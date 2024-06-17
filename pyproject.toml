@@ -1,0 +1,28 @@
+# pyproject.toml is a configuration file for Python projects.
+# It is used to specify dependencies, build system, and other metadata.
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.poetry]
+name = "GraspDataProcessing"
+version = "1.1.0"
+description = "A Python package for processing grasp data."
+authors = [{ name="Yenoch(Yi) Qin", email="Yenochqin@hotmail.com" },]
+license = "GPL"
+readme = "README.md"
+
+
+[tool.poetry.dependencies]
+python = "^3.8"
+numpy = "^1.20.1"
+pandas = "^1.2.3"
+matplotlib = "^3.3.4"
+re = "*"
+tqdm = "^4.59.0"
+pathlib = "^1.0.1"
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.2"
+
+[tool.poetry.scripts]
