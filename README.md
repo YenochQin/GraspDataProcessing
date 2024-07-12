@@ -11,8 +11,7 @@ Although GRASP has some original tools to handle the data, the programs written 
 Examples given in test folder. The only thing need to do is change the data file location, data file parameters and `calculation_parameters'.
 
 ---
-<<<<<<< Updated upstream
-=======
+
 
 ## Installation
 
@@ -32,4 +31,4 @@ pip install dist/grasp_data_processing-*.whl
 ```
 pip install -i https://test.pypi.org/simple/ grasp-data-processing
 ```
->>>>>>> Stashed changes
+
