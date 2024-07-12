@@ -6,31 +6,19 @@
 @author :YenochQin (秦毅)
 '''
 
-import sys
-
-# 添加包的路径到 sys.path
-# sys.path.append('D:\\Python\\grasp_use\\graspdataprocessing')
-sys.path.append("C:\\Users\\yenoch\\CodeFiles\\PythonCodes")
 import graspdataprocessing as gdt
 
 
-# test = {"atom": "NdGalike", 
-#               "file_dir": "D:\\Python\\grasp_use\\graspdataprocessing\\graspdataprocessing\\data", 
-#               "file_name": "", 
-#               "parameters": "cv3pCIas", 
-#               "this_as": 0, 
-#               "cut_off_subshell": "3d", 
-#               "file_type": "lsjTRANSITION"}
 test = {"atom": "NdGalike", 
-              "file_dir": "C:\\Users\\yenoch\\CodeFiles\\PythonCodes\\graspdataprocessing\\data\\trans", 
+              "file_dir": "D:\\PythonProjects\\graspdatatransfer\\data\\trans", 
               "file_name": "", 
-              "parameters": "cv3pCIas", 
+              "level_parameter": "cv3pCIas", 
               "this_as": 0, 
               "cut_off_subshell": "3d", 
               "file_type": "lsjTRANSITION"}
 
 
-transition_data_collection = gdt.LSJTransitionCollection(test)
+transition_data_collection = gdt.LSJTransitionDataCollection(test)
 
 data_pd = transition_data_collection.transition_data2dataframe()
 
