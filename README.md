@@ -2,7 +2,7 @@
 
 A simple data collection & processing tool for grasp2018.
 
-Coding in python3.11 Numpy, Pandas and Matplotlib are needed.
+Coding in python3.12 Numpy, Pandas and Matplotlib are needed.
 
 Although GRASP has some original tools to handle the data, the programs written in fortran are less convenient to operate and the operations are fixed, which is not conducive to subsequent processing.
 
