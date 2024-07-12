@@ -5,18 +5,14 @@
 @date :2024/05/07 14:22:17
 @author :YenochQin (秦毅)
 '''
-import sys
-
-# 添加包的路径到 sys.path
-sys.path.append('D:\\Python\\grasp_use\\graspdataprocessing')
 import graspdataprocessing as gdt
 
 plottest = {
-    "atom": "Ni", 
-    "dir": "D:\\Python\\grasp_use\\graspdataprocessing\\data\\cv\\cv3", 
-    "file": "4f2as5.cm", 
-    "parameters": "cv3",
-    "f_type": "mix"
+    "atom": "NdGalike", 
+    "file_dir": "D:\\PythonProjects\\graspdatatransfer\\data", 
+    "file_name": "oddcv3pCIas5.cm", 
+    "level_parameter": "cv3pCI",
+    "file_type": "mix"
     }
 
 test = gdt.GraspFileLoad(plottest)
