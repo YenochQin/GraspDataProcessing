@@ -1,0 +1,10 @@
+Metadata-Version: 2.1
+Name: grasp-data-processing
+Version: 1.2.dev1
+Summary: Grasp Data processing package
+Requires-Python: >=3.12
+License-File: LICENSE
+Requires-Dist: matplotlib
+Requires-Dist: numpy>=2.0
+Requires-Dist: pandas
+Requires-Dist: tqdm

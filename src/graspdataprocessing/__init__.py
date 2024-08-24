@@ -18,6 +18,7 @@ from .ASF_data_collection import *
 from .transition_data_collection import *
 # from .radial_wavefunction_plot import *
 from .fig_settings import *
+from .CSFs_choosing import *
 
 
 __all__ = [
