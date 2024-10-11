@@ -15,6 +15,7 @@ import re
 from tqdm import tqdm
 
 from .data_IO import GraspFileLoad
+from .tool_function import transition_dT_cal, doubleJ_to_J
 
 class TransitionDataCollection:
     def __init__(self, data_file_info: dict):
@@ -53,30 +54,32 @@ class TransitionDataCollection:
 
         return self.trans_data_line_index, self.transition_data_type_line_index
     
-
     def transition_data2dataframe(self):
 
         self.transition_data_pd = pd.DataFrame()
-        columns_orders = ['transition_type',
-                                                        'Upper_file',
-                                                        'Upper_loc',
-                                                        'Upper_J',
-                                                        'Upper_parity',
-                                                        'Lower_file',
-                                                        'Lower_loc',
-                                                        'Lower_J',
-                                                        'Lower_parity',
-                                                        'energy_level_difference',
-                                                        'wavelength_vac',
-                                                        'transition_rate_C',
-                                                        'oscillator_strength_C',
-                                                        'line_strength_C',
-                                                        'transition_rate_B',
-                                                        'oscillator_strength_B',
-                                                        'line_strength_B',
-                                                        'transition_rate_M',
-                                                        'oscillator_strength_M',
-                                                        'line_strength_M']
+        columns_orders = [
+                        'Upper_file',
+                        'Upper_loc',
+                        'Upper_J',
+                        'Upper_parity',
+                        'Lower_file',
+                        'Lower_loc',
+                        'Lower_J',
+                        'transition_type',
+                        'Lower_parity',
+                        'energy_level_difference',
+                        'wavelength_vac',
+                        'transition_rate_C',
+                        'oscillator_strength_C',
+                        'line_strength_C',
+                        'transition_rate_B',
+                        'oscillator_strength_B',
+                        'line_strength_B',
+                        'transition_rate_M',
+                        'oscillator_strength_M',
+                        'line_strength_M',
+                        'transition_dT'
+                            ]
 
         self.trans_data_line_location()
         for i in tqdm(range(len(self.transition_data_type_line_index))):
@@ -90,11 +93,29 @@ class TransitionDataCollection:
                 if self.transition_data_list[line] == '':
                     break
                 temp_transition_data_dict = TransitionDataBlock(self.transition_data_list[line:line+trans_data_block_step], temp_transition_type).transition_data_block2dict()
+                # print(temp_transition_data_dict)
+
+                if temp_transition_data_dict.get('line_strength_C') == 0 or temp_transition_data_dict.get('line_strength_B') == 0 or temp_transition_data_dict.get('line_strength_M') == 0:
+                    continue
                 temp_transition_data_df = pd.DataFrame([temp_transition_data_dict])
                 self.transition_data_pd = pd.concat([self.transition_data_pd, temp_transition_data_df], ignore_index=True, join='outer')
-        
-        
+            
         self.transition_data_pd = self.transition_data_pd.reindex(columns=columns_orders)
+        
+        self.transition_data_pd['transistion_type'] = pd.Categorical(self.transition_data_pd['transition_type'], categories=['E1', 'E2', 'E3', 'M1', 'M2'], ordered=True)
+        
+        self.transition_data_pd.sort_values('transition_type', inplace=True)
+        
+        self.transition_data_pd['transition_type'] = self.transition_data_pd['transition_type'].astype(str)
+        temp_E_transition_data_pd = self.transition_data_pd[self.transition_data_pd['transition_type'].str.contains('E')]
+        
+        for index, row in temp_E_transition_data_pd.iterrows():
+            # print(row)
+            rate_C = row['transition_rate_C']
+            rate_B = row['transition_rate_B']
+            transition_dT = transition_dT_cal(rate_C, rate_B)
+            self.transition_data_pd.at[index, 'transition_dT'] = transition_dT
+
         return self.transition_data_pd
 
 class LSJTransitionDataCollection:
@@ -136,34 +157,43 @@ class LSJTransitionDataCollection:
     def transition_data2dataframe(self):
 
         self.transition_data_pd = pd.DataFrame()
-        columns_orders = ['Upper_2J',
-                                                        'Upper_energy',
-                                                        'Upper_configuration',
-                                                        'Lower_2J',
-                                                        'Lower_energy',
-                                                        'Lower_configuration',
-                                                        'energy_level_difference',
-                                                        'wavelength_vac',
-                                                        'wavelength_air',
-                                                        'transition_type',
-                                                        'line_strength_B',
-                                                        'oscillator_strength_B',
-                                                        'transition_rate_B',
-                                                        'd_T',
-                                                        'line_strength_C',
-                                                        'oscillator_strength_C',
-                                                        'transition_rate_C',
-                                                        'transition_rate_M',
-                                                        'oscillator_strength_M',
-                                                        'line_strength_M']
+        columns_orders = [
+                        'Upper_J',
+                        'Upper_energy',
+                        'Upper_configuration',
+                        'Lower_J',
+                        'Lower_energy',
+                        'Lower_configuration',
+                        'transition_type',
+                        'energy_level_difference',
+                        'wavelength_vac',
+                        'wavelength_air',
+                        'line_strength_B',
+                        'oscillator_strength_B',
+                        'transition_rate_B',
+                        'line_strength_C',
+                        'oscillator_strength_C',
+                        'transition_rate_C',
+                        'line_strength_M',
+                        'oscillator_strength_M',
+                        'transition_rate_M',
+                        'transition_dT'
+                        ]
         self.transition_block_index()
         for i in tqdm(range(0,len(self.transition_block_index_list),2)):
             temp_transition_data_block = self.transition_data_list[self.transition_block_index_list[i]:self.transition_block_index_list[i+1]]
             temp_transition_data_dict = LSJTransitionDataBlock(temp_transition_data_block).transition_data_block2dict()
+            if temp_transition_data_dict.get('line_strength_C') == 0 or temp_transition_data_dict.get('line_strength_B') == 0 or temp_transition_data_dict.get('line_strength_M') == 0:
+                    continue
             temp_transition_data_df = pd.DataFrame([temp_transition_data_dict])
 
             self.transition_data_pd = pd.concat([self.transition_data_pd, temp_transition_data_df], ignore_index=True, join='outer')
         self.transition_data_pd = self.transition_data_pd.reindex(columns=columns_orders)
+        
+        self.transition_data_pd['transistion_type'] = pd.Categorical(self.transition_data_pd['transition_type'], categories=['E1', 'E2', 'E3', 'M1', 'M2'], ordered=True)
+        
+        self.transition_data_pd.sort_values('transition_type', inplace=True)
+        
         return self.transition_data_pd
 
 
@@ -229,7 +259,7 @@ class LSJTransitionDataBlock:
             self.block_trasnsition_properties_dict["line_strength_B"] = np.float64(properties_info_1[3])
             self.block_trasnsition_properties_dict["oscillator_strength_B"] = np.float64(properties_info_1[6])
             self.block_trasnsition_properties_dict["transition_rate_B"] = np.float64(properties_info_1[9])
-            self.block_trasnsition_properties_dict["d_T"] = np.float64(properties_info_1[12])
+            self.block_trasnsition_properties_dict["transition_dT"] = np.float64(properties_info_1[12])
             properties_line_2 = properties_lines[1]
             properties_info_2 = re.split(r'\s+', properties_line_2)
             properties_info_2 = [i.replace('D', 'e') for i in properties_info_2]
@@ -256,12 +286,14 @@ class LSJTransitionDataBlock:
         properties_info = self.data_block[3:]
 
         upper_level = self.get_transition_level_info(upper_level_info)
-        self.block_trasnsition_data_dict["Upper_2J"] = upper_level[0]
+        upper_double_j = upper_level[0]
+        self.block_trasnsition_data_dict["Upper_J"] = doubleJ_to_J(int(upper_double_j))
         self.block_trasnsition_data_dict["Upper_energy"] = upper_level[1]
         self.block_trasnsition_data_dict["Upper_configuration"] = upper_level[2]
 
         lower_level = self.get_transition_level_info(lower_level_info)
-        self.block_trasnsition_data_dict["Lower_2J"] = lower_level[0]
+        lower_double_j = lower_level[0]
+        self.block_trasnsition_data_dict["Lower_J"] = doubleJ_to_J(int(lower_double_j))
         self.block_trasnsition_data_dict["Lower_energy"] = lower_level[1]
         self.block_trasnsition_data_dict["Lower_configuration"] = lower_level[2]
         
@@ -383,60 +415,54 @@ def data_process(transition_df, level_df, data_file_info, Branching_Fraction=0.0
     Returns:
         [type : DataFrame]: [description: return transition_df]
     """
-    data_parameter = data_file_info.get('parameter')
+    data_parameter = data_file_info.get('level_parameter')
     file_type = data_file_info.get('file_type')
     a_s = data_file_info.get('this_as')
     
-    level_index_dict = {(row['Pos'], row['J'], row['Parity']): index for index, row in level_df.iterrows()}
-    
-    transition_df['Upper_index'] = transition_df.apply(lambda row: level_index_dict.get((row['Upper_loc'], row['Upper_J'], row['Upper_parity'])), axis=1)
-    transition_df['Lower_index'] = transition_df.apply(lambda row: level_index_dict.get((row['Lower_loc'], row['Lower_J'], row['Lower_parity'])), axis=1)
-    # for line in range(len(transition_df)):
-    # #     print(transition_df.loc[line])
-    #     Up_temp = transition_df.loc[line,'upper_level'].split()
-    #     Low_temp = transition_df.loc[line,'lower_level'].split()
-    #     Up_index_temp = level[(level.Pos == Up_temp[1]) & (level.J == Up_temp[2]) & (level.Parity == Up_temp[3])].index.tolist()[0]
-    #     Up_J_temp = Up_temp[2]
-    #     Up_J_temp_value = eval(Up_J_temp)
-    #     Low_index_temp = level[(level.Pos == Low_temp[1]) & (level.J == Low_temp[2]) & (level.Parity == Low_temp[3])].index.tolist()[0]
-    #     Low_J_temp = Low_temp[2]
-    #     Low_J_temp_value = eval(Low_J_temp)
+    if file_type.upper() == 'TRANSITION':
         
-    #     Up_index_temp = level[()]
-        
-    #     transition_df.loc[line, ['Upper_index', 'upper_conf', 'upper_J', 'upper_J_value', 'Lower_index', 'lower_conf', 'lower_J', 'Lower_J']] =[level.loc[Up_index_temp, 'No'], level.loc[Up_index_temp, f'Configuration_{data_parameter}{a_s}raw'], Up_J_temp, Up_J_temp_value, level.loc[Low_index_temp, 'No'], level.loc[Low_index_temp, f'Configuration_{data_parameter}{a_s}raw'], Low_J_temp, Low_J_temp_value]
-    #     transition_df.loc[line, 'wavelength'] = 10 ** 8 / transition_df.loc[line, 'delta_E'] 
+        level_index_dict = {(row['Pos'], row['J'], row['Parity']): row[f'No{data_parameter}{a_s}'] for index, row in level_df.iterrows()}
+        transition_df['Upper_index'] = transition_df.apply(lambda row: level_index_dict.get((row['Upper_loc'], row['Upper_J'], row['Upper_parity'])), axis=1)
+        transition_df['Lower_index'] = transition_df.apply(lambda row: level_index_dict.get((row['Lower_loc'], row['Lower_J'], row['Lower_parity'])), axis=1)
 
-    transition_df['Lower_index'] = transition_df.Lower_index.astype(np.int8)
-    transition_df['Upper_index'] = transition_df.Upper_index.astype(np.int8)
+    elif file_type.upper() == 'TRANSITION_LSJ':
+        
+        level_index_dict = {(row['J'], row[f'Energy_Total_{data_parameter}{a_s}'], row[f'Configuration_{data_parameter}{a_s}raw']): row[f'No{data_parameter}{a_s}'] for index, row in level_df.iterrows()}
+        transition_df['Upper_index'] = transition_df.apply(lambda row: level_index_dict.get((row['Upper_J'], row['Upper_configuration'], row['Upper_energy'])), axis=1)
+        transition_df['Lower_index'] = transition_df.apply(lambda row: level_index_dict.get((row['Lower_J'], row['Lower_configuration'], row['Lower_energy'])), axis=1)
+
+    else:
+        raise ValueError("file_type doesn't match, it should be 'TRANSITION' or 'TRANSITION_LSJ'")
+
     transition_df.sort_values(by=['Lower_index', 'Upper_index'], ascending=True, inplace=True)
-    # transition_df.f_l = transition_df.gf_l / (2*transition_df.Lower_J + 1)
-    # transition_df.f_v = transition_df.gf_v / (2*transition_df.Lower_J + 1)
-    transition_df.A_l_to_A_V = transition_df.transition_rate_B / transition_df.transition_rate_C
-    level_df['lifetime_l'] = 0
-    level_df['lifetime_l'] = level_df.lifetime_l.astype(np.float64)
-    level_df['lifetime_v'] = 0
-    level_df['lifetime_v'] = level_df.lifetime_v.astype(np.float64)
-    # level.loc[0,'lifetime'] = 0
+
+    transition_df.A_B_to_A_C = transition_df.transition_rate_B / transition_df.transition_rate_C
+
+    level_df['lifetime_B'] = np.float64(0)
+    level_df['lifetime_C'] = np.float64(0)
+    
+    transition_df['sum_A_B'] = np.float64(0)
+    transition_df['sum_A_C'] = np.float64(0)
+
     for lno in tqdm(range(2, len(level_df)+1, 1)):
-        temp_sum_A_l = transition_df.loc[(transition_df['Upper_index'] == lno), 'transition_rate_B'].sum()
-        temp_sum_A_v = transition_df.loc[(transition_df['Upper_index'] == lno), 'transition_rate_C'].sum()
-        # print(temp_sum_A_l,temp_sum_A_v)
-        if temp_sum_A_l != 0:
-            transition_df.loc[(transition_df['Upper_index'] == lno), 'sum_A_l'] = temp_sum_A_l
-            temp_lifetime_l = 1 / temp_sum_A_l
-            level_df.loc[lno-1, 'lifetime_l'] = temp_lifetime_l
+        temp_sum_A_B = transition_df.loc[(transition_df['Upper_index'] == lno), 'transition_rate_B'].sum()
+        temp_sum_A_C = transition_df.loc[(transition_df['Upper_index'] == lno), 'transition_rate_C'].sum()
+        # print(temp_sum_A_B,temp_sum_A_C)
+        if temp_sum_A_B != 0:
+            transition_df.loc[(transition_df['Upper_index'] == lno), 'sum_A_B'] = temp_sum_A_B
+            temp_lifetime_B = 1 / temp_sum_A_B
+            level_df.loc[lno-1, 'lifetime_B'] = temp_lifetime_B
         else:
             continue
-        if temp_sum_A_v != 0:
-            transition_df.loc[(transition_df['Upper_index'] == lno), 'sum_A_v'] = temp_sum_A_v
-            temp_lifetime_v = 1 / temp_sum_A_v
-            level_df.loc[lno-1, 'lifetime_v'] = temp_lifetime_v
+        if temp_sum_A_C != 0:
+            transition_df.loc[(transition_df['Upper_index'] == lno), 'sum_A_C'] = temp_sum_A_C
+            temp_lifetime_C = 1 / temp_sum_A_C
+            level_df.loc[lno-1, 'lifetime_C'] = temp_lifetime_C
         else:
             continue
     transition_df['branching_fraction'] = np.float64(0)
     for trannum in range(len(transition_df)):
-        transition_df.loc[trannum, 'branching_fraction'] = transition_df.loc[trannum, 'transition_rate_C']/transition_df.loc[trannum, 'sum_A_l']
+        transition_df.loc[trannum, 'branching_fraction'] = transition_df.loc[trannum, 'transition_rate_C']/transition_df.loc[trannum, 'sum_A_B']
         if transition_df.loc[trannum, 'branching_fraction'] <= Branching_Fraction:
             transition_df.drop(trannum, axis=0, inplace=True)
     

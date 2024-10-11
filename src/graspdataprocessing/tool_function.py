@@ -149,3 +149,10 @@ def transition_data_level_location(transition_data_df : pd.DataFrame, level_df :
 
 ######################################################################
 
+def transition_dT_cal(transition_rate_B, transition_rate_C):
+    
+    transition_dT = abs(transition_rate_B - transition_rate_C) / max(transition_rate_B, transition_rate_C)
+    
+    return transition_dT
+
+######################################################################
