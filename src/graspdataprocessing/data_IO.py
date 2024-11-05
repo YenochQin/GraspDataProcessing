@@ -5,6 +5,7 @@
 @date :2023/03/21 11:36:06
 @author :YenochQin (秦毅)
 '''
+import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -48,7 +49,7 @@ class GraspFileLoad:
                             # "TRANSITION": f"*{self.level_parameter}*.*{self.level_parameter}*.*t",
                             "TRANSITION": f"*.*.*t",
                              "TRANSITION_LSJ": f"*{self.level_parameter}*.*{self.level_parameter}*.*t.lsj", 
-                             "LSJCOMPOSITION": f"*{self.level_parameter}{self.this_as}.lsj.lbl", 
+                             "LSJCOMPOSITION": f"*{self.level_parameter}*{self.this_as}.lsj.lbl", 
                              "PLOT": f"*{self.level_parameter}*.plot", 
                              "BINARY_RADIAL_WAVEFUNCTIONS": f"*{self.level_parameter}*.w", 
                              "MIX_COEFFICIENT": f"*{self.level_parameter}*m",
@@ -76,6 +77,8 @@ class GraspFileLoad:
             temp_load_file_data.append('')
             self.load_files_data.extend(temp_load_file_data)
         return self.load_files_data
+    
+
     
     def radial_wavefunction_binary_file_read(self):
         self.nn_list = []
@@ -173,110 +176,60 @@ class GraspFileLoad:
         self.mix_coefficient_list = []
 
         with open(self.load_file_path, 'rb') as binary_file:
-                    
-            temp_int = binary_file.read(4)
-                    
-            title_bin = binary_file.read(6)                 # read (3) title*6
-            title = struct.unpack('6s', title_bin)[0]
-            # print("title=",title)
-                    
-            temp_int = binary_file.read(4)
 
-            temp_int = binary_file.read(4)  
-            NELEC_bin = binary_file.read(4)
-            self.num_electron = struct.unpack('i', NELEC_bin)[0]
 
-            ncftot_bin = binary_file.read(4)
-            self.total_num_configuration = struct.unpack('i', ncftot_bin)[0]
+            g92mix = read_fortran_record(binary_file, dtype=np.dtype('S6')).tobytes().decode('utf-8').strip()
 
-            nw_bin = binary_file.read(4)
-            self.NW = struct.unpack('i', nw_bin)[0]
+            print(f"g92mix: {g92mix}")  # Debugging print
+            
+            if g92mix != 'G92MIX':
+                raise ValueError('Not a mixing coefficient file!')
 
-            ncmin_bin = binary_file.read(4)
-            self.ncmin = struct.unpack('i', ncmin_bin)[0]
+            # READ (nfmix) nelec, ncftot, nw, nvectot, nvecsiz, nblock
+            header_data = read_fortran_record(binary_file, dtype=np.int32, count=6)
+            # nelec -> num_electron, ncftot -> total_num_configuration, nw -> NW, ncmin -> ncmin, nvecsiz -> nvecsiz, nblock -> num_block
+            self.num_electron, self.total_num_configuration, self.NW, self.ncmin, self.nvecsiz, self.num_block = header_data
 
-            nvecsiz_bin = binary_file.read(4)
-            self.nvecsiz = struct.unpack('i', nvecsiz_bin)[0]
-
-            nblock_bin = binary_file.read(4)
-            self.num_block = struct.unpack('i', nblock_bin)[0]
-
-            temp_int = binary_file.read(4)
-
-            print("title=",title)
+            print("title=", g92mix)
             print(f" nblock = {self.num_block},       ncftot =   {self.total_num_configuration},          nw =  {self.NW},            nelec =   {self.num_electron}")
             for jblock in tqdm(range(1, self.num_block+1)):
                 print('cycle jblock =',jblock)
-                temp_int = binary_file.read(4)  # READ (3) nb, ncfblk, nevblk, j_value_location, parity
-                if not temp_int:  # 如果data为空
-                    print("已经到达文件末尾")
-                    break
-                nb_bin = binary_file.read(4)
-                nb = struct.unpack('i', nb_bin)
-                print("nb=",nb)
-                self.index_block_list.append(nb[0])
                 
-                if jblock != nb[0]:
-                    break
-                
-                ncfblk_bin = binary_file.read(4)
-                ncfblk = struct.unpack('i', ncfblk_bin)
-                print("ncfblk=",ncfblk)
-                self.ncfblk_list.append(ncfblk[0])
-                
-                nevblk_bin = binary_file.read(4)
-                nevblk = struct.unpack('i', nevblk_bin)
-                print("nevblk=",nevblk)
-                self.block_energy_count_list.append(nevblk[0])
-                
-                j_value_location_bin = binary_file.read(4)
-                j_value_location = struct.unpack('i', j_value_location_bin)
-                print("j_value_location=",j_value_location)
-                self.j_value_location_list.append(j_value_location[0])
-                
-                parity_bin = binary_file.read(4)
-                parity = struct.unpack('i', parity_bin)
-                print("parity=",parity)
-                self.parity_list.append(parity[0])
-                    
-                temp_int = binary_file.read(4)  
-                
-                if nevblk[0] <= 0:
-                    continue
+                # Read block data: nb, ncfblk, nevblk, iatjp, iaspa
+                block_data = read_fortran_record(binary_file, dtype=np.int32, count=5)
+                nb, ncfblk, nevblk, j_value_location, parity = block_data
+                print(f' Block no. = {nb}, 2J+1 = {j_value_location}, Parity = {parity}, No. of eigenvalues = {nevblk}, No. of CSFs = {ncfblk}')
+                # nb -> index_block, ncfblk -> ncfblk, nevblk -> block_energy_count, j_value_location -> iatjp, parity -> iaspa
+                self.index_block_list.append(nb)
+                self.ncfblk_list.append(ncfblk)
+                self.block_energy_count_list.append(nevblk)
+                self.j_value_location_list.append(j_value_location)
+                self.parity_list.append(parity)
+                if jblock != nb:
+                    raise ValueError('jblock != nb')
 
-                temp_int = binary_file.read(4)  
+                ivec = read_fortran_record(binary_file, dtype=np.int32, count=nevblk)
 
-                ivec_bin = binary_file.read(4*nevblk[0])
-                ivec = struct.unpack('i'*nevblk[0], ivec_bin)  # READ (3) (ivec(i+ncountState), i = 1, nevblk)
-                print("ivec=",ivec)
                 ivec_array = np.array(ivec)
                 self.ivec_list.append(ivec_array)
+
                 
-                temp_int = binary_file.read(4)  
-                temp_int = binary_file.read(4)  
+                # READ (3) eav, (eval(i+ncountState), i = 1, nevblk)
+                eva_evals = read_fortran_record(binary_file, dtype=np.float64, count=nevblk+1)
+                eva = eva_evals[0]
+                evals = eva_evals[1:]
+
+                self.block_energy_list.append(eva)
+                self.block_level_energy_list.append(evals)
+
                 
-                eav_bin = binary_file.read(8)
-                eav = struct.unpack('d', eav_bin)  # READ (3) eav
-                print("eav=",eav)
-                self.block_energy_list.append(eav[0])
-                
-                eval_bin = binary_file.read(8*nevblk[0])
-                eval = struct.unpack('d'*nevblk[0], eval_bin)  # READ (3) eav, (eval(i+ncountState), i = 1, nevblk)
-                print("eval=",eval)
-                eval_array = np.array(eval)
-                self.block_level_energy_list.append(eval_array)
-                
-                temp_int = binary_file.read(4)  
-                temp_int = binary_file.read(4)  
-                
-                
-                evec_bin = binary_file.read(8*ncfblk[0]*nevblk[0])
-                evec = struct.unpack('d'*ncfblk[0]*nevblk[0], evec_bin)  # READ (3) (evec, i = 1, ncfblk*nevblk)
-                # print("evec=",evec)
-                evec_array = np.array(evec)
-                self.mix_coefficient_list.append(evec_array)
-                
-                temp_int = binary_file.read(4)  
+                # READ (3) (evec, i = 1, ncfblk*nevblk)
+                evecsblock = read_fortran_record(binary_file, dtype=np.float64, count=nevblk * ncfblk)
+                evecs = evecsblock.reshape(nevblk, ncfblk)
+
+                self.mix_coefficient_list.append(evecs)
+
+                # temp_int = binary_file.read(4)  
 
         return self.index_block_list, self.ncfblk_list, self.block_energy_count_list, self.j_value_location_list, self.parity_list, self.ivec_list, self.block_energy_list, self.block_level_energy_list, self.mix_coefficient_list
 
@@ -394,6 +347,7 @@ class GraspFileLoad:
         
         elif "MIX" in self.file_type.upper() or "COEF" in self.file_type.upper():
             self.file_type = "MIX_COEFFICIENT"
+            self.mix_coefficient_dict = {}
 
             if self.data_file_path:
                 self.load_file_path = self.data_file_path
@@ -425,7 +379,6 @@ class GraspFileLoad:
                 else:
                     print(f"{i+1:3}{temp_pos[level_index[i]]:3}{temp_J[level_index[i]]:>4}   {temp_parity[level_index[i]]:1}    {temp_energy[level_index[i]]:14.7f}{energy_au_cm(temp_energy[level_index[i]]-temp_energy[level_index[0]]):12.2f}")
                 
-
             return self.index_block_list, self.ncfblk_list, self.block_energy_count_list, self.j_value_location_list, self.parity_list, self.ivec_list, self.block_energy_list, self.block_level_energy_list, self.mix_coefficient_list
         
         elif "DENSITY" in self.file_type.upper():

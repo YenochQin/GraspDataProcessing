@@ -4,7 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "grasp-data-processing"
-version = '1.2.dev3'
+# version = '1.2.dev5'
+version = '1.2.5'
 description = "Grasp Data processing package"
 
 requires-python = ">= 3.12"

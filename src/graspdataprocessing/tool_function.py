@@ -156,3 +156,26 @@ def transition_dT_cal(transition_rate_B, transition_rate_C):
     return transition_dT
 
 ######################################################################
+
+# Function to read Fortran-style binary records (assume 4-byte record marker)
+def read_fortran_record(file, dtype, count=1):
+    # Read the record length (4 bytes before the data)
+    record_len_before = np.fromfile(file, dtype=np.int32, count=1)[0]
+    
+    # Print for debugging
+    # print(f"Record length before: {record_len_before}")
+    
+    # Read the actual data
+    data = np.fromfile(file, dtype=dtype, count=count)
+    
+    # Read the record length (4 bytes after the data)
+    record_len_after = np.fromfile(file, dtype=np.int32, count=1)[0]
+    
+    # Print for debugging
+    # print(f"Record length after: {record_len_after}")
+    
+    # Verify that the record lengths match
+    if record_len_before != record_len_after:
+        raise ValueError(f"Record length mismatch: {record_len_before} != {record_len_after}")
+    
+    return data

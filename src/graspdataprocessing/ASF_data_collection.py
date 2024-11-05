@@ -156,15 +156,18 @@ def mcdhf_energy_data_collection(data_file_info, a_s_list):
     return energy_data
 
 
-def ci_energy_data_collection(energy_data: pd.DataFrame, data_file_info: dict):
+def ci_energy_data_collection(energy_data: None, data_file_info: dict):
     """
-    This function is to merge the energy data of ci levels.
+    This function is used to collect single energy levels data or merge energy levels data from ci calculation.
     """
-    temp_ci_level_as = LevelsEnergyData(data_file_info).energy_data_formate()
-    energy_data = pd.merge(energy_data, temp_ci_level_as, how='outer', on=["Pos", "J", "Parity"],suffixes=("", str(data_file_info["level_parameter"])+str(data_file_info["this_as"])))
-    energy_data = energy_data.dropna(how = 'all', axis=1)
-    energy_data = energy_data.fillna(0.0)
-    energy_data = energy_data.sort_values(by=f'No{data_file_info["level_parameter"]}{data_file_info["this_as"]}', ascending=True)
+    if energy_data is None:
+        energy_data = LevelsEnergyData(data_file_info).energy_data_formate()
+    else:
+        temp_ci_level_as = LevelsEnergyData(data_file_info).energy_data_formate()
+        energy_data = pd.merge(energy_data, temp_ci_level_as, how='outer', on=["Pos", "J", "Parity"],suffixes=("", str(data_file_info["level_parameter"])+str(data_file_info["this_as"])))
+        energy_data = energy_data.dropna(how = 'all', axis=1)
+        energy_data = energy_data.fillna(0.0)
+        energy_data = energy_data.sort_values(by=f'No{data_file_info["level_parameter"]}{data_file_info["this_as"]}', ascending=True)
     return energy_data
 
 #######################################################################
