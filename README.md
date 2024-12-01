@@ -12,7 +12,6 @@ Examples given in test folder. The only thing need to do is change the data file
 
 ---
 
-
 ## Installation
 
 ### manual install
@@ -31,4 +30,3 @@ pip install dist/grasp_data_processing-*.whl
 ```
 pip install -i https://test.pypi.org/simple/ grasp-data-processing
 ```
-
