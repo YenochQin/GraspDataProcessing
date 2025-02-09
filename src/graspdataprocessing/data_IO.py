@@ -46,14 +46,15 @@ class GraspFileLoad:
         else:
             self.data_file_path = None
         self.file_keyword = {
-                            # "TRANSITION": f"*{self.level_parameter}*.*{self.level_parameter}*.*t",
-                            "TRANSITION": f"*.*.*t",
+                             # "TRANSITION": f"*{self.level_parameter}*.*{self.level_parameter}*.*t",
+                             "TRANSITION": f"*.*.*t",
                              "TRANSITION_LSJ": f"*{self.level_parameter}*.*{self.level_parameter}*.*t.lsj", 
                              "LSJCOMPOSITION": f"*{self.level_parameter}*{self.this_as}.lsj.lbl", 
                              "PLOT": f"*{self.level_parameter}*.plot", 
                              "BINARY_RADIAL_WAVEFUNCTIONS": f"*{self.level_parameter}*.w", 
                              "MIX_COEFFICIENT": f"*{self.level_parameter}*m",
-                             "DENSITY": f"*{self.this_as}.cd"}
+                             "DENSITY": f"*{self.this_as}.cd",
+                             "Configuration_state_functions": f"*{self.level_parameter}*.c"}
         # set the data file path as the attribute of the class
         
 
@@ -79,7 +80,6 @@ class GraspFileLoad:
         return self.load_files_data
     
 
-    
     def radial_wavefunction_binary_file_read(self):
         self.nn_list = []
         self.laky_list = []
@@ -161,7 +161,6 @@ class GraspFileLoad:
                 
                 
         return self.nn_list, self.laky_list, self.energy_list, self.npts_list, self.a0_list, self.pg_list, self.qg_list, self.rg_list
-    
 
     def mix_coefficient_file_read(self):
 
@@ -176,7 +175,6 @@ class GraspFileLoad:
         self.mix_coefficient_list = []
 
         with open(self.load_file_path, 'rb') as binary_file:
-
 
             g92mix = read_fortran_record(binary_file, dtype=np.dtype('S6')).tobytes().decode('utf-8').strip()
 
@@ -222,7 +220,6 @@ class GraspFileLoad:
                 self.block_energy_list.append(eva)
                 self.block_level_energy_list.append(evals)
 
-                
                 # READ (3) (evec, i = 1, ncfblk*nevblk)
                 evecsblock = read_fortran_record(binary_file, dtype=np.float64, count=nevblk * ncfblk)
                 evecs = evecsblock.reshape(nevblk, ncfblk)
@@ -233,8 +230,6 @@ class GraspFileLoad:
 
         return self.index_block_list, self.ncfblk_list, self.block_energy_count_list, self.j_value_location_list, self.parity_list, self.ivec_list, self.block_energy_list, self.block_level_energy_list, self.mix_coefficient_list
 
-
-
     def grasp_data_file_location(self):
         if self.data_file_dir.rglob(f"{self.file_keyword[self.file_type]}"):
             print(f"{self.file_keyword[self.file_type]} data file is found")
@@ -244,13 +239,12 @@ class GraspFileLoad:
         self.grasp_data_file_path_list = list(self.raw_file_path.glob(f"{self.file_keyword[self.file_type]}"))
 
         return self.grasp_data_file_path_list
-    
 
     def data_file_process(self):
         '''
         The data_file_process method in the GraspFileLoad class is designed to identify the data type of the input file and process it accordingly. 
         '''
-        
+
         # set the data type as the attribute of the class
         if "ENERGY" in self.file_type.upper() or "LEVEL" in self.file_type.upper():
             # if self.file_name:
@@ -379,7 +373,18 @@ class GraspFileLoad:
                 else:
                     print(f"{i+1:3}{temp_pos[level_index[i]]:3}{temp_J[level_index[i]]:>4}   {temp_parity[level_index[i]]:1}    {temp_energy[level_index[i]]:14.7f}{energy_au_cm(temp_energy[level_index[i]]-temp_energy[level_index[0]]):12.2f}")
                 
-            return self.index_block_list, self.ncfblk_list, self.block_energy_count_list, self.j_value_location_list, self.parity_list, self.ivec_list, self.block_energy_list, self.block_level_energy_list, self.mix_coefficient_list
+            mix_file_data = {
+                "index_block_list": self.index_block_list,
+                'ncfblk_list': self.ncfblk_list,
+                'block_energy_count_list': self.block_energy_count_list,
+                'j_value_location_list': self.j_value_location_list,
+                'parity_list': self.parity_list,
+                'ivec_list': self.ivec_list,
+                'block_energy_list': self.block_energy_list,
+                'block_level_energy_list': self.block_level_energy_list,
+                'mix_coefficient_list': self.mix_coefficient_list
+            }
+            return mix_file_data
         
         elif "DENSITY" in self.file_type.upper():
             self.file_type = "DENSITY"
@@ -396,6 +401,20 @@ class GraspFileLoad:
             temp_density_data = GraspFileLoad.file_read(self)
             
             return temp_density_data
+
+        elif "CSF" in self.file_type.upper():
+            self.file_type = "Configuration_state_functions"
+            temp_CSFs_data = []
+
+            if self.data_file_path:
+                self.load_file_path = self.data_file_path
+            else:
+                self.file_name = f"*{self.this_as}.c"
+                self.load_file_path = Path(self.data_file_dir).joinpath(self.file_name)
+                
+            temp_CSFs_data = GraspFileLoad.file_read(self)
+            
+            return temp_CSFs_data
 
         else:
             return 0

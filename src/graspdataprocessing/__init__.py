@@ -27,5 +27,7 @@ __all__ = [
            'set_size',
            'mcdhf_energy_data_collection',
            'ci_energy_data_collection',
+           'CSF_subshell_split',
+           'CSF_item_2_dict',
            '__version__'
            ]
