@@ -9,7 +9,9 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
 ######################################################################
+
 '''
 print energy levels function
 '''
@@ -25,6 +27,7 @@ Rydberg constant is  {Rydberg}
 ---------------------------------------------
 """
     )
+
 
 def level_J_value(j_index: int) -> str:
     j_value_list = ['0', '1/2', '1', '3/2', '2', '5/2', '3', '7/2', '4', '9/2', '5', '11/2', '6', '13/2', '7', '15/2', '8', '17/2', '9', '19/2', '10', '21/2', '11', '23/2', '12', '25/2', '13', '27/2', '14', '29/2', '15', '31/2', '16', '33/2', '17', '35/2', '18', '37/2', '19', '39/2', '20', '41/2', '21', '43/2', '22']
@@ -42,7 +45,6 @@ def energy_au_cm(energy_au: float, Rydberg = 109737.31568508) -> float:
 
 
 ######################################################################
-
 
 def align_2d_list_columns(two_dimensional_list):
     """
@@ -68,8 +70,10 @@ def align_2d_list_columns(two_dimensional_list):
     
     return aligned_list
 
+######################################################################
+
 def int_nl_2_str_nl(n: int, kappa: int) -> str:
-    '''
+    r'''
     $j = l + 1/2, \kappa = -(l+1)$
     $j = l - 1/2, \kappa = +l $
     '''
@@ -85,6 +89,30 @@ def int_nl_2_str_nl(n: int, kappa: int) -> str:
         print("error: kappa should not be zero")
     
     return str_nl
+
+
+def str_subshell_2_kappa(str_subshell: str) -> int:
+    r'''
+    $j = l + 1/2, \kappa = -(l+1)$
+    $j = l - 1/2, \kappa = +l $
+    '''
+    kappa_value = {
+        "s ": -1,
+        "p-": 1,
+        "p ": -2,
+        "d-": 2,
+        "d ": -3,
+        "f-": 3,
+        "f ": -4,
+        "g-": 4,
+        "g ": -5,
+        "h-": 5,
+        "h ": -6,
+        "i-": 6,
+        "i ": -7
+    }
+
+    return kappa_value.get(str_subshell, 0)
 
 ######################################################################
 
@@ -107,20 +135,18 @@ def lsj_transition_data_level_location(transition_data_df : pd.DataFrame, level_
     
     level_conf_column = f"Configuration_{level_paramenter}{level_as}raw"
     
-    def get_level_index(level_2J : str, level_conf : str, level_df : pd.DataFrame) -> int:
-        
-        level_J = doubleJ_to_J(int(level_2J))
+    def get_level_index(level_J : str, level_conf : str, level_df : pd.DataFrame) -> int:
         
         level_index = level_df[(level_df['J'] == level_J) & (level_df[f'{level_conf_column}'] == level_conf)].index.values[0]
         
         return level_index
 
     for index, row in transition_data_df.iterrows():
-        print(row["Upper_2J"], row["Upper_configuration"])
-        temp_upper_index = get_level_index(row['Upper_2J'], row['Upper_configuration'], level_df)
+        print(row["Upper_J"], row["Upper_configuration"])
+        temp_upper_index = get_level_index(row['Upper_J'], row['Upper_configuration'], level_df)
         
-        print(row['Lower_2J'], row["Lower_configuration"])
-        temp_lower_index = get_level_index(row['Lower_2J'], row['Lower_configuration'], level_df)
+        print(row['Lower_J'], row["Lower_configuration"])
+        temp_lower_index = get_level_index(row['Lower_J'], row['Lower_configuration'], level_df)
 
         transition_data_df.loc[index, 'Upper_level_location'] = temp_upper_index + 1
         transition_data_df.loc[index, 'Lower_level_location'] = temp_lower_index + 1
