@@ -77,7 +77,67 @@ def CSF_subshell_split(CSF: str) -> Dict[str, int]:
         'unfully_charged_subshell': subshell_unfully_charged,
         'fully_charged_subshell': subshell_fully_charged
         }
+
+def simplify_orbital_string(original_str):
+    kappa_value = {
+        "s ": -1,
+        "p-": 1,
+        "p ": -2,
+        "d-": 2,
+        "d ": -3,
+        "f-": 3,
+        "f ": -4,
+        "g-": 4,
+        "g ": -5,
+        "h-": 5,
+        "h ": -6,
+        "i-": 6,
+        "i ": -7
+    }
     
+    # 改进正则：使用更严格的分隔符匹配
+    pattern = re.compile(r'(\d+)([a-z][ -]?)\s*\(\s*(\d+)\s*\)')
+    simplified = []
+    
+    for match in re.finditer(pattern, original_str):
+        n, orbital, value = match.groups()
+        # 标准化轨道符号格式
+        orbital = orbital.replace(' ', '').rstrip('-') + ('-' if '-' in orbital else ' ')
+        if orbital not in kappa_value:
+            continue
+        simplified.append(f"{int(n)}|{kappa_value[orbital]}|{value}")
+    
+    return ' '.join(simplified)
+
+def desimplify_orbital_string(simplified_str):
+    reverse_kappa = {
+        -1: "s ",
+        1: "p-",
+        -2: "p ",
+        2: "d-",
+        -3: "d ",
+        3: "f-",
+        -4: "f ",
+        4: "g-",
+        -5: "g ",
+        5: "h-",
+        -6: "h ",
+        6: "i-",
+        -7: "i "
+    }
+    
+    items = simplified_str.split()
+    restored = []
+    
+    for item in items:
+        try:
+            n, kappa, value = item.split('|')
+            orbital_key = reverse_kappa.get(int(kappa), "")
+            restored.append(f"{n}{orbital_key.strip()} ({value})")
+        except:
+            continue
+    
+    return '  '.join(restored)
 
 def subshells_J_value_parser(subshells_J_value: str, subshell_unfully_charged: Dict[str, int]) -> Dict[str, str]:
 
