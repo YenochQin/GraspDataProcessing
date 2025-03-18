@@ -75,8 +75,7 @@ def mix_data_abs_above_threshold(mix_data_array: np.ndarray, threshold=0.1):
         threshold: 阈值，默认0.1
         
     返回：
-        按绝对值降序排列的元组列表，每个元组包含：
-        (元素值, 对应索引数组)
+        按绝对值降序排列的字典，键为索引数组（转换为元组），值为对应元素值
     """
     # 生成布尔掩码标识绝对值超过阈值的元素
     abs_above_threshold_mask = np.abs(mix_data_array) > threshold
@@ -87,19 +86,22 @@ def mix_data_abs_above_threshold(mix_data_array: np.ndarray, threshold=0.1):
     # 获取满足条件的元素索引（返回二维坐标数组）
     indices_where_abs_above_threshold = np.argwhere(abs_above_threshold_mask)
 
-    # 将值和索引配对组合
-    result_pairs = list(zip(values_above_threshold, indices_where_abs_above_threshold))
+    # 将索引数组转换为元组作为键，值与索引配对组合
+    result_dict = {tuple(index): value for index, value in zip(indices_where_abs_above_threshold, values_above_threshold)}
     
     # 按元素绝对值降序排序
-    sorted_result = sorted(result_pairs, key=lambda x: abs(x[0]), reverse=True)
+    sorted_result = dict(sorted(result_dict.items(), key=lambda x: abs(x[1]), reverse=True))
     
     return sorted_result
 
 # def csf_mix_above_threshold_coupling_info(mix_data_above_threshold_list: List, csf_data_list: List):
     
 #     csf_coupling_info = []
+
+#     mix_data_dim = mix_data_above_threshold_list.shape[0]
     
-#     for i in mix_data_above_threshold_list:
+#     for i in mix_data_dim:
+        
 
 
 
