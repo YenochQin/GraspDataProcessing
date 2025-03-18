@@ -19,44 +19,55 @@ class GraspFileLoad:
     # the initialization function of the class "GraspFileLoad"
 
     def __init__(self, data_file_info: dict):
-
-        self.atom = data_file_info.get("atom", "")
-        # data_file_dir -> data files directory
-        # data_file_path -> data file absolute path
+        """初始化文件加载器
+        
+        Args:
+            data_file_info: 包含文件配置信息的字典，需要包含以下键：
+                - atom: 原子标识
+                - file_dir: 数据文件目录路径
+                - file_type: 文件类型标识
+                - level_parameter: 能级参数
+                - this_as: AS标识符
+                - file_name: 具体文件名（可选）
+        """
+        # 原子系统标识初始化
+        self.atom = data_file_info.get("atom", "")  # 默认空字符串
+        
+        # 处理文件目录路径
         self.file_dir = data_file_info.get("file_dir")
         if not Path(self.file_dir).exists():
-            # Handle the non-existent directory appropriately
-            raise ValueError("Directory does not exist")
-            
+            raise ValueError("数据目录不存在")  # 严格校验目录有效性
         else:
             self.data_file_dir = Path(self.file_dir)
-            print(f"load data files from {self.data_file_dir}")
+            print(f"数据加载路径: {self.data_file_dir}")
 
-        # Add similar checks and error handling for other keys in data_file_info
-        # Use get method to avoid KeyErrors
-        self.file_type = data_file_info.get("file_type")  
-        self.level_parameter = data_file_info.get("level_parameter")
-        self.this_as = data_file_info.get("this_as")
+        # 加载文件配置参数
+        self.file_type = data_file_info.get("file_type")    # 文件类型标识
+        self.level_parameter = data_file_info.get("level_parameter")  # 能级参数
+        self.this_as = data_file_info.get("this_as")        # AS过程标识
+        
+        # 处理文件路径逻辑
         self.file_name = data_file_info.get("file_name")
         if Path(self.file_name).is_file():
-            self.data_file_path = Path(self.file_name)
-
+            self.data_file_path = Path(self.file_name)  # 直接使用完整路径
         elif isinstance(self.file_name, str) and self.file_name:
-            self.data_file_path = self.data_file_dir.joinpath(self.file_name)
+            self.data_file_path = self.data_file_dir / self.file_name  # 路径拼接
         else:
-            self.data_file_path = None
+            self.data_file_path = None  # 无明确文件名时需要后续处理
+
+        # 文件类型匹配规则配置
         self.file_keyword = {
-                             # "TRANSITION": f"*{self.level_parameter}*.*{self.level_parameter}*.*t",
-                             "TRANSITION": f"*.*.*t",
-                             "TRANSITION_LSJ": f"*{self.level_parameter}*.*{self.level_parameter}*.*t.lsj", 
-                             "LSJCOMPOSITION": f"*{self.level_parameter}*{self.this_as}.lsj.lbl", 
-                             "PLOT": f"*{self.level_parameter}*.plot", 
-                             "BINARY_RADIAL_WAVEFUNCTIONS": f"*{self.level_parameter}*.w", 
-                             "MIX_COEFFICIENT": f"*{self.level_parameter}*m",
-                             "DENSITY": f"*{self.this_as}.cd",
-                             "Configuration_state_functions": f"*{self.level_parameter}*.c"}
-        # set the data file path as the attribute of the class
-        
+            "TRANSITION": "*.*.*t",  # 匹配 transition 文件的通配符
+            "TRANSITION_LSJ": f"*{self.level_parameter}*.*{self.level_parameter}*.*t.lsj",
+            "LSJCOMPOSITION": f"*{self.level_parameter}*{self.this_as}.lsj.lbl",
+            "PLOT": f"*{self.level_parameter}*.plot",  # 绘图数据文件匹配
+            "BINARY_RADIAL_WAVEFUNCTIONS": f"*{self.level_parameter}*.w",  # 径向波函数二进制文件
+            "MIX_COEFFICIENT": f"*{self.level_parameter}*{self.this_as}.m",  # 混合系数文件
+            "CI_MIX_COEFFICIENT": f"*{self.level_parameter}*{self.this_as}.cm",  # 混合系数文件
+            "DENSITY": f"*{self.level_parameter}*{self.this_as}.cd",  # 密度文件
+            "Configuration_state_functions": f"*{self.level_parameter}*{self.this_as}.c"  # CSF配置文件
+        }
+
 
     # the function "file_read" has two input arguments: the file name and the number of columns
     # the function "file_read" returns the data array
@@ -92,12 +103,21 @@ class GraspFileLoad:
         
         with open(self.load_file_path, 'rb') as binary_file:
             
-            temp_int = binary_file.read(4)
+            # temp_int = binary_file.read(4)
             
-            title_bin = binary_file.read(6)                 # read (3) title*6
-            title = struct.unpack('6s', title_bin)
-            print(title[0])
-            temp_int = binary_file.read(4)
+            # title_bin = binary_file.read(6)                 # read (3) title*6
+            # title = struct.unpack('6s', title_bin)
+
+            # print(f"g92mix: {title[0]}")  # Debugging print
+            
+            # if title != 'G92RWF':
+            #     raise ValueError('Not a radial wavefunction file!')
+            # temp_int = binary_file.read(4)
+            
+            g92rwf = read_fortran_record(binary_file, dtype=np.dtype('S6')).tobytes().decode('utf-8').strip()
+            if g92rwf != 'G92RWF':
+                raise ValueError('Not a radial wavefunction file!')
+            
             
             while True:
                 
@@ -340,7 +360,11 @@ class GraspFileLoad:
             return self.radial_wavefunction_data
         
         elif "MIX" in self.file_type.upper() or "COEF" in self.file_type.upper():
-            self.file_type = "MIX_COEFFICIENT"
+            if "CI" in self.file_type.upper():
+                self.file_type = "CI_MIX_COEFFICIENT"
+            else:
+                self.file_type = "MIX_COEFFICIENT"
+
             self.mix_coefficient_dict = {}
 
             if self.data_file_path:

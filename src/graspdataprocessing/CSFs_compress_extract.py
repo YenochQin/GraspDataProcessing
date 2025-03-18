@@ -11,14 +11,18 @@ import numpy as np
 import pandas as pd
 # from pathlib import Path
 from tqdm import tqdm
-from .data_IO import GraspFileLoad
+import random
 import re
 from typing import Dict, Tuple, List
 
+from .data_IO import GraspFileLoad
+from .tool_function import *
 
-################################################################
+
+#######################################################################
 # CSFs source data compress to a simplified form
-################################################################
+#######################################################################
+
 
 def subshell_charged_state(subshell_CSF: str) -> Dict[str, str]:
     """
@@ -49,9 +53,9 @@ def if_subshell_full_charged(subshell_name: str, subshell_charged_num: int) -> b
     }
     return full_charged.get(subshell_name, 0) == subshell_charged_num
 
-def CSF_subshell_split(CSF: str) -> Dict[str, int]:
+def CSF_subshell_split(CSFs_configuration_raw: str) -> Dict[str, int]:
 
-    subshells_charged = re.split(r'(\d*\w[\s|-]\(\s\d*\))', CSF)
+    subshells_charged = re.split(r'(\d*\w[\s|-]\(\s\d*\))', CSFs_configuration_raw)
     print(subshells_charged)
     
     subshells_charged = [item for item in subshells_charged if item.strip()]
@@ -78,38 +82,44 @@ def CSF_subshell_split(CSF: str) -> Dict[str, int]:
         'fully_charged_subshell': subshell_fully_charged
         }
 
-def simplify_orbital_string(original_str):
-    kappa_value = {
-        "s ": -1,
-        "p-": 1,
-        "p ": -2,
-        "d-": 2,
-        "d ": -3,
-        "f-": 3,
-        "f ": -4,
-        "g-": 4,
-        "g ": -5,
-        "h-": 5,
-        "h ": -6,
-        "i-": 6,
-        "i ": -7
-    }
-    
-    # 改进正则：使用更严格的分隔符匹配
-    pattern = re.compile(r'(\d+)([a-z][ -]?)\s*\(\s*(\d+)\s*\)')
-    simplified = []
-    
-    for match in re.finditer(pattern, original_str):
-        n, orbital, value = match.groups()
-        # 标准化轨道符号格式
-        orbital = orbital.replace(' ', '').rstrip('-') + ('-' if '-' in orbital else ' ')
-        if orbital not in kappa_value:
-            continue
-        simplified.append(f"{int(n)}|{kappa_value[orbital]}|{value}")
-    
-    return ' '.join(simplified)
+#######################################################################
 
-def desimplify_orbital_string(simplified_str):
+def CSF_subshell_compress(CSF_configuration_raw: str):
+    '''
+    compress CSF subshell from
+      5s ( 2)  4d-( 4)  4d ( 6)  5p-( 2)  5p ( 4)  6s ( 2)  4f-( 1)  4f ( 6)  5d ( 1)
+    to
+    '5|-1|2;4|2|4;4|-3|6;5|1|2;5|-2|4;6|-1|2;4|3|1;4|-4|6;5|-3|1;'
+    '''
+    subshells_charged = re.split(r'(\d*\w[\s|-]\(\s\d*\))', CSF_configuration_raw)
+    subshells_charged = [item for item in subshells_charged if item.strip()]
+    
+    print(subshells_charged)
+    compressed_CSF = ''
+    
+    for subshell in subshells_charged:
+        temp_subshell_charged_state = subshell_charged_state(subshell)
+        temp_subshell_kappa = str_subshell_2_kappa(temp_subshell_charged_state['subshell_name'])
+        compressed_CSF += f'{temp_subshell_charged_state['subshell_main_quantum_num']}|{temp_subshell_kappa}|{temp_subshell_charged_state['subshell_charged_num']};'
+
+    return compressed_CSF
+
+def CSF_compress(CSF_raw: List):
+    '''
+    compress CSF
+    '''
+    if len(CSF_raw) != 3:
+        raise ValueError("CSF_raw need to be 3 line")
+
+    return CSF_subshell_compress(CSF_raw[0]) + CSF_raw[1:]
+
+def CSF_subshell_extract(simplified_str):
+    '''
+    extract CSF subshell from
+    '5|-1|2;4|2|4;4|-3|6;5|1|2;5|-2|4;6|-1|2;4|3|1;4|-4|6;5|-3|1;'
+    to 
+      5s ( 2)  4d-( 4)  4d ( 6)  5p-( 2)  5p ( 4)  6s ( 2)  4f-( 1)  4f ( 6)  5d ( 1)
+    '''
     reverse_kappa = {
         -1: "s ",
         1: "p-",
@@ -126,18 +136,20 @@ def desimplify_orbital_string(simplified_str):
         -7: "i "
     }
     
-    items = simplified_str.split()
+    items = simplified_str.split(';')
     restored = []
     
     for item in items:
         try:
             n, kappa, value = item.split('|')
             orbital_key = reverse_kappa.get(int(kappa), "")
-            restored.append(f"{n}{orbital_key.strip()} ({value})")
+            restored.append(f"{n}{orbital_key}({value})")
         except:
             continue
     
     return '  '.join(restored)
+
+#######################################################################
 
 def subshells_J_value_parser(subshells_J_value: str, subshell_unfully_charged: Dict[str, int]) -> Dict[str, str]:
 
@@ -165,25 +177,45 @@ def CSF_item_2_dict(CSF_item_list: List[str]) -> Dict:
 
 
 def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
+    """
+    Process CSF file data and extract structured information.
     
+    Args:
+        CSFs_file_data: Raw CSF data list containing subshell info and CSFs entries
+    
+    Returns:
+        Dictionary containing:
+        - raw_subshell_info: Original header lines
+        - parsed subshell parameters (n, orbitals, etc.)
+        - star_indices: Positions of CSF separators
+        - CSFs_j_value: Collected J-values from CSFs
+    """
+    # Extract first 4 lines containing subshell information
     subshell_info = CSFs_file_data[0:4]
     
     CSFs_file_info = {}
     CSFs_file_info['raw_subshell_info'] = subshell_info
+    
+    # Process subshell info pairs (parameter name + values)
     for i in range(0, len(subshell_info), 2):
-        key = subshell_info[i].rstrip(':')      # 去掉键中的冒号
-        value = subshell_info[i + 1].split()
+        key = subshell_info[i].rstrip(':')      # Remove colon from key
+        value = subshell_info[i + 1].split()    # Split values into list
         CSFs_file_info[key] = value
 
+    # Find all CSF separators ('*') in the data
     star_indices = [index for index, value in enumerate(CSFs_file_data) if value == '*']
     CSFs_file_info['star_indices'] = star_indices
     
-    
+    # Collect J-values preceding each separator and the final value
     CSFs_j_value = []
     for index in star_indices:
-        CSFs_j_value.append(CSFs_file_data[index-1])
+        CSFs_j_value.append(CSFs_file_data[index-1])  # Get value before separator
         
-    CSFs_j_value.append(CSFs_file_data[-1])
+    CSFs_j_value.append(CSFs_file_data[-1])  # Add final value after last CSF
     CSFs_file_info['CSFs_j_value'] = CSFs_j_value
 
     return CSFs_file_info
+
+#######################################################################
+
+

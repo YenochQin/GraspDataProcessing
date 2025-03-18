@@ -6,139 +6,141 @@
 @author :YenochQin (秦毅)
 '''
 
+import numpy as np
+import pandas as pd
+# from pathlib import Path
+from tqdm import tqdm
+from .data_IO import GraspFileLoad
+import re
+from typing import Dict, Tuple, List
+
+#######################################################################
+
+def split_by_asterisk(lines):
+    """
+    将列表按单独一个星号行分割为二维列表
+    
+    :param lines: readlines 读取的列表
+    :param keep_empty: 是否保留空块（默认过滤）
+    :return: 二维列表，例如 [[块1行], [块2行], ...]
+    """
+    result = []
+    current_chunk = []
+    
+    for line in lines:
+        # 严格匹配：仅当行内容为单个星号（含换行符）
+        if line.strip() == "*":
+            result.append(current_chunk)
+            current_chunk = []
+        else:
+            current_chunk.append(line)  # 可选：去除换行符
+    
+    # 添加最后一个块
+    result.append(current_chunk)
+    
+    return result
+
+
+def shuffle_three_line_groups(lst):
+    """
+    将列表按每三行一组随机打乱顺序
+    示例输入格式：
+    ['行1', '行2', '行3', '行4', '行5', '行6', ...]
+    输出格式：
+    ['行4', '行5', '行6', '行1', '行2', '行3', ...]
+    """
+    # 检查是否能被3整除
+    if len(lst) % 3 != 0:
+        raise ValueError("列表长度必须是3的倍数")
+
+    # 将列表分成三元组
+    groups = [lst[i:i+3] for i in range(0, len(lst), 3)]
+    
+    # 打乱组顺序
+    random.shuffle(groups)
+    
+    # 重新展开为平铺列表
+    shuffled = [line for group in groups for line in group]
+    
+    return shuffled
+
+
 
 def mix_data_abs_above_threshold(mix_data_array: np.ndarray, threshold=0.1):
-    # 1. 生成布尔掩码：绝对值是否超过阈值（0.1）
+    """
+    筛选并排序混合数据中绝对值超过阈值的元素
+    
+    参数：
+        mix_data_array: 输入的混合数据数组
+        threshold: 阈值，默认0.1
+        
+    返回：
+        按绝对值降序排列的元组列表，每个元组包含：
+        (元素值, 对应索引数组)
+    """
+    # 生成布尔掩码标识绝对值超过阈值的元素
     abs_above_threshold_mask = np.abs(mix_data_array) > threshold
 
-    # 2. 提取满足条件的数值：绝对值超过阈值的元素值
+    # 提取超过阈值的实际值
     values_above_threshold = mix_data_array[abs_above_threshold_mask]
 
-    # 3. 提取满足条件的索引：满足条件的多维坐标
+    # 获取满足条件的元素索引（返回二维坐标数组）
     indices_where_abs_above_threshold = np.argwhere(abs_above_threshold_mask)
 
-    # 组合结果（可选）
+    # 将值和索引配对组合
     result_pairs = list(zip(values_above_threshold, indices_where_abs_above_threshold))
     
+    # 按元素绝对值降序排序
     sorted_result = sorted(result_pairs, key=lambda x: abs(x[0]), reverse=True)
     
     return sorted_result
 
-def csf_mix_above_threshold_coupling_info(mix_data_above_threshold_list: List, csf_data_list: List):
+# def csf_mix_above_threshold_coupling_info(mix_data_above_threshold_list: List, csf_data_list: List):
     
-    csf_coupling_info = []
+#     csf_coupling_info = []
     
-    for i in mix_data_above_threshold_list:
+#     for i in mix_data_above_threshold_list:
 
 
 
-def count_prim_pool(flnm_full, flnm_head):
-    with open(flnm_full, "r") as f_full:
-        with open(flnm_head, "r") as f_head:
-            for _ in range(0, 5):
-                f_head.readline()
-                f_full.readline()
 
-            csfs_prim_num = 0
-            while True:
-                ln = f_head.readline()
-                if not ln:
-                    break
-                else:
-                    f_head.readline()
-                    f_head.readline()
-                    # 这里不再跳过 flnm_full 中的对应行
-                    csfs_prim_num += 1
 
-        csfs_pool_num = 0
-        while True:
-            ln = f_full.readline()
-            if not ln:
-                break
-            else:
-                f_full.readline()
-                f_full.readline()
-                csfs_pool_num += 1
 
-    return csfs_prim_num, csfs_pool_num
 
-# 读取文件并删除每行的第一个字符
-def remove_first_char_from_file(input_file, output_file):
-    with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
-        for line in infile:
-            # 删除每行的第一个字符，并写入到新文件
-            outfile.write(line[1:])
 
-def extract_confinfo_part_ind(filename,cmin):
-    """
-    从指定文件中逐行提取编号、CI系数和组态。
-    返回一个包含编号、CI系数和组态的列表。
-    """
-    pattern = r"^\s*(\d+)\s+([+-]?\d*\.?\d+)\s*$"
-    curr_index_ci_conf = []
-    current_block = []
-    current_ci = 0
-    current_index = 0
 
-    with open(filename, 'r') as file:
-        for line in file:
-            match = re.match(pattern, line)
 
-            if match:
-                # 如果在一个组态块中，保存符合条件的块
-                if current_block and current_ci != 0:
-                    curr_index_ci_conf.append((current_index, current_ci, "".join(current_block)))
-                
-                # 开始新的组态块（不包括匹配行），将 current_index 转换为 int
-                current_index = int(match.group(1))
-                current_ci = float(match.group(2))
-                current_block = []  # 清空组态块
-            elif current_block or line.strip():  # 处理组态行
-                current_block.append(line)  # 保留原始行内容
-    
-    # 处理最后一个组态块
-    if current_block and current_ci != 0:
-        curr_index_ci_conf.append((current_index, current_ci, "".join(current_block)))
+
+
+#######################################################################
+
+
+# def main():
+#     if len(sys.argv) != 2:
+#         print("用法: python test.py <文件名>")
+#         sys.exit(1)
         
-    # 根据CI系数的平方进行筛选
-    part_ind = [int(item[0]) for item in curr_index_ci_conf if item[1] ** 2 >= cmin]
-    part_ind = np.array(part_ind)  # 转为numpy数组
+#     csf_file = sys.argv[1]
+#     load_csf_data = []
+#     with open(csf_file, 'r') as load_csf_file:
+#         load_csf_data = load_csf_file.readlines()
 
-    return curr_index_ci_conf, part_ind
 
-def generate_onoff(basis_size, csfs_prim_num, part_ind):
-    onoff = np.zeros(basis_size, dtype=bool)
-    onoff[part_ind-1] = True
-    onoff[csfs_prim_num:] = True
-    mark_train = onoff.copy()
-    mark_apply = ~onoff
-    true_count = np.count_nonzero(onoff)
-    return onoff, mark_train, mark_apply, true_count
+#     csf_list = load_csf_data[5:]
 
-def generate_import_onoff(csfs_prim_num, part_ind):
-    onoff = np.zeros(csfs_prim_num, dtype=bool)
-    onoff[part_ind-1] = True
-    mark_train = onoff.copy()
-    mark_apply = ~onoff
-    return onoff, mark_train, mark_apply
+#     csf_block_list = split_by_asterisk(csf_list)
+#     print(len(csf_block_list[0]), len(csf_block_list[1]), len(csf_block_list[2]))
+    
+#     csf_random_list = []
+#     for block in csf_block_list:
+#         csf_random_list.append(shuffle_three_line_groups(block))
+        
+#     with open(f'random.c', 'w') as write_csf_file:
+#         write_csf_file.write(''.join(load_csf_data[:5]))
+#         for index, block in enumerate(csf_random_list):
+#             write_csf_file.write(''.join(block))
+#             if index != len(csf_random_list) - 1:
+#                 write_csf_file.write(' *\n')
 
-def write_atcomp_input(curr_grasp_inp, full_grasp_inp, basis_size, onoff):
-    with open(curr_grasp_inp, "w") as f_curr:
-        with open(full_grasp_inp, "r") as f_full:
-            # 先写入full_grasp_inp文件的前5行
-            for _ in range(5):
-                ln = f_full.readline()
-                f_curr.write(ln)
-            
-            # 继续按照onoff[csfs_ind]的信息写入
-            for csfs_ind in range(basis_size):
-                ln1 = f_full.readline()
-                ln2 = f_full.readline()
-                ln3 = f_full.readline()
-
-                if onoff[csfs_ind]:
-                    f_curr.write(ln1)
-                    f_curr.write(ln2)
-                    f_curr.write(ln3)
-                    
-    return None
+# if __name__ == "__main__":
+#     main()
