@@ -231,8 +231,14 @@ class GraspFileLoad:
                 
                 # READ (3) eav, (eval(i+ncountState), i = 1, nevblk)
                 eva_evals = read_fortran_record(binary_file, dtype=np.float64, count=nevblk+1)
+
                 eva = eva_evals[0]
                 evals = eva_evals[1:]
+
+                if ncfblk != len(evals):
+                    raise ValueError('''ncfblk: number of configuration functions in block
+            len(evals): number of eigenvalues in block
+            ncfblk should equal len(evals)''')
 
                 self.block_energy_list.append(eva)
                 self.block_level_energy_list.append(evals)

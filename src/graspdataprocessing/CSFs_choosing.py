@@ -58,13 +58,13 @@ def csf_mix_data_abs_above_threshold(level_mix_data: Dict, threshold=0.1):
             
     return level_mix_data
 
-# def csf_mix_above_threshold_coupling_info(mix_data_above_threshold_list: List, csf_data_list: List):
+def level_mix_above_threshold_coupling_info(mix_data_above_threshold_list: List, csf_data_list: List):
     
-#     csf_coupling_info = []
+    csf_coupling_info = []
 
-#     mix_data_dim = mix_data_above_threshold_list.shape[0]
+    mix_data_dim = mix_data_above_threshold_list.shape[0]
     
-#     for i in mix_data_dim:
+    for i in mix_data_dim:
         
 
 
