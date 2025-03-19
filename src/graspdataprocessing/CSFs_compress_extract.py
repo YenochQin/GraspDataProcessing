@@ -151,10 +151,16 @@ def CSF_subshell_extract(simplified_str):
 
 #######################################################################
 
-def subshells_J_value_parser(subshells_J_value: str, subshell_unfully_charged: Dict[str, int]) -> Dict[str, str]:
-
-    subshells_J_value_list = re.findall(r'\S+', subshells_J_value)
-    return {key: value for key, value in zip(subshell_unfully_charged.keys(), subshells_J_value_list)}
+def CSF_J(csf_3rd_line: str):
+    '''
+    extract J from CSF 3rd line
+    '''
+    J_parity = re.search(r'(\d+)([+-])\n', csf_3rd_line)
+    
+    if J_parity:
+        J_value = J_parity.group(1)
+        parity = J_parity.group(2)
+        return J_value, parity
 
 
 def CSF_item_2_dict(CSF_item_list: List[str]) -> Dict:
@@ -203,19 +209,94 @@ def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
         CSFs_file_info[key] = value
 
     # Find all CSF separators ('*') in the data
-    star_indices = [index for index, value in enumerate(CSFs_file_data) if value == '*']
+    star_indices = []
+    for index, value in enumerate(CSFs_file_data):
+        if '*' in value:
+            star_indices.append(index)
     CSFs_file_info['star_indices'] = star_indices
-    
+
     # Collect J-values preceding each separator and the final value
     CSFs_j_value = []
+    CSFs_block_parity = []
+    prev_index = 5
+    CSFs_file_info['CSFs_block_data'] = []  # 初始化 CSFs_block_data 列表
+
     for index in star_indices:
-        CSFs_j_value.append(CSFs_file_data[index-1])  # Get value before separator
-        
-    CSFs_j_value.append(CSFs_file_data[-1])  # Add final value after last CSF
+        temp_j_value, temp_parity = CSF_J(CSFs_file_data[index - 1])
+        CSFs_j_value.append(temp_j_value)
+        CSFs_block_parity.append(temp_parity)
+        # 处理每个块的数据，而不是一次性存储所有块
+        block_data = CSFs_file_data[prev_index:index]
+        if len(block_data) % 3 != 0:
+            raise ValueError("CSFs_list length must be a multiple of 3")
+        CSFs_file_info['CSFs_block_data'].append(block_data)  # 添加当前块的数据
+        prev_index = index + 1
+
+    temp_j_value, temp_parity = CSF_J(CSFs_file_data[-1])
+    CSFs_j_value.append(temp_j_value)
+    CSFs_block_parity.append(temp_parity)
     CSFs_file_info['CSFs_j_value'] = CSFs_j_value
+
+    CSFs_parity = set(CSFs_block_parity)
+    if len(CSFs_parity) == 1:
+        CSFs_file_info['parity'] = list(CSFs_parity)[0]
+
+    # 处理最后一个块的数据
+    last_block_data = CSFs_file_data[prev_index:]
+    if len(last_block_data) % 3 != 0:
+        raise ValueError("CSFs_list length must be a multiple of 3")
+    CSFs_file_info['CSFs_block_data'].append(last_block_data)  # 添加最后一个块的数据
 
     return CSFs_file_info
 
 #######################################################################
 
 
+
+def split_by_asterisk(lines):
+    """
+    将列表按单独一个星号行分割为二维列表
+    
+    :param lines: readlines 读取的列表
+    :param keep_empty: 是否保留空块（默认过滤）
+    :return: 二维列表，例如 [[块1行], [块2行], ...]
+    """
+    result = []
+    current_chunk = []
+    
+    for line in lines:
+        # 严格匹配：仅当行内容为单个星号（含换行符）
+        if line.strip() == "*":
+            result.append(current_chunk)
+            current_chunk = []
+        else:
+            current_chunk.append(line)  # 可选：去除换行符
+    
+    # 添加最后一个块
+    result.append(current_chunk)
+    
+    return result
+
+
+def shuffle_three_line_groups(lst):
+    """
+    将列表按每三行一组随机打乱顺序
+    示例输入格式：
+    ['行1', '行2', '行3', '行4', '行5', '行6', ...]
+    输出格式：
+    ['行4', '行5', '行6', '行1', '行2', '行3', ...]
+    """
+    # 检查是否能被3整除
+    if len(lst) % 3 != 0:
+        raise ValueError("列表长度必须是3的倍数")
+
+    # 将列表分成三元组
+    groups = [lst[i:i+3] for i in range(0, len(lst), 3)]
+    
+    # 打乱组顺序
+    random.shuffle(groups)
+    
+    # 重新展开为平铺列表
+    shuffled = [line for group in groups for line in group]
+    
+    return shuffled

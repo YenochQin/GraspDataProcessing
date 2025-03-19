@@ -16,57 +16,10 @@ from typing import Dict, Tuple, List
 
 #######################################################################
 
-def split_by_asterisk(lines):
-    """
-    将列表按单独一个星号行分割为二维列表
-    
-    :param lines: readlines 读取的列表
-    :param keep_empty: 是否保留空块（默认过滤）
-    :return: 二维列表，例如 [[块1行], [块2行], ...]
-    """
-    result = []
-    current_chunk = []
-    
-    for line in lines:
-        # 严格匹配：仅当行内容为单个星号（含换行符）
-        if line.strip() == "*":
-            result.append(current_chunk)
-            current_chunk = []
-        else:
-            current_chunk.append(line)  # 可选：去除换行符
-    
-    # 添加最后一个块
-    result.append(current_chunk)
-    
-    return result
-
-
-def shuffle_three_line_groups(lst):
-    """
-    将列表按每三行一组随机打乱顺序
-    示例输入格式：
-    ['行1', '行2', '行3', '行4', '行5', '行6', ...]
-    输出格式：
-    ['行4', '行5', '行6', '行1', '行2', '行3', ...]
-    """
-    # 检查是否能被3整除
-    if len(lst) % 3 != 0:
-        raise ValueError("列表长度必须是3的倍数")
-
-    # 将列表分成三元组
-    groups = [lst[i:i+3] for i in range(0, len(lst), 3)]
-    
-    # 打乱组顺序
-    random.shuffle(groups)
-    
-    # 重新展开为平铺列表
-    shuffled = [line for group in groups for line in group]
-    
-    return shuffled
 
 
 
-def mix_data_abs_above_threshold(mix_data_array: np.ndarray, threshold=0.1):
+def level_mix_data_abs_above_threshold(level_mix_data_array: np.ndarray, threshold=0.1):
     """
     筛选并排序混合数据中绝对值超过阈值的元素
     
@@ -94,6 +47,17 @@ def mix_data_abs_above_threshold(mix_data_array: np.ndarray, threshold=0.1):
     
     return sorted_result
 
+def csf_mix_data_abs_above_threshold(level_mix_data: Dict, threshold=0.1):
+
+    for block in range(level_mix_data['CSFs_blocks_num']):
+        block_level_num = len(level_mix_data['mix_coefficient_list'][block])
+    
+        for i in range(block_level_num):
+            temp_coeff = level_mix_data_abs_above_threshold(level_mix_data['mix_coefficient_list'][block][i], threshold=0.1)
+            level_mix_data[f'block{block}_No{i}'] = temp_coeff
+            
+    return level_mix_data
+
 # def csf_mix_above_threshold_coupling_info(mix_data_above_threshold_list: List, csf_data_list: List):
     
 #     csf_coupling_info = []
@@ -109,6 +73,12 @@ def mix_data_abs_above_threshold(mix_data_array: np.ndarray, threshold=0.1):
 
 
 
+
+
+
+
+
+#######################################################################
 
 
 

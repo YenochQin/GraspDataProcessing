@@ -48,8 +48,8 @@ class GraspFileLoad:
         
         # 处理文件路径逻辑
         self.file_name = data_file_info.get("file_name")
-        if Path(self.file_name).is_file():
-            self.data_file_path = Path(self.file_name)  # 直接使用完整路径
+        if Path(self.file_dir).is_file():
+            self.data_file_path = Path(self.file_dir)  # 直接使用完整路径
         elif isinstance(self.file_name, str) and self.file_name:
             self.data_file_path = self.data_file_dir / self.file_name  # 路径拼接
         else:
@@ -197,18 +197,15 @@ class GraspFileLoad:
         with open(self.load_file_path, 'rb') as binary_file:
 
             g92mix = read_fortran_record(binary_file, dtype=np.dtype('S6')).tobytes().decode('utf-8').strip()
-
-            print(f"g92mix: {g92mix}")  # Debugging print
-            
             if g92mix != 'G92MIX':
                 raise ValueError('Not a mixing coefficient file!')
+            print(f"g92mix: {g92mix}")  # Debugging print
 
             # READ (nfmix) nelec, ncftot, nw, nvectot, nvecsiz, nblock
             header_data = read_fortran_record(binary_file, dtype=np.int32, count=6)
             # nelec -> num_electron, ncftot -> total_num_configuration, nw -> NW, ncmin -> ncmin, nvecsiz -> nvecsiz, nblock -> num_block
             self.num_electron, self.total_num_configuration, self.NW, self.ncmin, self.nvecsiz, self.num_block = header_data
 
-            print("title=", g92mix)
             print(f" nblock = {self.num_block},       ncftot =   {self.total_num_configuration},          nw =  {self.NW},            nelec =   {self.num_electron}")
             for jblock in tqdm(range(1, self.num_block+1)):
                 print('cycle jblock =',jblock)
@@ -248,7 +245,7 @@ class GraspFileLoad:
 
                 # temp_int = binary_file.read(4)  
 
-        return self.index_block_list, self.ncfblk_list, self.block_energy_count_list, self.j_value_location_list, self.parity_list, self.ivec_list, self.block_energy_list, self.block_level_energy_list, self.mix_coefficient_list
+        return self.num_block, self.index_block_list, self.ncfblk_list, self.block_energy_count_list, self.j_value_location_list, self.parity_list, self.ivec_list, self.block_energy_list, self.block_level_energy_list, self.mix_coefficient_list
 
     def grasp_data_file_location(self):
         if self.data_file_dir.rglob(f"{self.file_keyword[self.file_type]}"):
@@ -398,6 +395,7 @@ class GraspFileLoad:
                     print(f"{i+1:3}{temp_pos[level_index[i]]:3}{temp_J[level_index[i]]:>4}   {temp_parity[level_index[i]]:1}    {temp_energy[level_index[i]]:14.7f}{energy_au_cm(temp_energy[level_index[i]]-temp_energy[level_index[0]]):12.2f}")
                 
             mix_file_data = {
+                'CSFs_blocks_num': self.num_block,
                 "index_block_list": self.index_block_list,
                 'ncfblk_list': self.ncfblk_list,
                 'block_energy_count_list': self.block_energy_count_list,
