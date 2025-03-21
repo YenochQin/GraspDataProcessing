@@ -6,13 +6,19 @@
 @author :YenochQin (秦毅)
 '''
 import sys
+import re
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import re
-from tqdm import tqdm
-from .tool_function import *
 import struct
+
+from tqdm import tqdm
+
+from .tool_function import *
+from .CSFs_compress_extract import *
+from .CSFs_choosing import *
+
 # import csv
 # the class "GraspFileLoad" is used to load the data file
 class GraspFileLoad:
@@ -234,18 +240,17 @@ class GraspFileLoad:
 
                 eva = eva_evals[0]
                 evals = eva_evals[1:]
-
-                if ncfblk != len(evals):
-                    raise ValueError('''ncfblk: number of configuration functions in block
-            len(evals): number of eigenvalues in block
-            ncfblk should equal len(evals)''')
-
                 self.block_energy_list.append(eva)
                 self.block_level_energy_list.append(evals)
 
                 # READ (3) (evec, i = 1, ncfblk*nevblk)
                 evecsblock = read_fortran_record(binary_file, dtype=np.float64, count=nevblk * ncfblk)
                 evecs = evecsblock.reshape(nevblk, ncfblk)
+
+                if ncfblk != len(evecs[0]):
+                    raise ValueError('''ncfblk: number of configuration functions in block
+            len(evecs[0]): number of level eigenvalues in block
+            ncfblk should equal len(evecs[0])''')
 
                 self.mix_coefficient_list.append(evecs)
 
@@ -441,8 +446,11 @@ class GraspFileLoad:
                 self.load_file_path = Path(self.data_file_dir).joinpath(self.file_name)
                 
             temp_CSFs_data = GraspFileLoad.file_read(self)
+            print(temp_CSFs_data)
             
-            return temp_CSFs_data
+            self.csf_data_dict = get_CSFs_file_info(temp_CSFs_data)
+            
+            return self.csf_data_dict
 
         else:
             return 0

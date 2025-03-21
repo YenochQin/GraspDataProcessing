@@ -7,12 +7,13 @@
 
 @version 1.0: Object Oriented Programming modified from level_data_collection.py
 '''
+import re
 
 import numpy as np
 import pandas as pd
-# from pathlib import Path
-import re
+
 from tqdm import tqdm
+
 from .data_IO import GraspFileLoad, EnergyFile2csv
 
 #######################################################################

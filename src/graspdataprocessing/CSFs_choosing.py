@@ -5,14 +5,16 @@
 @date :2024/08/02 20:38:24
 @author :YenochQin (秦毅)
 '''
+import re
+from typing import Dict, Tuple, List
 
 import numpy as np
 import pandas as pd
-# from pathlib import Path
+
 from tqdm import tqdm
-from .data_IO import GraspFileLoad
-import re
-from typing import Dict, Tuple, List
+
+from .CSFs_compress_extract import *
+
 
 #######################################################################
 
@@ -31,10 +33,10 @@ def level_mix_data_abs_above_threshold(level_mix_data_array: np.ndarray, thresho
         按绝对值降序排列的字典，键为索引数组（转换为元组），值为对应元素值
     """
     # 生成布尔掩码标识绝对值超过阈值的元素
-    abs_above_threshold_mask = np.abs(mix_data_array) > threshold
+    abs_above_threshold_mask = np.abs(level_mix_data_array) > threshold
 
     # 提取超过阈值的实际值
-    values_above_threshold = mix_data_array[abs_above_threshold_mask]
+    values_above_threshold = level_mix_data_array[abs_above_threshold_mask]
 
     # 获取满足条件的元素索引（返回二维坐标数组）
     indices_where_abs_above_threshold = np.argwhere(abs_above_threshold_mask)
@@ -58,14 +60,21 @@ def csf_mix_data_abs_above_threshold(level_mix_data: Dict, threshold=0.1):
             
     return level_mix_data
 
-def level_mix_above_threshold_coupling_info(mix_data_above_threshold_list: List, csf_data_list: List):
-    
+def level_mix_above_threshold_coupling_info(mix_data_above_threshold: Dict, csf_data_list: List):
+    csf_list = []
+    csf_mid_coupling_info = []
     csf_coupling_info = []
 
-    mix_data_dim = mix_data_above_threshold_list.shape[0]
-    
-    for i in mix_data_dim:
         
+    for key, value in mix_data_above_threshold.items():
+        temp_csf_data = CSFs_block_get_CSF(csf_data_list, key)
+        csf_list.append(temp_csf_data[0])
+        temp_csf_data_dict = CSF_item_2_dict(temp_csf_data)
+        
+        csf_mid_coupling_info.append(temp_csf_data_dict['temp_coupled_j'])
+        csf_coupling_info.append(temp_csf_data_dict['final_coupled_j_parity'])
+
+    return csf_list, csf_mid_coupling_info, csf_coupling_info
 
 
 
@@ -79,6 +88,23 @@ def level_mix_above_threshold_coupling_info(mix_data_above_threshold_list: List,
 
 
 #######################################################################
+
+def CSFs_block_get_CSF(CSFs_block: List, CSf_index: Tuple) -> List:
+    """
+    根据CSF的索引获取对应的CSF
+
+    参数：
+        CSFs_block: 包含CSF的列表
+        CSf_index: 要获取的CSF的索引，元组形式
+
+    返回：
+        对应的CSF，如果索引无效则返回None
+    """
+    # 检查索引是否有效
+    if CSf_index[0] < 0 and len(CSFs_block)%3 == 0:
+        raise ValueError("CSF index must be non-negative, and CSFs_block length must be a multiple of 3.")
+    
+    return CSFs_block[CSf_index[0]*3:CSf_index[0]*3+3]
 
 
 

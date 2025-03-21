@@ -8,10 +8,11 @@
 @version 1.0: Object Oriented Programming modified from transition_data2csv.py
 '''
 
+import re
 
 import numpy as np
 import pandas as pd
-import re
+
 from tqdm import tqdm
 
 from .data_IO import GraspFileLoad
