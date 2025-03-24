@@ -161,18 +161,34 @@ def CSF_J(csf_3rd_line: str):
         return J_value, parity
 
 
-def CSF_item_2_dict(CSF_item_list: List[str]) -> Dict:
+def CSF_info_2_dict(CSF_item_list: List[str]) -> Dict:
 
     # 解析 subshell 信息
-    CSF_item_dict = CSF_subshell_split(CSF_item_list[0])
+    CSF_info_dict = CSF_subshell_split(CSF_item_list[0])
     
     # 添加 temp_coupled_j 和 final_coupled_j_parity
-    CSF_item_dict.update({
+    CSF_info_dict.update({
         'temp_coupled_j': CSF_item_list[1],
         'final_coupled_j_parity': CSF_item_list[2],
     })
     
     # 解析 final_coupled_j_parity 中的 J 和 parity
+    j_p = CSF_item_list[2].split()[-1]  # 提取 J 和 parity 部分
+    CSF_info_dict['parity'] = j_p[-1]   # parity 是最后一个字符
+    CSF_info_dict['J'] = j_p[:-1]       # J 是 parity 之前的部分
+    
+    return CSF_info_dict
+
+def CSF_item_2_dict(CSF_item_list: List[str]) -> Dict:
+
+    CSF_item_dict = {}
+    
+    CSF_item_dict.update({
+        'subshell_raw': CSF_item_list[0],
+        'temp_coupled_j': CSF_item_list[1],
+        'final_coupled_j_parity': CSF_item_list[2],
+    })
+
     j_p = CSF_item_list[2].split()[-1]  # 提取 J 和 parity 部分
     CSF_item_dict['parity'] = j_p[-1]   # parity 是最后一个字符
     CSF_item_dict['J'] = j_p[:-1]       # J 是 parity 之前的部分

@@ -444,9 +444,10 @@ class GraspFileLoad:
             else:
                 self.file_name = f"*{self.this_as}.c"
                 self.load_file_path = Path(self.data_file_dir).joinpath(self.file_name)
-                
-            temp_CSFs_data = GraspFileLoad.file_read(self)
-            print(temp_CSFs_data)
+            
+            # GraspFileLoad.file_read(self) module cannot be utilized here, as the parsing of CSFs files serves exclusively for CSF refinement purposes, and preservation of trailing newline characters is mandatory.
+            with open(self.load_file_path, 'r') as temp_load_file:
+                temp_CSFs_data = temp_load_file.readlines()
             
             self.csf_data_dict = get_CSFs_file_info(temp_CSFs_data)
             
