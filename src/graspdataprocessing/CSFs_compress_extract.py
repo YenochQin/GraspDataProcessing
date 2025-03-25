@@ -314,3 +314,53 @@ def shuffle_three_line_groups(lst):
     shuffled = [line for group in groups for line in group]
     
     return shuffled
+
+
+class CSFs:
+
+    def __init__(self, csfs_data_list_raw: List):
+
+        self.csfs_file_data = csfs_data_list_raw
+        self.csfs_file_info = get_CSFs_file_info(self.csfs_file_data)
+        self.CSFs_j_value = self.csfs_file_info.get('CSFs_j_value')
+        self.parity = self.csfs_file_info.get('parity')
+        self.CSFs_block_data = self.csfs_file_info.get('CSFs_block_data')
+        self.CSFs_block_length = []
+        for i in range(len(self.CSFs_block_data)):
+            self.CSFs_block_length.append(int(len(self.CSFs_block_data[i])/3))
+        
+    
+    def CSF_info_2_dict(self, CSF_item_list: List[str]) -> Dict:
+
+        # 解析 subshell 信息
+        self.CSF_info_dict = CSF_subshell_split(CSF_item_list[0])
+        
+        # 添加 temp_coupled_j 和 final_coupled_j_parity
+        self.CSF_info_dict.update({
+            'temp_coupled_j': CSF_item_list[1],
+            'final_coupled_j_parity': CSF_item_list[2],
+        })
+        
+        # 解析 final_coupled_j_parity 中的 J 和 parity
+        j_p = CSF_item_list[2].split()[-1]  # 提取 J 和 parity 部分
+        self.CSF_info_dict['parity'] = j_p[-1]   # parity 是最后一个字符
+        self.CSF_info_dict['J'] = j_p[:-1]       # J 是 parity 之前的部分
+        
+        return self.CSF_info_dict
+
+    def CSF_item_2_dict(self, CSF_item_list: List[str]) -> Dict:
+
+        self.CSF_item_dict = {}
+        
+        self.CSF_item_dict.update({
+            'subshell_raw': CSF_item_list[0],
+            'temp_coupled_j': CSF_item_list[1],
+            'final_coupled_j_parity': CSF_item_list[2],
+        })
+
+        j_p = CSF_item_list[2].split()[-1]  # 提取 J 和 parity 部分
+        self.CSF_item_dict['parity'] = j_p[-1]   # parity 是最后一个字符
+        self.CSF_item_dict['J'] = j_p[:-1]       # J 是 parity 之前的部分
+        
+        return self.CSF_item_dict
+    

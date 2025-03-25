@@ -10,6 +10,7 @@ from typing import Dict, Tuple, List
 
 import numpy as np
 import pandas as pd
+from collections import Counter
 
 from tqdm import tqdm
 
@@ -76,17 +77,6 @@ def level_mix_above_threshold_coupling_info(mix_data_above_threshold: Dict, csf_
 
     return csf_list, csf_mid_coupling_info, csf_coupling_info
 
-
-
-
-
-
-
-
-
-
-
-
 #######################################################################
 
 def CSFs_block_get_CSF(CSFs_block: List, CSf_index: Tuple) -> List:
@@ -105,6 +95,32 @@ def CSFs_block_get_CSF(CSFs_block: List, CSf_index: Tuple) -> List:
         raise ValueError("CSF index must be non-negative, and CSFs_block length must be a multiple of 3.")
     
     return CSFs_block[CSf_index[0]*3:CSf_index[0]*3+3]
+
+def CSF_final_coupling_J_collection(CSFs_one_block: List):
+    """
+    从CSF块中提取最终J值集合
+
+    参数：
+        CSFs_block: 包含CSF的列表
+
+    返回：
+        最终J值集合
+    """
+    coupling_J_counts = Counter(CSFs_one_block)
+    result = {}
+    for element in coupling_J_counts:
+        result[element] = {
+            'count': coupling_J_counts[element],
+            'indices': []
+        }
+
+    for index, element in enumerate(CSFs_one_block):
+        result[element]['indices'].append(index)
+
+    for element, info in result.items():
+        print(f"元素 {element} 出现次数: {info['count']}, 索引: {info['indices']}")
+        
+    return result
 
 
 

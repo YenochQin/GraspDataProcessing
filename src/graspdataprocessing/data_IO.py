@@ -45,7 +45,7 @@ class GraspFileLoad:
             raise ValueError("数据目录不存在")  # 严格校验目录有效性
         else:
             self.data_file_dir = Path(self.file_dir)
-            print(f"数据加载路径: {self.data_file_dir}")
+            print(f"Data file {self.data_file_dir} loaded.")
 
         # 加载文件配置参数
         self.file_type = data_file_info.get("file_type")    # 文件类型标识
@@ -405,7 +405,7 @@ class GraspFileLoad:
                 else:
                     print(f"{i+1:3}{temp_pos[level_index[i]]:3}{temp_J[level_index[i]]:>4}   {temp_parity[level_index[i]]:1}    {temp_energy[level_index[i]]:14.7f}{energy_au_cm(temp_energy[level_index[i]]-temp_energy[level_index[0]]):12.2f}")
                 
-            mix_file_data = {
+            self.mix_file_data = {
                 'CSFs_blocks_num': self.num_block,
                 "index_block_list": self.index_block_list,
                 'ncfblk_list': self.ncfblk_list,
@@ -417,7 +417,7 @@ class GraspFileLoad:
                 'block_level_energy_list': self.block_level_energy_list,
                 'mix_coefficient_list': self.mix_coefficient_list
             }
-            return mix_file_data
+            return self.mix_file_data
         
         elif "DENSITY" in self.file_type.upper():
             self.file_type = "DENSITY"
@@ -449,9 +449,10 @@ class GraspFileLoad:
             with open(self.load_file_path, 'r') as temp_load_file:
                 temp_CSFs_data = temp_load_file.readlines()
             
-            self.csf_data_dict = get_CSFs_file_info(temp_CSFs_data)
+            # self.csf_data_dict = get_CSFs_file_info(temp_CSFs_data)
+            self.csf_data = CSFs(temp_CSFs_data)
             
-            return self.csf_data_dict
+            return self.csf_data
 
         else:
             return 0
