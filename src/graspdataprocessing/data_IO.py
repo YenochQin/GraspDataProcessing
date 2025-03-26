@@ -8,6 +8,7 @@
 import sys
 import re
 from pathlib import Path
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -19,8 +20,6 @@ from .tool_function import *
 from .CSFs_compress_extract import *
 from .CSFs_choosing import *
 
-# import csv
-# the class "GraspFileLoad" is used to load the data file
 class GraspFileLoad:
     # the initialization function of the class "GraspFileLoad"
 
@@ -33,7 +32,7 @@ class GraspFileLoad:
                 - file_dir: 数据文件目录路径
                 - file_type: 文件类型标识
                 - level_parameter: 能级参数
-                - this_as: AS标识符
+                - this_as: this active space no.
                 - file_name: 具体文件名（可选）
         """
         # 原子系统标识初始化
@@ -74,7 +73,6 @@ class GraspFileLoad:
             "Configuration_state_functions": f"*{self.level_parameter}*{self.this_as}.c"  # CSF配置文件
         }
 
-
     # the function "file_read" has two input arguments: the file name and the number of columns
     # the function "file_read" returns the data array
     def file_read(self):
@@ -86,7 +84,7 @@ class GraspFileLoad:
         self.load_file_data = [line.strip() for line in self.load_file_data]
         print(f"file {self.load_file_path} loaded")
         return self.load_file_data
-    
+
     def files_read(self):
         self.load_files_data = []
         for temp_file_path in self.data_path_list:
@@ -95,7 +93,6 @@ class GraspFileLoad:
             temp_load_file_data.append('')
             self.load_files_data.extend(temp_load_file_data)
         return self.load_files_data
-    
 
     def radial_wavefunction_binary_file_read(self):
         self.nn_list = []
@@ -108,25 +105,13 @@ class GraspFileLoad:
         self.rg_list = []
         
         with open(self.load_file_path, 'rb') as binary_file:
-            
-            # temp_int = binary_file.read(4)
-            
-            # title_bin = binary_file.read(6)                 # read (3) title*6
-            # title = struct.unpack('6s', title_bin)
 
-            # print(f"g92mix: {title[0]}")  # Debugging print
-            
-            # if title != 'G92RWF':
-            #     raise ValueError('Not a radial wavefunction file!')
-            # temp_int = binary_file.read(4)
-            
             g92rwf = read_fortran_record(binary_file, dtype=np.dtype('S6')).tobytes().decode('utf-8').strip()
             if g92rwf != 'G92RWF':
                 raise ValueError('Not a radial wavefunction file!')
-            
-            
+
             while True:
-                
+
                 temp_int = binary_file.read(4)  
                 if not temp_int:  # temp_int为空则表明已经到达文件末尾
                     print("已经到达文件末尾")
@@ -142,7 +127,7 @@ class GraspFileLoad:
                 laky = struct.unpack('i', laky_bin)
                 print(laky)
                 self.laky_list.append(laky[0])
-        
+
                 energy_bin = binary_file.read(8)
                 energy = struct.unpack('d', energy_bin)
                 print(energy)
@@ -152,12 +137,10 @@ class GraspFileLoad:
                 npts = struct.unpack('i', npts_bin)
                 print(npts)
                 self.npts_list.append(npts[0])
-                
-                
+
                 temp_int = binary_file.read(4)
                 temp_int = binary_file.read(4)      # read (3) a0, (pg(j,i), j=1, npts), (qg(j,i), j=1, npts)
-                
-                
+
                 a0_bin = binary_file.read(8)
                 a0 = struct.unpack('d', a0_bin)
                 self.a0_list.append(a0[0])
@@ -172,7 +155,7 @@ class GraspFileLoad:
                 qg = struct.unpack('d'*npts[0], qg_bin)
                 qg_array = np.array(qg)
                 self.qg_list.append(qg_array)
-                
+
                 temp_int = binary_file.read(4)
                 temp_int = binary_file.read(4)      # read (3) (rg(j,i), j=1, npts)
 
@@ -181,11 +164,10 @@ class GraspFileLoad:
                 rg_array = np.array(rg)
                 print(rg[0])
                 self.rg_list.append(rg_array)
-                
+
                 temp_int = binary_file.read(4)
                 # temp_int = binary_file.read(4)
-                
-                
+
         return self.nn_list, self.laky_list, self.energy_list, self.npts_list, self.a0_list, self.pg_list, self.qg_list, self.rg_list
 
     def mix_coefficient_file_read(self):
@@ -215,7 +197,7 @@ class GraspFileLoad:
             print(f" nblock = {self.num_block},       ncftot =   {self.total_num_configuration},          nw =  {self.NW},            nelec =   {self.num_electron}")
             for jblock in tqdm(range(1, self.num_block+1)):
                 print('cycle jblock =',jblock)
-                
+
                 # Read block data: nb, ncfblk, nevblk, iatjp, iaspa
                 block_data = read_fortran_record(binary_file, dtype=np.int32, count=5)
                 nb, ncfblk, nevblk, j_value_location, parity = block_data
@@ -254,8 +236,6 @@ class GraspFileLoad:
 
                 self.mix_coefficient_list.append(evecs)
 
-                # temp_int = binary_file.read(4)  
-
         return self.num_block, self.index_block_list, self.ncfblk_list, self.block_energy_count_list, self.j_value_location_list, self.parity_list, self.ivec_list, self.block_energy_list, self.block_level_energy_list, self.mix_coefficient_list
 
     def grasp_data_file_location(self):
@@ -291,7 +271,7 @@ class GraspFileLoad:
             self.level_data = GraspFileLoad.file_read(self)
             print("data file type: level data")
             return self.level_data
-        
+
         elif "LSJ" in self.file_type.upper() and "TRAN" not in self.file_type.upper():
             self.file_type = "LSJCOMPOSITION"
             self.lsj_lbl_data = []
@@ -300,14 +280,14 @@ class GraspFileLoad:
             self.data_path_list = GraspFileLoad.grasp_data_file_location(self)
             print(self.data_path_list)
             self.lsj_lbl_data = GraspFileLoad.files_read(self)
-            
+
             for self.index_num in range(0,len(self.lsj_lbl_data)):
                 # print(lsj_lbl[line])
                 if re.search(r'\d+.\d+%', self.lsj_lbl_data[self.index_num]) :
                     self.level_loc_lbl.append(self.index_num)
             print("data file type: level jj2lsj data")
             return self.lsj_lbl_data, self.level_loc_lbl
-        
+
         elif "TRANS" in self.file_type.upper() and "LSJ" not in self.file_type.upper():
             self.file_type = "TRANSITION"
             self.transition_data = []
@@ -316,7 +296,7 @@ class GraspFileLoad:
             print("data file type: transition_data")
             self.transition_data.append('')
             return self.transition_data
-        
+
         elif "TRANS" in self.file_type.upper() and "LSJ" in self.file_type.upper():
             self.file_type = "TRANSITION_LSJ"
             self.transition_data = []
@@ -324,11 +304,11 @@ class GraspFileLoad:
             self.transition_lsj_data = GraspFileLoad.files_read(self)
             print("data file type: transition_LSJ_data")
             return self.transition_lsj_data
-        
+
         elif "PLOT" in self.file_type.upper():
             self.file_type = "PLOT"
             temp_plot_data = []
-            
+
             if self.data_file_path:
                 self.load_file_path = self.data_file_path
             else:
@@ -359,19 +339,22 @@ class GraspFileLoad:
             self.radial_wavefunction_data[f'r(a.u)'] = self.rg_list[self.max_rg_index]
             pg_aligned_list = align_2d_list_columns(self.pg_list)
             qg_aligned_list = align_2d_list_columns(self.qg_list)
-            
+
             for n in range(len(self.nn_list)):
                 str_nl = int_nl_2_str_nl(self.nn_list[n], self.laky_list[n])
                 self.radial_wavefunction_data[f'P({str_nl})'] = pg_aligned_list[n]
                 self.radial_wavefunction_data[f'Q({str_nl})'] = qg_aligned_list[n]
-                
+
             return self.radial_wavefunction_data
-        
+
         elif "MIX" in self.file_type.upper() or "COEF" in self.file_type.upper():
             if "CI" in self.file_type.upper():
                 self.file_type = "CI_MIX_COEFFICIENT"
+                print("data file type: ci mix_coefficient_data")
+
             else:
                 self.file_type = "MIX_COEFFICIENT"
+                print("data file type: rmcdhf mix_coefficient_data")
 
             self.mix_coefficient_dict = {}
 
@@ -382,8 +365,7 @@ class GraspFileLoad:
                 self.load_file_path = Path(self.data_file_dir).joinpath(self.file_name)
 
             GraspFileLoad.mix_coefficient_file_read(self)
-            print("data file type: mix_coefficient_data")
-            
+
             level_print_title()
             temp_pos = []
             temp_J = []
@@ -395,30 +377,30 @@ class GraspFileLoad:
                     temp_J.append(level_J_value(self.j_value_location_list[jblock-1]))
                     temp_parity.append(level_parity(self.parity_list[jblock-1]))
                     temp_energy.append(self.block_energy_list[jblock-1]+self.block_level_energy_list[jblock-1][pos-1])
-                    
-            
+
             level_index = np.argsort(temp_energy)
-            
+
             for i in range(len(level_index)):
                 if i == 0:
                     print(f"{i+1:3}{temp_pos[level_index[i]]:3}{temp_J[level_index[i]]:>4}   {temp_parity[level_index[i]]:1}    {temp_energy[level_index[i]]:14.7f}{0.0000000:12.2f}")
                 else:
                     print(f"{i+1:3}{temp_pos[level_index[i]]:3}{temp_J[level_index[i]]:>4}   {temp_parity[level_index[i]]:1}    {temp_energy[level_index[i]]:14.7f}{energy_au_cm(temp_energy[level_index[i]]-temp_energy[level_index[0]]):12.2f}")
-                
-            self.mix_file_data = {
-                'CSFs_blocks_num': self.num_block,
-                "index_block_list": self.index_block_list,
-                'ncfblk_list': self.ncfblk_list,
-                'block_energy_count_list': self.block_energy_count_list,
-                'j_value_location_list': self.j_value_location_list,
-                'parity_list': self.parity_list,
-                'ivec_list': self.ivec_list,
-                'block_energy_list': self.block_energy_list,
-                'block_level_energy_list': self.block_level_energy_list,
-                'mix_coefficient_list': self.mix_coefficient_list
-            }
+
+            # set mix file data as a class
+            self.mix_file_data = MixCoefficientData(
+                CSFs_blocks_num=self.num_block,
+                index_block_list=self.index_block_list,
+                ncfblk_list=self.ncfblk_list,
+                block_energy_count_list=self.block_energy_count_list,
+                j_value_location_list=self.j_value_location_list,
+                parity_list=self.parity_list,
+                ivec_list=self.ivec_list,
+                block_energy_list=self.block_energy_list,
+                block_level_energy_list=self.block_level_energy_list,
+                mix_coefficient_list=self.mix_coefficient_list
+            )
             return self.mix_file_data
-        
+
         elif "DENSITY" in self.file_type.upper():
             self.file_type = "DENSITY"
             temp_density_data = []
@@ -430,9 +412,9 @@ class GraspFileLoad:
             else:
                 self.file_name = f"*{self.this_as}.cd"
                 self.load_file_path = Path(self.data_file_dir).joinpath(self.file_name)
-                
+
             temp_density_data = GraspFileLoad.file_read(self)
-            
+
             return temp_density_data
 
         elif "CSF" in self.file_type.upper():
@@ -444,21 +426,32 @@ class GraspFileLoad:
             else:
                 self.file_name = f"*{self.this_as}.c"
                 self.load_file_path = Path(self.data_file_dir).joinpath(self.file_name)
-            
+
             # GraspFileLoad.file_read(self) module cannot be utilized here, as the parsing of CSFs files serves exclusively for CSF refinement purposes, and preservation of trailing newline characters is mandatory.
             with open(self.load_file_path, 'r') as temp_load_file:
                 temp_CSFs_data = temp_load_file.readlines()
-            
+
             # self.csf_data_dict = get_CSFs_file_info(temp_CSFs_data)
             self.csf_data = CSFs(temp_CSFs_data)
-            
+
             return self.csf_data
 
         else:
             return 0
 
-
-
+@dataclass
+class MixCoefficientData:
+    CSFs_blocks_num: int
+    index_block_list: list
+    ncfblk_list: list
+    block_energy_count_list: list 
+    j_value_location_list: list
+    parity_list: list
+    ivec_list: list
+    block_energy_list: list
+    block_level_energy_list: list
+    # mix_coefficient_list shape is [CSFs_blocks_num*array([block_energy_count_list[i]*[ncfblk_list[i]]])]
+    mix_coefficient_list: list
 #######################################################################
 class EnergyFile2csv():
 
