@@ -96,7 +96,7 @@ def CSFs_block_get_CSF(CSFs_block: List, CSf_index: Tuple) -> List:
     
     return CSFs_block[CSf_index[0]*3:CSf_index[0]*3+3]
 
-def CSF_final_coupling_J_collection(CSFs_one_block: List):
+def CSF_final_coupling_J_collection(CSFs_one_block: List, coupling_level: int = 1):
     """
     从CSF块中提取最终J值集合
 
@@ -104,7 +104,7 @@ def CSF_final_coupling_J_collection(CSFs_one_block: List):
         CSFs_block: 包含CSF的列表
 
     返回：
-        最终J值集合
+        最终J值集合，按元素出现次数从大到小排序
     """
     coupling_J_counts = Counter(CSFs_one_block)
     result = {}
@@ -117,11 +117,53 @@ def CSF_final_coupling_J_collection(CSFs_one_block: List):
     for index, element in enumerate(CSFs_one_block):
         result[element]['indices'].append(index)
 
-    for element, info in result.items():
+    # 按count值从大到小排序
+    sorted_result = dict(sorted(result.items(), key=lambda x: x[1]['count'], reverse=True))
+    
+    for element, info in sorted_result.items():
         print(f"元素 {element} 出现次数: {info['count']}, 索引: {info['indices']}")
         
-    return result
+    return sorted_result
 
+#######################################################################
+def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, threshold: float = None):
+    """
+    根据混合系数对CSF块进行排序，并可选择返回截断值对应的索引
+
+    参数：
+        CSFs_block: 包含CSF的列表
+        mix_coefficient: 混合系数
+        threshold: 可选，截断阈值
+
+    返回：
+        如果threshold为None: 返回排序后的CSF块
+        如果threshold不为None: 返回元组(排序后的CSF块, 截断值对应的原始索引列表)
+    """
+    # 检查输入参数的有效性
+    if not isinstance(mix_coefficient, np.ndarray):
+        raise ValueError("mix_coefficient must be a numpy array")
+    if len(CSFs_block) == 0 or len(mix_coefficient) == 0:
+        return [] if threshold is None else ([], [])
+    if len(CSFs_block) % 3 != 0:
+        raise ValueError("CSFs_block length must be a multiple of 3.")
+    if len(CSFs_block) // 3 != len(mix_coefficient):
+        raise ValueError("mix_coefficient length must match number of CSFs")
+    
+    # 将CSF块分成每三个元素一组
+    csf_groups = [CSFs_block[i:i+3] for i in range(0, len(CSFs_block), 3)]
+    
+    # 使用numpy的argsort进行排序（更高效）
+    sorted_indices = np.argsort(-np.abs(mix_coefficient))
+    
+    # 构建排序后的CSF块
+    sorted_csf_block = [item for i in sorted_indices for item in csf_groups[i]]
+    
+    # 根据threshold参数决定返回值
+    if threshold is not None:
+        # 找出绝对值大于阈值的系数的原始索引
+        threshold_indices = [i for i in sorted_indices if abs(mix_coefficient[i]) > threshold]
+        return sorted_csf_block, threshold_indices
+    return sorted_csf_block
 
 
 
@@ -129,7 +171,7 @@ def CSF_final_coupling_J_collection(CSFs_one_block: List):
 #######################################################################
 
 
-# def main():
+# def main()
 #     if len(sys.argv) != 2:
 #         print("用法: python test.py <文件名>")
 #         sys.exit(1)

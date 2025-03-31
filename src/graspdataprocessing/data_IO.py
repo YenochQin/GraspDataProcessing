@@ -389,12 +389,12 @@ class GraspFileLoad:
             # set mix file data as a class
             self.mix_file_data = MixCoefficientData(
                 CSFs_blocks_num=self.num_block,
-                index_block_list=self.index_block_list,
-                ncfblk_list=self.ncfblk_list,
+                block_index_list=self.index_block_list,
+                block_CSFs_nums=self.ncfblk_list,
                 block_energy_count_list=self.block_energy_count_list,
                 j_value_location_list=self.j_value_location_list,
                 parity_list=self.parity_list,
-                ivec_list=self.ivec_list,
+                block_levels_list=self.ivec_list,
                 block_energy_list=self.block_energy_list,
                 block_level_energy_list=self.block_level_energy_list,
                 mix_coefficient_list=self.mix_coefficient_list
@@ -442,16 +442,20 @@ class GraspFileLoad:
 @dataclass
 class MixCoefficientData:
     CSFs_blocks_num: int
-    index_block_list: list
-    ncfblk_list: list
+    block_index_list: list
+    block_CSFs_nums: list
     block_energy_count_list: list 
     j_value_location_list: list
     parity_list: list
-    ivec_list: list
+    block_levels_list: list
     block_energy_list: list
     block_level_energy_list: list
     # mix_coefficient_list shape is [CSFs_blocks_num*array([block_energy_count_list[i]*[ncfblk_list[i]]])]
     mix_coefficient_list: list
+    
+    
+    
+
 #######################################################################
 class EnergyFile2csv():
 
@@ -510,5 +514,18 @@ class EnergyFile2csv():
         print(f"energy levels data has been written into {self.store_file_path}\\{self.file_name}_level.csv csv file")
         return self.saved_csv_file_path
 
+#######################################################################
 
+def sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data: List, output_file):
+    """
+    将排序后的CSFs数据写入到指定的输出文件中。
 
+    Args:
+        sorted_CSFs_data (List): 排序后的CSFs数据列表。
+        output_file (str): 输出文件的路径。
+    """
+    with open(output_file, 'w') as file:
+        for line in CSFs_file_info:
+            file.write(line)  # 写入CSF数据，每个CSF后面加上换行符
+        for line in sorted_CSFs_data:
+            file.write(line)  # 写入CSF数据，每个CSF后面加上换行符
