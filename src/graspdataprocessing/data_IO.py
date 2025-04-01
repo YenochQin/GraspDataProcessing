@@ -516,7 +516,7 @@ class EnergyFile2csv():
 
 #######################################################################
 
-def sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data: List, output_file):
+def sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data: List, output_file: str, single_block = False):
     """
     将排序后的CSFs数据写入到指定的输出文件中。
 
@@ -524,8 +524,20 @@ def sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data: List, output_fi
         sorted_CSFs_data (List): 排序后的CSFs数据列表。
         output_file (str): 输出文件的路径。
     """
+    if len(CSFs_file_info) != 4:
+        raise ValueError('CSFs file header info error!')
+    
     with open(output_file, 'w') as file:
         for line in CSFs_file_info:
-            file.write(line)  # 写入CSF数据，每个CSF后面加上换行符
-        for line in sorted_CSFs_data:
-            file.write(line)  # 写入CSF数据，每个CSF后面加上换行符
+            file.write(line)  
+        
+        file.write('CSF(s):\n')
+        if not single_block:
+            for block in sorted_CSFs_data:
+                for line in block:
+                    file.write(line)
+                file.write(' *\n')
+        else:
+            for line in sorted_CSFs_data:
+                file.write(line)
+

@@ -205,7 +205,7 @@ def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
     
     Returns:
         Dictionary containing:
-        - raw_subshell_info: Original header lines
+        - subshell_info_raw: Original header lines
         - parsed subshell parameters (n, orbitals, etc.)
         - star_indices: Positions of CSF separators
         - CSFs_j_value: Collected J-values from CSFs
@@ -214,7 +214,7 @@ def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
     subshell_info = CSFs_file_data[0:4]
     
     CSFs_file_info = {}
-    CSFs_file_info['raw_subshell_info'] = subshell_info
+    CSFs_file_info['subshell_info_raw'] = subshell_info
     
     # Process subshell info pairs (parameter name + values)
     for i in range(0, len(subshell_info), 2):
@@ -320,16 +320,15 @@ class CSFs:
 
     def __init__(self, csfs_data_list_raw: List):
 
-        self.csfs_file_data = csfs_data_list_raw
-        self.csfs_file_info = get_CSFs_file_info(self.csfs_file_data)
-        self.CSFs_j_value = self.csfs_file_info.get('CSFs_j_value')
-        self.parity = self.csfs_file_info.get('parity')
-        self.CSFs_block_data = self.csfs_file_info.get('CSFs_block_data')
+        temp_csfs_file_info = get_CSFs_file_info(csfs_data_list_raw)
+        self.subshell_info_raw = temp_csfs_file_info.get('subshell_info_raw')
+        self.CSFs_j_value = temp_csfs_file_info.get('CSFs_j_value')
+        self.parity = temp_csfs_file_info.get('parity')
+        self.CSFs_block_data = temp_csfs_file_info.get('CSFs_block_data')
         self.CSFs_block_length = []
         for i in range(len(self.CSFs_block_data)):
             self.CSFs_block_length.append(int(len(self.CSFs_block_data[i])/3))
-        
-    
+
     def CSF_info_2_dict(self, CSF_item_list: List[str]) -> Dict:
 
         # 解析 subshell 信息
