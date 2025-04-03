@@ -11,16 +11,27 @@ from typing import Dict, Tuple, List
 import numpy as np
 import pandas as pd
 from collections import Counter
+from dataclasses import dataclass
 
 from tqdm import tqdm
 
 from .CSFs_compress_extract import *
 
+@dataclass(frozen=True)
+class MixCoefficientData:
+    CSFs_blocks_num: int
+    block_index_list: list
+    block_CSFs_nums: list
+    block_energy_count_list: list 
+    j_value_location_list: list
+    parity_list: list
+    block_levels_list: list
+    block_energy_list: list
+    block_level_energy_list: list
+    # mix_coefficient_list shape is [CSFs_blocks_num*array([block_energy_count_list[i]*[ncfblk_list[i]]])]
+    mix_coefficient_list: list
 
 #######################################################################
-
-
-
 
 def level_mix_data_abs_above_threshold(level_mix_data_array: np.ndarray, threshold=0.1):
     """
@@ -50,16 +61,17 @@ def level_mix_data_abs_above_threshold(level_mix_data_array: np.ndarray, thresho
     
     return sorted_result
 
-def csf_mix_data_abs_above_threshold(level_mix_data: Dict, threshold=0.1):
-
-    for block in range(level_mix_data['CSFs_blocks_num']):
-        block_level_num = len(level_mix_data['mix_coefficient_list'][block])
+def csf_mix_data_abs_above_threshold(level_mix_data: MixCoefficientData, threshold=0.1):
+    
+    csf_mix_data_abs_above_threshold = {}
+    for block in range(level_mix_data.CSFs_blocks_num):
+        block_level_num = len(level_mix_data.mix_coefficient_list[block])
     
         for i in range(block_level_num):
-            temp_coeff = level_mix_data_abs_above_threshold(level_mix_data['mix_coefficient_list'][block][i], threshold=0.1)
-            level_mix_data[f'block{block}_No{i}'] = temp_coeff
+            temp_coeff = level_mix_data_abs_above_threshold(level_mix_data.mix_coefficient_list[block][i], threshold)
+            csf_mix_data_abs_above_threshold[f'block{block}_No{i}'] = temp_coeff
             
-    return level_mix_data
+    return csf_mix_data_abs_above_threshold
 
 def level_mix_above_threshold_coupling_info(mix_data_above_threshold: Dict, csf_data_list: List):
     csf_list = []

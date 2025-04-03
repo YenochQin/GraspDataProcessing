@@ -8,7 +8,6 @@
 import sys
 import re
 from pathlib import Path
-from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -439,19 +438,7 @@ class GraspFileLoad:
         else:
             return 0
 
-@dataclass
-class MixCoefficientData:
-    CSFs_blocks_num: int
-    block_index_list: list
-    block_CSFs_nums: list
-    block_energy_count_list: list 
-    j_value_location_list: list
-    parity_list: list
-    block_levels_list: list
-    block_energy_list: list
-    block_level_energy_list: list
-    # mix_coefficient_list shape is [CSFs_blocks_num*array([block_energy_count_list[i]*[ncfblk_list[i]]])]
-    mix_coefficient_list: list
+
     
     
     

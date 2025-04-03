@@ -316,6 +316,7 @@ def shuffle_three_line_groups(lst):
     return shuffled
 
 
+
 class CSFs:
 
     def __init__(self, csfs_data_list_raw: List):
