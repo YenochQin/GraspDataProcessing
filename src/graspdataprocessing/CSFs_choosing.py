@@ -32,30 +32,7 @@ class MixCoefficientData:
     mix_coefficient_list: list
 
 #######################################################################
-# def mix_coefficient_threshold_kmeans(level_mix_data: MixCoefficientData):
-#     """
-#     使用KMeans聚类方法对混合系数进行自适应阈值处理。
-#     此方法不适用，因为level_mix_data.mix_coefficient_list的核密度估计图只有一个峰
-#     """
-#     thresholds = [np.zeros(len(arr), dtype=np.float64) for arr in level_mix_data.block_levels_index_list]
-
-#     for block in level_mix_data.block_index_list:
-#         for level in level_mix_data.block_levels_index_list[block]:
-#             squares = np.square(level_mix_data.mix_coefficient_list[block][level]).reshape(-1, 1)
-#             kmeans = KMeans(n_clusters=2).fit(squares)
-#             centers = sorted(kmeans.cluster_centers_.flatten())
-
-#             # 确定阈值（取低能量类中心）
-#             threshold = np.sqrt(centers[0])
-#             # print(f"Block {block}, Level {level}, Threshold: {threshold}")
-#             thresholds[block][level] = threshold
-            
-#     return thresholds
-
-#######################################################################
-
-
-def level_mix_data_abs_above_threshold(level_mix_data_array: np.ndarray, threshold=0.1):
+def single_asf_mix_square_above_threshold(asf_mix_data_array: np.ndarray, threshold=0.1):
     """
     筛选并排序混合数据中绝对值超过阈值的元素
     
@@ -67,41 +44,41 @@ def level_mix_data_abs_above_threshold(level_mix_data_array: np.ndarray, thresho
         按绝对值降序排列的字典，键为索引数组（转换为元组），值为对应元素值
     """
     # 生成布尔掩码标识绝对值超过阈值的元素
-    abs_above_threshold_mask = np.abs(level_mix_data_array) > threshold
+    square_above_threshold_mask = np.square(asf_mix_data_array) > threshold
 
     # 提取超过阈值的实际值
-    values_above_threshold = level_mix_data_array[abs_above_threshold_mask]
+    values_above_threshold = asf_mix_data_array[square_above_threshold_mask]
 
     # 获取满足条件的元素索引（返回二维坐标数组）
-    indices_where_abs_above_threshold = np.argwhere(abs_above_threshold_mask)
+    indices_where_square_above_threshold = np.argwhere(square_above_threshold_mask)
 
     # 将索引数组转换为元组作为键，值与索引配对组合
-    result_dict = {tuple(index): value for index, value in zip(indices_where_abs_above_threshold, values_above_threshold)}
+    result_dict = {tuple(index): value for index, value in zip(indices_where_square_above_threshold, values_above_threshold)}
     
     # 按元素绝对值降序排序
     sorted_result = dict(sorted(result_dict.items(), key=lambda x: abs(x[1]), reverse=True))
     
     return sorted_result
 
-def csf_mix_data_abs_above_threshold(level_mix_data: MixCoefficientData, threshold=0.1):
+def batch_asfs_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, threshold=0.1):
     
-    csf_mix_data_abs_above_threshold = {}
-    for block in range(level_mix_data.CSFs_blocks_num):
-        block_level_num = len(level_mix_data.mix_coefficient_list[block])
+    csf_mix_square_data_above_threshold = {}
+    for block in range(asfs_mix_data.CSFs_blocks_num):
+        block_level_num = len(asfs_mix_data.mix_coefficient_list[block])
     
         for i in range(block_level_num):
-            temp_coeff = level_mix_data_abs_above_threshold(level_mix_data.mix_coefficient_list[block][i], threshold)
-            csf_mix_data_abs_above_threshold[f'block{block}_level{i}'] = temp_coeff
+            temp_coeff = single_asf_mix_square_above_threshold(asfs_mix_data.mix_coefficient_list[block][i], threshold)
+            csf_mix_square_data_above_threshold[f'block{block}_level{i}'] = temp_coeff
             
-    return csf_mix_data_abs_above_threshold
+    return csf_mix_square_data_above_threshold
 
-def level_mix_above_threshold_coupling_info(mix_data_above_threshold: Dict, csf_data_list: List):
+def asf_mix_square_above_threshold_coupling_info(mix_square_data_above_threshold: Dict, csf_data_list: List):
     csf_list = []
     csf_mid_coupling_info = []
     csf_coupling_info = []
 
         
-    for key, value in mix_data_above_threshold.items():
+    for key, value in mix_square_data_above_threshold.items():
         temp_csf_data = CSFs_block_get_CSF(csf_data_list, key)
         csf_list.append(temp_csf_data[0])
         temp_csf_data_dict = CSF_item_2_dict(temp_csf_data)
@@ -200,7 +177,7 @@ def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, th
     csf_groups = [CSFs_block[i:i+3] for i in range(0, len(CSFs_block), 3)]
     
     # 使用numpy的argsort进行排序（更高效）
-    sorted_indices = np.argsort(-np.abs(mix_coefficient))
+    sorted_indices = np.argsort(-np.square(mix_coefficient))
     
     # 构建排序后的CSF块
     sorted_csf_block = [item for i in sorted_indices for item in csf_groups[i]]
