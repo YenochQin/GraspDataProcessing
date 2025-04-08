@@ -202,7 +202,8 @@ class GraspFileLoad:
                 nb, ncfblk, nevblk, j_value_location, parity = block_data
                 print(f' Block no. = {nb}, 2J+1 = {j_value_location}, Parity = {parity}, No. of eigenvalues = {nevblk}, No. of CSFs = {ncfblk}')
                 # nb -> index_block, ncfblk -> ncfblk, nevblk -> block_energy_count, j_value_location -> iatjp, parity -> iaspa
-                self.index_block_list.append(nb)
+                self.index_block_list.append(nb - 1)  # use python index method not fortran index method
+
                 self.ncfblk_list.append(ncfblk)
                 self.block_energy_count_list.append(nevblk)
                 self.j_value_location_list.append(j_value_location)
@@ -212,7 +213,9 @@ class GraspFileLoad:
 
                 ivec = read_fortran_record(binary_file, dtype=np.int32, count=nevblk)
 
-                ivec_array = np.array(ivec)
+                ivec_array = np.array(ivec) - 1  # use python index method not fortran index method
+                
+                
                 self.ivec_list.append(ivec_array)
 
                 
@@ -393,7 +396,7 @@ class GraspFileLoad:
                 block_energy_count_list=self.block_energy_count_list,
                 j_value_location_list=self.j_value_location_list,
                 parity_list=self.parity_list,
-                block_levels_list=self.ivec_list,
+                block_levels_index_list=self.ivec_list,
                 block_energy_list=self.block_energy_list,
                 block_level_energy_list=self.block_level_energy_list,
                 mix_coefficient_list=self.mix_coefficient_list
@@ -528,3 +531,6 @@ def sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data: List, output_fi
             for line in sorted_CSFs_data:
                 file.write(line)
 
+#######################################################################
+
+    

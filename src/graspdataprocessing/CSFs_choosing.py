@@ -25,13 +25,35 @@ class MixCoefficientData:
     block_energy_count_list: list 
     j_value_location_list: list
     parity_list: list
-    block_levels_list: list
+    block_levels_index_list: list
     block_energy_list: list
     block_level_energy_list: list
     # mix_coefficient_list shape is [CSFs_blocks_num*array([block_energy_count_list[i]*[ncfblk_list[i]]])]
     mix_coefficient_list: list
 
 #######################################################################
+# def mix_coefficient_threshold_kmeans(level_mix_data: MixCoefficientData):
+#     """
+#     使用KMeans聚类方法对混合系数进行自适应阈值处理。
+#     此方法不适用，因为level_mix_data.mix_coefficient_list的核密度估计图只有一个峰
+#     """
+#     thresholds = [np.zeros(len(arr), dtype=np.float64) for arr in level_mix_data.block_levels_index_list]
+
+#     for block in level_mix_data.block_index_list:
+#         for level in level_mix_data.block_levels_index_list[block]:
+#             squares = np.square(level_mix_data.mix_coefficient_list[block][level]).reshape(-1, 1)
+#             kmeans = KMeans(n_clusters=2).fit(squares)
+#             centers = sorted(kmeans.cluster_centers_.flatten())
+
+#             # 确定阈值（取低能量类中心）
+#             threshold = np.sqrt(centers[0])
+#             # print(f"Block {block}, Level {level}, Threshold: {threshold}")
+#             thresholds[block][level] = threshold
+            
+#     return thresholds
+
+#######################################################################
+
 
 def level_mix_data_abs_above_threshold(level_mix_data_array: np.ndarray, threshold=0.1):
     """
@@ -69,7 +91,7 @@ def csf_mix_data_abs_above_threshold(level_mix_data: MixCoefficientData, thresho
     
         for i in range(block_level_num):
             temp_coeff = level_mix_data_abs_above_threshold(level_mix_data.mix_coefficient_list[block][i], threshold)
-            csf_mix_data_abs_above_threshold[f'block{block}_No{i}'] = temp_coeff
+            csf_mix_data_abs_above_threshold[f'block{block}_level{i}'] = temp_coeff
             
     return csf_mix_data_abs_above_threshold
 
@@ -108,7 +130,7 @@ def CSFs_block_get_CSF(CSFs_block: List, CSf_index: Tuple) -> List:
     
     return CSFs_block[CSf_index[0]*3:CSf_index[0]*3+3]
 
-def CSF_final_coupling_J_collection(CSFs_one_block: List, coupling_level: int = 1):
+def CSF_final_coupling_J_collection(block_CSFs: List, coupling_level: int = -1):
     """
     从CSF块中提取最终J值集合
 
@@ -118,17 +140,30 @@ def CSF_final_coupling_J_collection(CSFs_one_block: List, coupling_level: int = 
     返回：
         最终J值集合，按元素出现次数从大到小排序
     """
-    coupling_J_counts = Counter(CSFs_one_block)
+    CSFs_coupling_info_list = [tuple(block_CSFs[0][i+2].lstrip().split()) for i in range(0, len(block_CSFs[0])-2, 3)]
+    CSFs_choosed_coupling_info = [CSF_coupling_info[-coupling_level:] if len(CSF_coupling_info) >= coupling_level else CSF_coupling_info for CSF_coupling_info in CSFs_coupling_info_list]
+    
     result = {}
-    for element in coupling_J_counts:
-        result[element] = {
-            'count': coupling_J_counts[element],
-            'indices': []
-        }
+    if coupling_level == -1:
+        coupling_J_counts = Counter(CSFs_coupling_info_list)
+        for element in coupling_J_counts:
+            result[element] = {
+                'count': coupling_J_counts[element],
+                'indices': []
+            }
 
-    for index, element in enumerate(CSFs_one_block):
-        result[element]['indices'].append(index)
+        for index, element in enumerate(CSFs_coupling_info_list):
+            result[element]['indices'].append(index)
+    else:
+        coupling_J_counts = Counter(CSFs_choosed_coupling_info)
+        for element in coupling_J_counts:
+            result[element] = {
+                'count': coupling_J_counts[element],
+                'indices': []
+            }
 
+        for index, element in enumerate(CSFs_choosed_coupling_info):
+            result[tuple(element)]['indices'].append(index)
     # 按count值从大到小排序
     sorted_result = dict(sorted(result.items(), key=lambda x: x[1]['count'], reverse=True))
     
@@ -181,7 +216,6 @@ def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, th
 
 
 #######################################################################
-
 
 # def main()
 #     if len(sys.argv) != 2:
