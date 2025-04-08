@@ -140,7 +140,7 @@ def CSF_final_coupling_J_collection(block_CSFs: List, coupling_level: int = -1):
     返回：
         最终J值集合，按元素出现次数从大到小排序
     """
-    CSFs_coupling_info_list = [tuple(block_CSFs[0][i+2].lstrip().split()) for i in range(0, len(block_CSFs[0])-2, 3)]
+    CSFs_coupling_info_list = [tuple(block_CSFs[i+2].lstrip().split()) for i in range(0, len(block_CSFs)-2, 3)]
     CSFs_choosed_coupling_info = [CSF_coupling_info[-coupling_level:] if len(CSF_coupling_info) >= coupling_level else CSF_coupling_info for CSF_coupling_info in CSFs_coupling_info_list]
     
     result = {}
