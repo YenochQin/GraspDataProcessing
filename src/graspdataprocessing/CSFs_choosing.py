@@ -16,20 +16,9 @@ from dataclasses import dataclass
 from tqdm import tqdm
 
 from .CSFs_compress_extract import *
+from .data_modules import MixCoefficientData
 
-@dataclass(frozen=True)
-class MixCoefficientData:
-    CSFs_blocks_num: int
-    block_index_list: list
-    block_CSFs_nums: list
-    block_energy_count_list: list 
-    j_value_location_list: list
-    parity_list: list
-    block_levels_index_list: list
-    block_energy_list: list
-    block_level_energy_list: list
-    # mix_coefficient_list shape is [CSFs_blocks_num*array([block_energy_count_list[i]*[ncfblk_list[i]]])]
-    mix_coefficient_list: list
+
 
 #######################################################################
 def single_asf_mix_square_above_threshold(asf_mix_data_array: np.ndarray, threshold=0.1):
@@ -62,15 +51,15 @@ def single_asf_mix_square_above_threshold(asf_mix_data_array: np.ndarray, thresh
 
 def batch_asfs_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, threshold=0.1):
     
-    csf_mix_square_data_above_threshold = {}
+    csfs_mix_square_data_above_threshold = {}
     for block in range(asfs_mix_data.CSFs_blocks_num):
         block_level_num = len(asfs_mix_data.mix_coefficient_list[block])
     
         for i in range(block_level_num):
             temp_coeff = single_asf_mix_square_above_threshold(asfs_mix_data.mix_coefficient_list[block][i], threshold)
-            csf_mix_square_data_above_threshold[f'block{block}_level{i}'] = temp_coeff
+            csfs_mix_square_data_above_threshold[f'block{block}_level{i}'] = temp_coeff
             
-    return csf_mix_square_data_above_threshold
+    return csfs_mix_square_data_above_threshold
 
 def asf_mix_square_above_threshold_coupling_info(mix_square_data_above_threshold: Dict, csf_data_list: List):
     csf_list = []
@@ -102,12 +91,12 @@ def CSFs_block_get_CSF(CSFs_block: List, CSf_index: Tuple) -> List:
         对应的CSF，如果索引无效则返回None
     """
     # 检查索引是否有效
-    if CSf_index[0] < 0 and len(CSFs_block)%3 == 0:
-        raise ValueError("CSF index must be non-negative, and CSFs_block length must be a multiple of 3.")
+    if CSf_index[0] < 0 and len(CSFs_block) < 0:
+        raise ValueError("CSF index and CSFs_block length must be non-negative.")
     
-    return CSFs_block[CSf_index[0]*3:CSf_index[0]*3+3]
+    return CSFs_block[CSf_index[0]]
 
-def CSF_final_coupling_J_collection(block_CSFs: List, coupling_level: int = -1):
+def single_block_CSFs_final_coupling_J_collection(block_CSFs: List, coupling_level: int = -1) -> Dict:
     """
     从CSF块中提取最终J值集合
 
@@ -117,7 +106,7 @@ def CSF_final_coupling_J_collection(block_CSFs: List, coupling_level: int = -1):
     返回：
         最终J值集合，按元素出现次数从大到小排序
     """
-    CSFs_coupling_info_list = [tuple(block_CSFs[i+2].lstrip().split()) for i in range(0, len(block_CSFs)-2, 3)]
+    CSFs_coupling_info_list = [tuple(block_CSFs[i][2].lstrip().split()) for i in range(0, len(block_CSFs))]
     CSFs_choosed_coupling_info = [CSF_coupling_info[-coupling_level:] if len(CSF_coupling_info) >= coupling_level else CSF_coupling_info for CSF_coupling_info in CSFs_coupling_info_list]
     
     result = {}
@@ -142,12 +131,26 @@ def CSF_final_coupling_J_collection(block_CSFs: List, coupling_level: int = -1):
         for index, element in enumerate(CSFs_choosed_coupling_info):
             result[tuple(element)]['indices'].append(index)
     # 按count值从大到小排序
-    sorted_result = dict(sorted(result.items(), key=lambda x: x[1]['count'], reverse=True))
+    # sorted_result = dict(sorted(result.items(), key=lambda x: x[1]['count'], reverse=True))
     
-    for element, info in sorted_result.items():
-        print(f"元素 {element} 出现次数: {info['count']}, 索引: {info['indices']}")
+    # for element, info in sorted_result.items():
+    #     print(f"元素 {element} 出现次数: {info['count']}, 索引: {info['indices']}")
         
     return sorted_result
+
+def single_block_CSFs_final_coupling_J_mix_coefficient_sum(block_CSFs: List, coupling_level: int = -1) -> Dict:
+
+
+def batch_CSFs_final_coupling_J_collection(CSFs_block_list: List, coupling_level: int = -1):
+    """
+    从CSF块中提取最终J值集合
+
+    参数：
+        CSFs_block_list: 包含CSF块的列表
+
+    返回：
+        最终J值集合，按元素出现次数从大到小排序
+    """
 
 #######################################################################
 def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, threshold: float = None):
@@ -168,19 +171,16 @@ def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, th
         raise ValueError("mix_coefficient must be a numpy array")
     if len(CSFs_block) == 0 or len(mix_coefficient) == 0:
         return [] if threshold is None else ([], [])
-    if len(CSFs_block) % 3 != 0:
-        raise ValueError("CSFs_block length must be a multiple of 3.")
-    if len(CSFs_block) // 3 != len(mix_coefficient):
+    # if len(CSFs_block) % 3 != 0:
+    #     raise ValueError("CSFs_block length must be a multiple of 3.")
+    if len(CSFs_block) != len(mix_coefficient):
         raise ValueError("mix_coefficient length must match number of CSFs")
-    
-    # 将CSF块分成每三个元素一组
-    csf_groups = [CSFs_block[i:i+3] for i in range(0, len(CSFs_block), 3)]
     
     # 使用numpy的argsort进行排序（更高效）
     sorted_indices = np.argsort(-np.square(mix_coefficient))
     
     # 构建排序后的CSF块
-    sorted_csf_block = [item for i in sorted_indices for item in csf_groups[i]]
+    sorted_csf_block = [item for i in sorted_indices for item in CSFs_block[i]]
     
     # 根据threshold参数决定返回值
     if threshold is not None:

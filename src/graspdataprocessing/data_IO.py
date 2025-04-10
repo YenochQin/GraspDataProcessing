@@ -8,6 +8,9 @@
 import sys
 import re
 from pathlib import Path
+from typing import Dict, Tuple, List
+
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -18,11 +21,11 @@ from tqdm import tqdm
 from .tool_function import *
 from .CSFs_compress_extract import *
 from .CSFs_choosing import *
-
+from .data_modules import *
 class GraspFileLoad:
     # the initialization function of the class "GraspFileLoad"
 
-    def __init__(self, data_file_info: dict):
+    def __init__(self, data_file_info: Dict):
         """初始化文件加载器
         
         Args:
@@ -239,6 +242,64 @@ class GraspFileLoad:
                 self.mix_coefficient_list.append(evecs)
 
         return self.num_block, self.index_block_list, self.ncfblk_list, self.block_energy_count_list, self.j_value_location_list, self.parity_list, self.ivec_list, self.block_energy_list, self.block_level_energy_list, self.mix_coefficient_list
+    
+    def csfs_file_read(self):
+
+        self.subshell_info_raw = []
+        self.CSFs_block_j_value = []
+        self.parity = ''
+        self.CSFs_block_data = []
+        self.CSFs_block_length = []
+        csfs_file_data = []
+        with open(self.load_file_path, 'r') as csfs_file:
+            for line in csfs_file:
+                csfs_file_data.append(line)
+        
+        self.subshell_info_raw = csfs_file_data[0:4]
+        
+        star_indices = []
+        CSFs_block_parity = []
+        
+        for index, value in enumerate(csfs_file_data):
+            if '*' in value:
+                star_indices.append(index)
+
+        prev_index = 5
+        for index in star_indices:
+            temp_j_value, temp_parity = CSF_J(csfs_file_data[index - 1])
+            self.CSFs_block_j_value.append(temp_j_value)
+            CSFs_block_parity.append(temp_parity)
+            # 处理每个块的数据，而不是一次性存储所有块
+            block_data = csfs_file_data[prev_index:index]
+            if len(block_data) % 3 != 0:
+                raise ValueError("CSFs_list length must be a multiple of 3")
+            
+            # 将CSF块分成每三个元素一组
+            block_csfs = [block_data[i:i+3] for i in range(0, len(block_data), 3)]
+            self.CSFs_block_length.append(len(block_csfs))
+            self.CSFs_block_data.append(block_csfs)  # 添加当前块的数据
+            prev_index = index + 1
+            
+        temp_j_value, temp_parity = CSF_J(csfs_file_data[-1])
+        self.CSFs_block_j_value.append(temp_j_value)
+        CSFs_block_parity.append(temp_parity)
+
+        CSFs_parity = set(CSFs_block_parity)
+        if len(CSFs_parity) == 1:
+            self.parity = list(CSFs_parity)[0]
+
+        # 处理最后一个块的数据
+        last_block_data = csfs_file_data[prev_index:]
+        if len(last_block_data) % 3 != 0:
+            raise ValueError("CSFs_list length must be a multiple of 3")
+        
+        # 将CSF块分成每三个元素一组
+        block_csfs = [last_block_data[i:i+3] for i in range(0, len(last_block_data), 3)]
+        self.CSFs_block_length.append(len(block_csfs))        
+        self.CSFs_block_data.append(block_csfs)  # 添加最后一个块的数据
+        
+        return self.subshell_info_raw, self.CSFs_block_j_value, self.parity, self.CSFs_block_data, self.CSFs_block_length
+
 
     def grasp_data_file_location(self):
         if self.data_file_dir.rglob(f"{self.file_keyword[self.file_type]}"):
@@ -421,7 +482,6 @@ class GraspFileLoad:
 
         elif "CSF" in self.file_type.upper():
             self.file_type = "Configuration_state_functions"
-            temp_CSFs_data = []
 
             if self.data_file_path:
                 self.load_file_path = self.data_file_path
@@ -430,26 +490,25 @@ class GraspFileLoad:
                 self.load_file_path = Path(self.data_file_dir).joinpath(self.file_name)
 
             # GraspFileLoad.file_read(self) module cannot be utilized here, as the parsing of CSFs files serves exclusively for CSF refinement purposes, and preservation of trailing newline characters is mandatory.
-            with open(self.load_file_path, 'r') as temp_load_file:
-                temp_CSFs_data = temp_load_file.readlines()
+            GraspFileLoad.csfs_file_read(self)
+            
+            self.csfs_file_data = CSFs(
+                subshell_info_raw=self.subshell_info_raw,
+                CSFs_block_j_value=self.CSFs_block_j_value,
+                parity=self.parity,
+                CSFs_block_data=self.CSFs_block_data,
+                CSFs_block_length=self.CSFs_block_length
+            )
 
-            # self.csf_data_dict = get_CSFs_file_info(temp_CSFs_data)
-            self.csf_data = CSFs(temp_CSFs_data)
-
-            return self.csf_data
+            return self.csfs_file_data
 
         else:
             return 0
 
-
-    
-    
-    
-
 #######################################################################
 class EnergyFile2csv():
 
-    def __init__(self, data_file_info: dict):
+    def __init__(self, data_file_info: Dict):
         self.data_file_info = data_file_info
         self.atom = data_file_info.get("atom")
         self.file_dir = data_file_info.get("file_dir")

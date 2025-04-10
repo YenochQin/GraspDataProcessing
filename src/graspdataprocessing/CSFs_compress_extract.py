@@ -196,12 +196,12 @@ def CSF_item_2_dict(CSF_item_list: List[str]) -> Dict:
     return CSF_item_dict
 
 
-def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
+def get_CSFs_file_info(csfs_file_data: List) -> Dict:
     """
     Process CSF file data and extract structured information.
     
     Args:
-        CSFs_file_data: Raw CSF data list containing subshell info and CSFs entries
+        csfs_file_data: Raw CSF data list containing subshell info and CSFs entries
     
     Returns:
         Dictionary containing:
@@ -211,7 +211,7 @@ def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
         - CSFs_j_value: Collected J-values from CSFs
     """
     # Extract first 4 lines containing subshell information
-    subshell_info = CSFs_file_data[0:4]
+    subshell_info = csfs_file_data[0:4]
     
     CSFs_file_info = {}
     CSFs_file_info['subshell_info_raw'] = subshell_info
@@ -224,7 +224,7 @@ def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
 
     # Find all CSF separators ('*') in the data
     star_indices = []
-    for index, value in enumerate(CSFs_file_data):
+    for index, value in enumerate(csfs_file_data):
         if '*' in value:
             star_indices.append(index)
     CSFs_file_info['star_indices'] = star_indices
@@ -236,17 +236,17 @@ def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
     CSFs_file_info['CSFs_block_data'] = []  # 初始化 CSFs_block_data 列表
 
     for index in star_indices:
-        temp_j_value, temp_parity = CSF_J(CSFs_file_data[index - 1])
+        temp_j_value, temp_parity = CSF_J(csfs_file_data[index - 1])
         CSFs_j_value.append(temp_j_value)
         CSFs_block_parity.append(temp_parity)
         # 处理每个块的数据，而不是一次性存储所有块
-        block_data = CSFs_file_data[prev_index:index]
+        block_data = csfs_file_data[prev_index:index]
         if len(block_data) % 3 != 0:
             raise ValueError("CSFs_list length must be a multiple of 3")
         CSFs_file_info['CSFs_block_data'].append(block_data)  # 添加当前块的数据
         prev_index = index + 1
 
-    temp_j_value, temp_parity = CSF_J(CSFs_file_data[-1])
+    temp_j_value, temp_parity = CSF_J(csfs_file_data[-1])
     CSFs_j_value.append(temp_j_value)
     CSFs_block_parity.append(temp_parity)
     CSFs_file_info['CSFs_j_value'] = CSFs_j_value
@@ -256,7 +256,7 @@ def get_CSFs_file_info(CSFs_file_data: List) -> Dict:
         CSFs_file_info['parity'] = list(CSFs_parity)[0]
 
     # 处理最后一个块的数据
-    last_block_data = CSFs_file_data[prev_index:]
+    last_block_data = csfs_file_data[prev_index:]
     if len(last_block_data) % 3 != 0:
         raise ValueError("CSFs_list length must be a multiple of 3")
     CSFs_file_info['CSFs_block_data'].append(last_block_data)  # 添加最后一个块的数据
@@ -317,50 +317,50 @@ def shuffle_three_line_groups(lst):
 
 
 
-class CSFs:
+# class CSFs:
 
-    def __init__(self, csfs_data_list_raw: List):
+#     def __init__(self, csfs_data_list_raw: List):
 
-        temp_csfs_file_info = get_CSFs_file_info(csfs_data_list_raw)
-        self.subshell_info_raw = temp_csfs_file_info.get('subshell_info_raw')
-        self.CSFs_j_value = temp_csfs_file_info.get('CSFs_j_value')
-        self.parity = temp_csfs_file_info.get('parity')
-        self.CSFs_block_data = temp_csfs_file_info.get('CSFs_block_data')
-        self.CSFs_block_length = []
-        for i in range(len(self.CSFs_block_data)):
-            self.CSFs_block_length.append(int(len(self.CSFs_block_data[i])/3))
+#         temp_csfs_file_info = get_CSFs_file_info(csfs_data_list_raw)
+#         self.subshell_info_raw = temp_csfs_file_info.get('subshell_info_raw')
+#         self.CSFs_j_value = temp_csfs_file_info.get('CSFs_j_value')
+#         self.parity = temp_csfs_file_info.get('parity')
+#         self.CSFs_block_data = temp_csfs_file_info.get('CSFs_block_data')
+#         self.CSFs_block_length = []
+#         for i in range(len(self.CSFs_block_data)):
+#             self.CSFs_block_length.append(int(len(self.CSFs_block_data[i])/3))
 
-    def CSF_info_2_dict(self, CSF_item_list: List[str]) -> Dict:
+#     def CSF_info_2_dict(self, CSF_item_list: List[str]) -> Dict:
 
-        # 解析 subshell 信息
-        self.CSF_info_dict = CSF_subshell_split(CSF_item_list[0])
+#         # 解析 subshell 信息
+#         self.CSF_info_dict = CSF_subshell_split(CSF_item_list[0])
         
-        # 添加 temp_coupled_j 和 final_coupled_j_parity
-        self.CSF_info_dict.update({
-            'temp_coupled_j': CSF_item_list[1],
-            'final_coupled_j_parity': CSF_item_list[2],
-        })
+#         # 添加 temp_coupled_j 和 final_coupled_j_parity
+#         self.CSF_info_dict.update({
+#             'temp_coupled_j': CSF_item_list[1],
+#             'final_coupled_j_parity': CSF_item_list[2],
+#         })
         
-        # 解析 final_coupled_j_parity 中的 J 和 parity
-        j_p = CSF_item_list[2].split()[-1]  # 提取 J 和 parity 部分
-        self.CSF_info_dict['parity'] = j_p[-1]   # parity 是最后一个字符
-        self.CSF_info_dict['J'] = j_p[:-1]       # J 是 parity 之前的部分
+#         # 解析 final_coupled_j_parity 中的 J 和 parity
+#         j_p = CSF_item_list[2].split()[-1]  # 提取 J 和 parity 部分
+#         self.CSF_info_dict['parity'] = j_p[-1]   # parity 是最后一个字符
+#         self.CSF_info_dict['J'] = j_p[:-1]       # J 是 parity 之前的部分
         
-        return self.CSF_info_dict
+#         return self.CSF_info_dict
 
-    def CSF_item_2_dict(self, CSF_item_list: List[str]) -> Dict:
+#     def CSF_item_2_dict(self, CSF_item_list: List[str]) -> Dict:
 
-        self.CSF_item_dict = {}
+#         self.CSF_item_dict = {}
         
-        self.CSF_item_dict.update({
-            'subshell_raw': CSF_item_list[0],
-            'temp_coupled_j': CSF_item_list[1],
-            'final_coupled_j_parity': CSF_item_list[2],
-        })
+#         self.CSF_item_dict.update({
+#             'subshell_raw': CSF_item_list[0],
+#             'temp_coupled_j': CSF_item_list[1],
+#             'final_coupled_j_parity': CSF_item_list[2],
+#         })
 
-        j_p = CSF_item_list[2].split()[-1]  # 提取 J 和 parity 部分
-        self.CSF_item_dict['parity'] = j_p[-1]   # parity 是最后一个字符
-        self.CSF_item_dict['J'] = j_p[:-1]       # J 是 parity 之前的部分
+#         j_p = CSF_item_list[2].split()[-1]  # 提取 J 和 parity 部分
+#         self.CSF_item_dict['parity'] = j_p[-1]   # parity 是最后一个字符
+#         self.CSF_item_dict['J'] = j_p[:-1]       # J 是 parity 之前的部分
         
-        return self.CSF_item_dict
+#         return self.CSF_item_dict
     

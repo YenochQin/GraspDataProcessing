@@ -20,7 +20,7 @@ from .transition_data_collection import *
 from .fig_settings import *
 from .CSFs_choosing import *
 from .CSFs_compress_extract import *
-
+from .data_modules import *
 
 __all__ = [
            'GraspFileLoad',
