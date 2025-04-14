@@ -143,19 +143,65 @@ def single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_c
         block_csfs_coupling_J_collection_dict[element]['sum_ci'] = sum_ci
         
     # 按sum_ci值从大到小排序
-    # sorted_block_csfs_coupling_J_collection_dict = dict(sorted(block_csfs_coupling_J_collection_dict.items(), key=lambda x: x[1]['sum_ci'], reverse=True))
+    sorted_block_csfs_coupling_J_collection_dict = dict(sorted(block_csfs_coupling_J_collection_dict.items(), key=lambda x: x[1]['sum_ci'], reverse=True))
     
     # for element, info in sorted_block_csfs_coupling_J_collection_dict.items():
     #     print(f"元素 {element} 出现次数: {info['count']}, 索引: {info['indices']}")
     return block_csfs_coupling_J_collection_dict
 
-def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, block_asfs_mixmix_coefficient_list:List, coupling_level: int = -1) -> Dict:
+def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, block_asfs_mixmix_coefficient_list: List, coupling_level: int = -1) -> Dict:
     block_csfs_coupling_J_collection_dict = single_block_csfs_final_coupling_J_collection(block_CSFs, coupling_level)
-    block_csfs_coupling_J_collection_dict
+
+    block_asfs_coupling_J_sum_ci = {}
+    # block_csfs_coupling_J_collection_dict
     for asf_index in range(len(block_asfs_mixmix_coefficient_list)):
-        block_csfs_coupling_J_collection_dict['']
+        # block_csfs_coupling_J_collection_dict['sum_ci']
+        block_asfs_coupling_J_sum_ci[f'asf_{asf_index}'] = single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_collection_dict, block_asfs_mixmix_coefficient_list[asf_index])
+
+    return block_asfs_coupling_J_sum_ci
+#######################################################################
+def block_chosen_csfs_indies_union(block_asfs_coupling_J_sum_ci: Dict, larg_ci_csfs_indies) -> List:
+    """
+    从CSF块中提取耦合J值集合
+
+    参数：
+        CSFs_asf: 包含CSF的列表
+
+    返回：
+        耦合J值集合和对应索引
+    """
+
+    chosen_csfs_indies = []
+    for key, inner_dict in block_asfs_coupling_J_sum_ci.items():
+        if inner_dict:
+            first_key, first_value = next(iter(inner_dict.items()))
+            chosen_csfs_indies.append(first_value['indices'])
+
+    union_csfs_indies = chosen_csfs_indies.copy()
+    for item in larg_ci_csfs_indies:
+        if item not in union_csfs_indies:
+            union_csfs_indies.append(item)
+
+    return union_csfs_indies
+
+def union_lists_with_order(*lists):
+    """
+    计算多个列表的并集，保留元素首次出现的顺序。
+
+    参数:
+        *lists: 任意数量的列表
+
+    返回:
+        包含所有列表元素并去重，且保留元素首次出现顺序的列表
+    """
+    # 使用 dict.fromkeys 保留元素顺序并去重
+    all_elements = []
+    for lst in lists:
+        all_elements.extend(lst)
+    return list(dict.fromkeys(all_elements))
 
 #######################################################################
+
 def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, threshold: float = None):
     """
     根据混合系数对CSF块进行排序，并可选择返回截断值对应的索引
