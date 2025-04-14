@@ -95,62 +95,65 @@ def CSFs_block_get_CSF(CSFs_block: List, CSf_index: Tuple) -> List:
         raise ValueError("CSF index and CSFs_block length must be non-negative.")
     
     return CSFs_block[CSf_index[0]]
-
-def single_block_CSFs_final_coupling_J_collection(block_CSFs: List, coupling_level: int = -1) -> Dict:
+def single_block_csfs_final_coupling_J_collection(block_csfs: List, coupling_level: int = -1) -> Dict:
     """
-    从CSF块中提取最终J值集合
+    从CSF块中提取耦合J值集合
 
     参数：
-        CSFs_block: 包含CSF的列表
+        CSFs_asf: 包含CSF的列表
 
     返回：
-        最终J值集合，按元素出现次数从大到小排序
+        耦合J值集合和对应索引
     """
-    CSFs_coupling_info_list = [tuple(block_CSFs[i][2].lstrip().split()) for i in range(0, len(block_CSFs))]
+    CSFs_coupling_info_list = [tuple(block_csfs[i][2].lstrip().split()) for i in range(0, len(block_csfs))]
     CSFs_choosed_coupling_info = [CSF_coupling_info[-coupling_level:] if len(CSF_coupling_info) >= coupling_level else CSF_coupling_info for CSF_coupling_info in CSFs_coupling_info_list]
     
-    result = {}
+    coupling_J_collection = {}
     if coupling_level == -1:
         coupling_J_counts = Counter(CSFs_coupling_info_list)
         for element in coupling_J_counts:
-            result[element] = {
+            coupling_J_collection[element] = {
                 'count': coupling_J_counts[element],
                 'indices': []
             }
 
         for index, element in enumerate(CSFs_coupling_info_list):
-            result[element]['indices'].append(index)
+            coupling_J_collection[element]['indices'].append(index)
     else:
         coupling_J_counts = Counter(CSFs_choosed_coupling_info)
         for element in coupling_J_counts:
-            result[element] = {
+            coupling_J_collection[element] = {
                 'count': coupling_J_counts[element],
                 'indices': []
             }
 
         for index, element in enumerate(CSFs_choosed_coupling_info):
-            result[tuple(element)]['indices'].append(index)
-    # 按count值从大到小排序
-    # sorted_result = dict(sorted(result.items(), key=lambda x: x[1]['count'], reverse=True))
+            coupling_J_collection[tuple(element)]['indices'].append(index)
+
+    return coupling_J_collection
+
+def single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_collection_dict: Dict, mix_coefficient_list: List) -> Dict:
     
-    # for element, info in sorted_result.items():
-    #     print(f"元素 {element} 出现次数: {info['count']}, 索引: {info['indices']}")
+    for index, element in enumerate(block_csfs_coupling_J_collection_dict):
+        print(f"元素 {element} 出现次数: {block_csfs_coupling_J_collection_dict[element]['count']}")
+        sum_ci = 0
+        for ci in block_csfs_coupling_J_collection_dict[element]['indices']:
+            sum_ci += mix_coefficient_list[ci]**2
+        print(f"元素 {element} 对应的索引之和: {sum_ci}")
+        block_csfs_coupling_J_collection_dict[element]['sum_ci'] = sum_ci
         
-    return sorted_result
+    # 按sum_ci值从大到小排序
+    # sorted_block_csfs_coupling_J_collection_dict = dict(sorted(block_csfs_coupling_J_collection_dict.items(), key=lambda x: x[1]['sum_ci'], reverse=True))
+    
+    # for element, info in sorted_block_csfs_coupling_J_collection_dict.items():
+    #     print(f"元素 {element} 出现次数: {info['count']}, 索引: {info['indices']}")
+    return block_csfs_coupling_J_collection_dict
 
-def single_block_CSFs_final_coupling_J_mix_coefficient_sum(block_CSFs: List, coupling_level: int = -1) -> Dict:
-
-
-def batch_CSFs_final_coupling_J_collection(CSFs_block_list: List, coupling_level: int = -1):
-    """
-    从CSF块中提取最终J值集合
-
-    参数：
-        CSFs_block_list: 包含CSF块的列表
-
-    返回：
-        最终J值集合，按元素出现次数从大到小排序
-    """
+def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, block_asfs_mixmix_coefficient_list:List, coupling_level: int = -1) -> Dict:
+    block_csfs_coupling_J_collection_dict = single_block_csfs_final_coupling_J_collection(block_CSFs, coupling_level)
+    block_csfs_coupling_J_collection_dict
+    for asf_index in range(len(block_asfs_mixmix_coefficient_list)):
+        block_csfs_coupling_J_collection_dict['']
 
 #######################################################################
 def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, threshold: float = None):
