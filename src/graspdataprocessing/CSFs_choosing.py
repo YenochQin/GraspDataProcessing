@@ -160,29 +160,26 @@ def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, b
 
     return block_asfs_coupling_J_sum_ci
 #######################################################################
-def block_chosen_csfs_indies_union(block_asfs_coupling_J_sum_ci: Dict, larg_ci_csfs_indies) -> List:
+def block_csfs_coupling_J_chosen(block_asfs_coupling_J_sum_ci: Dict) -> List:
     """
-    从CSF块中提取耦合J值集合
-
-    参数：
-        CSFs_asf: 包含CSF的列表
-
-    返回：
-        耦合J值集合和对应索引
+    Selects the most significant CSF indices for each ASF based on coupling J values.
+    
+    Args:
+        block_asfs_coupling_J_sum_ci: Dictionary containing coupling information for multiple ASFs,
+        where each ASF has a dictionary of coupling configurations
+        with their sum of squared mix coefficients ('sum_ci')
+    
+    Returns:
+        List of lists containing indices of CSFs with the strongest coupling for each ASF
     """
-
-    chosen_csfs_indies = []
+    chosen_csfs_indices = []
     for key, inner_dict in block_asfs_coupling_J_sum_ci.items():
         if inner_dict:
+
             first_key, first_value = next(iter(inner_dict.items()))
-            chosen_csfs_indies.append(first_value['indices'])
+            chosen_csfs_indices.append(first_value['indices'])
 
-    union_csfs_indies = chosen_csfs_indies.copy()
-    for item in larg_ci_csfs_indies:
-        if item not in union_csfs_indies:
-            union_csfs_indies.append(item)
-
-    return union_csfs_indies
+    return chosen_csfs_indices
 
 def union_lists_with_order(*lists):
     """
@@ -202,13 +199,14 @@ def union_lists_with_order(*lists):
 
 #######################################################################
 
-def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, threshold: float = None):
+def CSFs_sort_by_mix_coefficient(CSFs_block: List, *mix_coefficients: np.ndarray, threshold: float = None):
     """
-    根据混合系数对CSF块进行排序，并可选择返回截断值对应的索引
+    根据多个混合系数的对应元素和来对CSF块进行排序，并可选择返回截断值对应的索引
 
     参数：
         CSFs_block: 包含CSF的列表
-        mix_coefficient: 混合系数
+        *mix_coefficients: 一个或多个混合系数数组
+        对于同一个block拥有多个asfs的情况，现将asfs的系数进行求和，再进行排序
         threshold: 可选，截断阈值
 
     返回：
@@ -216,27 +214,63 @@ def CSFs_sort_by_mix_coefficient(CSFs_block: List, mix_coefficient: np.array, th
         如果threshold不为None: 返回元组(排序后的CSF块, 截断值对应的原始索引列表)
     """
     # 检查输入参数的有效性
-    if not isinstance(mix_coefficient, np.ndarray):
-        raise ValueError("mix_coefficient must be a numpy array")
-    if len(CSFs_block) == 0 or len(mix_coefficient) == 0:
-        return [] if threshold is None else ([], [])
-    # if len(CSFs_block) % 3 != 0:
-    #     raise ValueError("CSFs_block length must be a multiple of 3.")
-    if len(CSFs_block) != len(mix_coefficient):
-        raise ValueError("mix_coefficient length must match number of CSFs")
+    if len(CSFs_block) == 0 or len(mix_coefficients) == 0:
+        raise ValueError("CSFs_block和mix_coefficients不能为空")
     
-    # 使用numpy的argsort进行排序（更高效）
-    sorted_indices = np.argsort(-np.square(mix_coefficient))
+    # 检查所有系数数组长度一致
+    coeff_lengths = {len(coeff) for coeff in mix_coefficients}
+    if len(coeff_lengths) > 1:
+        raise ValueError("所有mix_coefficients数组长度必须相同")
+    if len(CSFs_block) != next(iter(coeff_lengths)):
+        raise ValueError("mix_coefficients长度必须与CSFs_block匹配")
+
+    # 计算所有系数数组的对应元素和
+    combined_coeff = np.sum([np.square(coeff) for coeff in mix_coefficients], axis=0)
+    
+    # 使用numpy的argsort进行排序（降序）
+    sorted_indices = np.argsort(-combined_coeff)
     
     # 构建排序后的CSF块
     sorted_csf_block = [item for i in sorted_indices for item in CSFs_block[i]]
     
     # 根据threshold参数决定返回值
     if threshold is not None:
-        # 找出绝对值大于阈值的系数的原始索引
-        threshold_indices = [i for i in sorted_indices if abs(mix_coefficient[i]) > threshold]
+        # 找出组合系数大于阈值的原始索引
+        threshold_indices = [i for i in sorted_indices if combined_coeff[i] > threshold**2]
         return sorted_csf_block, threshold_indices
+        
     return sorted_csf_block
+
+
+def radom_choose_csfs(block_csfs_list: List, choose_csfs_num: int, start_index: int = 0) -> Tuple[List, List[int]]:
+    """
+    从CSF列表中随机选择指定数量的CSF及其索引
+
+    参数：
+        block_csfs_list: 包含CSF的列表
+        choose_csfs_num: 要选择的CSF数量
+        start_index: 起始索引(默认为0)
+
+    返回：
+        元组(包含随机选择的CSF列表, 对应的原始索引列表)
+    """
+    block_csfs_len = len(block_csfs_list)
+    if start_index > block_csfs_len:
+        raise ValueError("start_index不能大于block_csfs_list的长度")
+    if start_index + choose_csfs_num > block_csfs_len:
+        raise ValueError("选择的CSF数量超过可用范围")
+    
+    # 生成随机索引
+    random_indices = np.random.choice(
+        range(start_index, block_csfs_len),
+        size=choose_csfs_num,
+        replace=False
+    )
+    
+    # 获取对应的CSF和索引
+    chosen_csfs = [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in random_indices]
+    
+    return chosen_csfs, random_indices.tolist()
 
 
 

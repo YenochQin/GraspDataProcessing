@@ -72,7 +72,9 @@ class GraspFileLoad:
             "MIX_COEFFICIENT": f"*{self.level_parameter}*{self.this_as}.m",  # 混合系数文件
             "CI_MIX_COEFFICIENT": f"*{self.level_parameter}*{self.this_as}.cm",  # 混合系数文件
             "DENSITY": f"*{self.level_parameter}*{self.this_as}.cd",  # 密度文件
-            "Configuration_state_functions": f"*{self.level_parameter}*{self.this_as}.c"  # CSF配置文件
+            "Configuration_state_functions": f"*{self.level_parameter}*{self.this_as}.c",  # CSF配置文件
+            "LEVEL": f"*{self.level_parameter}*{self.this_as}.level",  # 能级文件
+
         }
 
     # the function "file_read" has two input arguments: the file name and the number of columns
