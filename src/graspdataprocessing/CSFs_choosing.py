@@ -147,7 +147,7 @@ def single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_c
     
     # for element, info in sorted_block_csfs_coupling_J_collection_dict.items():
     #     print(f"元素 {element} 出现次数: {info['count']}, 索引: {info['indices']}")
-    return block_csfs_coupling_J_collection_dict
+    return sorted_block_csfs_coupling_J_collection_dict
 
 def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, block_asfs_mixmix_coefficient_list: List, coupling_level: int = -1) -> Dict:
     block_csfs_coupling_J_collection_dict = single_block_csfs_final_coupling_J_collection(block_CSFs, coupling_level)

@@ -7,6 +7,7 @@
 '''
 import sys
 import re
+import csv 
 from pathlib import Path
 from typing import Dict, Tuple, List
 
@@ -541,8 +542,8 @@ class EnergyFile2csv():
     def energy_file2csv(self):
         # load the data file
         self.load_level_data = GraspFileLoad.data_file_process(self)
-        for i in range(len(self.load_level_data)):
-            if 'No Pos  J ' in self.load_level_data[i]:
+        for i, line in enumerate(self.load_level_data):  # 使用enumerate获取行号
+            if 'No Pos  J ' in line:
                 self.skip_line = i + 3
                 break
         
@@ -552,17 +553,19 @@ class EnergyFile2csv():
             if '-----' in line:
                 break
             else:
-                self.save_level_data.append(line)
+                self.save_level_data.append(line.split())
         # set the data file path
         self.saved_csv_file_path = self.store_file_path.joinpath(f"{self.file_name}_level.csv")
         # open the csv file
+        
         with open(self.saved_csv_file_path, 'w', newline='') as csv_file:
             # write the data file into the csv file
-            # writer = csv.writer(csv_file)
-            for item in self.save_level_data:
-                # writer.writerow(item)
-                csv_file.write(item+'\n')
-        print(f"energy levels data has been written into {self.store_file_path}\\{self.file_name}_level.csv csv file")
+            writer = csv.writer(csv_file)
+            writer.writerows(self.save_level_data)
+            # for item in self.save_level_data:
+            #     # writer.writerow(item)
+            #     csv_file.write(item+'\n')
+        print(f"energy levels data has been written into {self.store_file_path}/{self.file_name}_level.csv csv file")
         return self.saved_csv_file_path
 
 #######################################################################
@@ -594,4 +597,28 @@ def sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data: List, output_fi
 
 #######################################################################
 
+def level_data_compare(levels_file_1: List, levels_file_2: List):
     
+    level_data_1 = []
+    level_data_2 = []
+    for i, line in enumerate(levels_file_1):  # 使用enumerate获取行号
+        if 'No Pos  J'in line:
+            skip_line = i + 3
+            break
+    level_data_1 = levels_file_1[skip_line:]
+    for i, line in enumerate(levels_file_2):  # 使用enumerate获取行号
+        if 'No Pos  J'in line:
+            skip_line = i + 3
+            break
+    level_data_2 = levels_file_2[skip_line:]
+    
+    if len(level_data_1)!= len(level_data_2):
+        raise ValueError('The number of levels is not equal!')
+    
+    for i, (line1, line2) in enumerate(zip(level_data_1, level_data_2)):
+        if not line1 or not line2:  # 跳过空行
+            continue
+        if line1.split()[-1] != line2.split()[-1]:
+            raise ValueError(f'Configuration state functions differ at line {i+1}')
+        
+    return True

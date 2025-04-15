@@ -121,7 +121,8 @@ class LevelsEnergyData:
         
         self.saved_csv_file_path = self.raw_data2csv.energy_file2csv()
         
-        self.level_read_df = pd.read_csv(f"{self.saved_csv_file_path}", sep=r'\s+', names=['No', 'Pos', 'J', 'Parity', f'Energy_Total_{self.level_parameter}{self.this_as}', f'E_as{self.this_as}', 'Splitting', f'Configuration_{self.level_parameter}{self.this_as}raw'], dtype=str)
+        # self.level_read_df = pd.read_csv(f"{self.saved_csv_file_path}", sep=r'\s+', names=['No', 'Pos', 'J', 'Parity', f'Energy_Total_{self.level_parameter}{self.this_as}', f'E_as{self.this_as}', 'Splitting', f'Configuration_{self.level_parameter}{self.this_as}raw'], dtype=str)
+        self.level_read_df = pd.read_csv(f"{self.saved_csv_file_path}", names=['No', 'Pos', 'J', 'Parity', f'Energy_Total_{self.level_parameter}{self.this_as}', f'E_as{self.this_as}', 'Splitting', f'Configuration_{self.level_parameter}{self.this_as}raw'], dtype=str)
         
         return self.level_read_df
         
