@@ -95,6 +95,9 @@ def CSFs_block_get_CSF(CSFs_block: List, CSf_index: Tuple) -> List:
         raise ValueError("CSF index and CSFs_block length must be non-negative.")
     
     return CSFs_block[CSf_index[0]]
+
+#######################################################################
+
 def single_block_csfs_final_coupling_J_collection(block_csfs: List, coupling_level: int = -1) -> Dict:
     """
     从CSF块中提取耦合J值集合
@@ -159,6 +162,21 @@ def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, b
         block_asfs_coupling_J_sum_ci[f'asf_{asf_index}'] = single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_collection_dict, block_asfs_mixmix_coefficient_list[asf_index])
 
     return block_asfs_coupling_J_sum_ci
+
+def batch_blocks_CSFs_final_coupling_J_collection(blocks_CSFs_list: List, blocks_asfs_mix_coefficient_list: List, coupling_level: int = -1) -> Dict:
+    blocks_asfs_coupling_J_sum_ci = {}
+    for i, (block, asf_mix) in enumerate(zip(blocks_CSFs_list, blocks_asfs_mix_coefficient_list)):
+        print(f"第{i+1}个block的asf的混合系数长度为：{len(asf_mix)}")
+        if len(block) != len(asf_mix[0]):
+            raise ValueError("blocks_CSFs_list和blocks_asfs_mix_coefficient_list长度不匹配")
+        
+        block_asfs_coupling_J_collection = single_block_batch_asfs_CSFs_final_coupling_J_collection(block, asf_mix, coupling_level)
+        
+        blocks_asfs_coupling_J_sum_ci[f'block{i}'] = block_asfs_coupling_J_collection
+
+        
+    return blocks_asfs_coupling_J_sum_ci
+    
 #######################################################################
 def block_csfs_coupling_J_chosen(block_asfs_coupling_J_sum_ci: Dict) -> List:
     """
