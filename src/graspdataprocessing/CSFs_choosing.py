@@ -156,10 +156,10 @@ def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, b
     block_csfs_coupling_J_collection_dict = single_block_csfs_final_coupling_J_collection(block_CSFs, coupling_level)
 
     block_asfs_coupling_J_sum_ci = {}
-    # block_csfs_coupling_J_collection_dict
-    for asf_index in range(len(block_asfs_mixmix_coefficient_list)):
-        # block_csfs_coupling_J_collection_dict['sum_ci']
-        block_asfs_coupling_J_sum_ci[f'asf_{asf_index}'] = single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_collection_dict, block_asfs_mixmix_coefficient_list[asf_index])
+
+    for asf_index, asf_mixmix_coefficient in enumerate(block_asfs_mixmix_coefficient_list):
+
+        block_asfs_coupling_J_sum_ci[f'asf_{asf_index}'] = single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_collection_dict, asf_mixmix_coefficient)
 
     return block_asfs_coupling_J_sum_ci
 
