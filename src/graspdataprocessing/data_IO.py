@@ -570,29 +570,44 @@ class EnergyFile2csv():
 
 #######################################################################
 # TODO not good enough
-def sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data: List, output_file: str, single_block = False):
+def write_sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data_list: List, output_file: str):
     """
     将排序后的CSFs数据写入到指定的输出文件中。
 
     Args:
-        sorted_CSFs_data (List): 排序后的CSFs数据列表。
+        CSFs_file_info (List): CSFs文件的头部信息(CSF(s):行上面的信息)
+        sorted_CSFs_data (List): 排序后的CSFs数据列表
+            sorted_CSFs_data[block
+                                [CSFs
+                                    [CSFS_1]
+                                    [CSFS_2]
+                                    ...
+                                    [CSFS_n]
+                                ]
+            ]
         output_file (str): 输出文件的路径。
     """
     if len(CSFs_file_info) != 4:
         raise ValueError('CSFs file header info error!')
-    
+    blocks_num = len(sorted_CSFs_data_list)
     with open(output_file, 'w') as file:
         for line in CSFs_file_info:
             file.write(line)  
         
         file.write('CSF(s):\n')
-        if not single_block:
-            for block in sorted_CSFs_data:
-                for line in block:
-                    file.write(line)
-                file.write(' *\n')
-        else:
-            for line in sorted_CSFs_data:
+        if blocks_num > 1:
+            for index, block in enumerate(sorted_CSFs_data_list):
+                if index!= blocks_num-1:
+                    for csf in block:
+                        for line in csf:
+                            file.write(line)
+                    file.write(' *\n')
+                else:
+                    for csf in block:
+                        for line in csf:
+                            file.write(line)
+        elif blocks_num == 1:
+            for line in sorted_CSFs_data_list:
                 file.write(line)
 
 #######################################################################
