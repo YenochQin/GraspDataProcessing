@@ -169,6 +169,14 @@ def single_block_csfs_final_coupling_J_collection(block_csfs: List, coupling_lev
 
     return coupling_J_collection
 
+def batch_blocks_csfs_final_coupling_J_collection(blocks_csfs_list: List[List], coupling_level: int = -1) -> Dict:
+    blocks_coupling_J_collection = {}
+    for block, block_csfs in enumerate(blocks_csfs_list):
+        print(f"第{block+1}个block包含{len(block_csfs)}个csf")
+        block_coupling_J_collection = single_block_csfs_final_coupling_J_collection(block_csfs, coupling_level)
+        blocks_coupling_J_collection[block] = block_coupling_J_collection
+    return blocks_coupling_J_collection
+
 def single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_collection_dict: Dict, mix_coefficient_list: List) -> Dict:
     
     for index, element in enumerate(block_csfs_coupling_J_collection_dict):
@@ -205,7 +213,7 @@ def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, b
     # return block_asfs_coupling_J_sum_ci
     return base_coupling_dict
 
-def batch_blocks_CSFs_final_coupling_J_collection(blocks_CSFs_list: List, blocks_asfs_mix_coefficient_list: List, coupling_level: int = -1) -> Dict:
+def batch_blocks_CSFs_final_coupling_J_mix_coefficient_sum(blocks_CSFs_list: List, blocks_asfs_mix_coefficient_list: List, coupling_level: int = -1) -> Dict:
     blocks_asfs_coupling_J_sum_ci = {}
     for block, (block_csfs, block_asfs_mix) in enumerate(zip(blocks_CSFs_list, blocks_asfs_mix_coefficient_list)):
         print(f"第{block+1}个block包含{len(block_asfs_mix)}个asf")
