@@ -8,6 +8,7 @@
 import sys
 import re
 import csv 
+import msgpack
 from pathlib import Path
 from typing import Dict, Tuple, List
 
@@ -637,3 +638,25 @@ def level_data_compare(levels_file_1: List, levels_file_2: List):
             raise ValueError(f'Configuration state functions differ at line {i+1}')
         
     return True
+
+
+#######################################################################
+
+def csfs_index_storange(blocks_csfs_index: Dict, save_file_path: str):
+    """
+    将CSFs索引存储到指定的文件中。
+    Args:
+        blocks_csfs_index (Dict): 包含CSFs索引的字典。
+        save_file_path (str): 存储文件的路径。
+    """
+    with open('save_file_path', 'wb') as f:
+        msgpack.dump(blocks_csfs_index, f)
+        
+    return f'CSFs index has been stored to {save_file_path}'
+
+def csfs_index_load(load_csfs_index_file_path: str):
+    
+    with open(load_csfs_index_file_path, 'rb') as f:
+        blocks_csfs_index = msgpack.load(f)
+        
+    return blocks_csfs_index
