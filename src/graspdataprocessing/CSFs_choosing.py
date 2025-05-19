@@ -265,6 +265,34 @@ def union_lists_with_order(*lists):
         all_elements.extend(lst)
     return list(dict.fromkeys(all_elements))
 
+def merge_multiple_dicts_with_ordered_union(*dicts: Dict[Tuple[int], List]) -> dict:
+    """
+    合并多个字典中相同键对应的列表，保持顺序并去重
+    
+    参数:
+        *dicts: 可变数量的字典参数，每个字典的值应为列表
+        
+    返回:
+        合并后的字典，包含所有输入字典中相同键的合并列表
+    """
+    if not dicts:
+        return {}
+    
+    # 获取所有字典共有的键
+    common_keys = set(dicts[0].keys())
+    for d in dicts[1:]:
+        common_keys.intersection_update(d.keys())
+    
+    merged_result = {}
+    for key in common_keys:
+        print(f"Processing block {key}")
+        # 收集所有字典中该键对应的列表
+        lists_to_merge = [d[key] for d in dicts]
+        # 使用union_lists_with_order合并列表
+        merged_result[key] = gdp.union_lists_with_order(*lists_to_merge)
+    
+    return merged_result
+
 #######################################################################
 
 def merge_csfs_indices_lists_by_block_key(chosen_csfs_indices: Dict[Tuple[int, int], List]) -> Dict[int, List]:
