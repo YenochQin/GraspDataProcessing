@@ -395,6 +395,41 @@ def radom_choose_csfs(block_csfs_list: List, choose_csfs_num: int, start_index: 
 
 #######################################################################
 
+def maping_two_csfs_indices(small_as_csfs_data: List[List[List[str]]], large_as_csfs_data: List[List[List[str]]]) -> Dict[Tuple[int], List[int]]:
+    """def find_subset_indices(original_data: List[List[List[str]]], subset_data: List[List[List[str]]]) -> List[int]:
+    找出子集CSF数据在原CSF数据中的索引位置
+    
+    参数:
+        original_data: 原始CSF数据列表(三层嵌套)
+        subset_data: 子集CSF数据列表(三层嵌套)
+        
+    返回:
+        包含子集每个元素在原始数据中索引的列表
+    """
+    indices = {}
+    block_num = len(small_as_csfs_data)
+    
+    def flatten_block(csf):
+        return [item for sublist in csf for item in sublist]
+    
+    for block in range(block_num):
+        
+        block_to_index = {
+        tuple(flatten_block(large_csfs)): idx  # 展平后转为 tuple
+        for idx, large_csfs in enumerate(large_as_csfs_data[block])
+                        }
+
+        block_indices = [
+            block_to_index[tuple(flatten_block(small_csfs))]
+            for small_csfs in small_as_csfs_data[block]
+            if tuple(flatten_block(small_csfs)) in block_to_index
+                ]
+        indices[block] = block_indices
+    
+    return indices
+
+
+
 # def main()
 #     if len(sys.argv) != 2:
 #         print("用法: python test.py <文件名>")
