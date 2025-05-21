@@ -43,6 +43,9 @@ def get_total_ci(input_file):
     for ci in cis_ts:
         N_ci.append(len(ci))
     return N_ci, cis_ts, head, indexss
+    ## csffiledata.CSFs_block_length = N_ci
+    ## csffiledata.CSFs_block_data = cis_ts
+    ## csffiledata.subshell_info_raw = head (without 'CSFs:\n')
 
 def save_ci(index, output_path, N_ci, cis_ts, head):
     id_split = [0]+np.cumsum(N_ci).tolist()

@@ -360,35 +360,74 @@ def CSFs_sort_by_mix_coefficient(CSFs_block: List, *mix_coefficients: np.ndarray
     return sorted_csf_block
 
 
-def radom_choose_csfs(block_csfs_list: List, choose_csfs_num: int, start_index: int = 0) -> Tuple[List, List[int]]:
-    """
-    从CSF列表中随机选择指定数量的CSF及其索引
+#######################################################################
+# random select csfs from block_csfs_list
+#######################################################################
 
-    参数：
-        block_csfs_list: 包含CSF的列表
-        choose_csfs_num: 要选择的CSF数量
-        start_index: 起始索引(默认为0)
-
-    返回：
-        元组(包含随机选择的CSF列表, 对应的原始索引列表)
+def generate_unique_random_numbers(max_num: int, count: int) -> list:
     """
-    block_csfs_len = len(block_csfs_list)
-    if start_index > block_csfs_len:
-        raise ValueError("start_index不能大于block_csfs_list的长度")
-    if start_index + choose_csfs_num > block_csfs_len:
-        raise ValueError("选择的CSF数量超过可用范围")
+    生成指定数量不重复的随机正整数
     
-    # 生成随机索引
-    random_indices = np.random.choice(
-        range(start_index, block_csfs_len),
-        size=choose_csfs_num,
-        replace=False
-    )
+    参数:
+        max_num: 随机数的最大值(包含)
+        count: 需要生成的随机数数量
+        
+    返回:
+        包含不重复随机数的列表，按升序排列
+    """
+    if count <= 0:
+        return []
     
-    # 获取对应的CSF和索引
-    chosen_csfs = [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in random_indices]
+    if max_num <= 0:
+        raise ValueError("max_num必须大于0")
+        
+    if count > max_num:
+        raise ValueError(f"无法生成{count}个不重复的1-{max_num}之间的数字")
     
-    return chosen_csfs, random_indices.tolist()
+    # 使用sample方法确保不重复
+    numbers = random.sample(range(1, max_num + 1), count)
+    numbers.sort()  # 排序结果
+    
+    return numbers
+
+def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selected_csfs_indices: List =[]):
+    """
+    从CSF列表中随机选择指定比例的CSF，可合并已选索引
+    
+    参数:
+        block_csfs_list: 待选择的CSF列表
+        ratio_CSFs_select_num: 选择比例(0-1之间)
+        selected_csfs_indices: 已选CSF索引列表(可选)
+        
+    返回:
+        tuple: (选中的CSF列表, 对应的索引列表)
+    """
+    block_csfs_num = len(block_csfs_list)
+    selected_csfs_num = len(selected_csfs_indices)
+    
+    # 计算总需要选择的数量（基于总数比例）
+    total_needed = int(block_csfs_num * ratio_CSFs_select_num)
+    
+    # 计算还需要补充的数量
+    choose_csfs_num = total_needed - selected_csfs_num
+    
+    if choose_csfs_num < 0:
+        # 如果已选数量已超过比例要求，直接返回已选
+        return [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], selected_csfs_indices
+    elif choose_csfs_num == 0:
+        # 如果刚好达到比例要求
+        return [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], selected_csfs_indices
+    
+    # 生成新的随机索引(确保不重复)
+    random_indices = generate_unique_random_numbers(block_csfs_num, choose_csfs_num)
+    
+    # 合并新旧索引并去重(保持顺序)
+    chosen_csfs_indices = union_lists_with_order(random_indices, selected_csfs_indices)
+
+    # 获取对应的CSF数据
+    chosen_csfs = [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in chosen_csfs_indices]
+    
+    return chosen_csfs, chosen_csfs_indices
 
 
 
