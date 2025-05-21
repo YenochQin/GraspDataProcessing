@@ -76,34 +76,28 @@ def main(cfg):
             logger.info(f"             第{b}次迭代开始")
             os.system("cp " + file_name + ".c rcsf.inp")
             start_time = time.time()
-            os.system("mpirun -hostfile hostfile -np 12 -mca btl ^openib rangular_mpi < rangular.input")
+            os.system("mpirun  -np 46  rangular_mpi < rangular.input")
             logger.info("             rangular done")
             logger.info(f"             rangular运行时间:{time.time() - start_time}")
             if b == 1:
-                os.system("rwfnestimate < rwfnestimate.input")
+                os.system("rwfnestimate < rwfnestimate.input1")
                 logger.info("             rwfnestimate done")
                 scfstart_time = time.time()
-                os.system("mpirun -hostfile hostfile -np 12 -mca btl ^openib rmcdhf_mem_mpi < rmcdhf_mem_mpi.input")
-                os.system("rsave " + file_name)
-                logger.info("             rmcdhf done")
-                logger.info(f"             rmcdhf运行时间:{time.time() - scfstart_time}")
-                os.system("mpirun -hostfile hostfile -np 12 -mca btl ^openib rci_mpi < rci_mpi.input")
-                logger.info("             rci done")
-                logger.info(f"             rci运行时间:{time.time() - scfstart_time}")
+                os.system("mpirun  -np 46  rmcdhf_mem_mpi < rmcdhf_mem_mpi.input1")
             else:
-                # os.system("rwfnestimate < rwfnestimate.input2")
-                os.system("cp "+ conf + "_" + str(spetral_term_index) + "_" + str(b-1) + ".w " + file_name+ ".w")
+                os.system("rwfnestimate < rwfnestimate.input2")
+                logger.info("             rwfnestimate done")
                 scfstart_time = time.time()
-                os.system("mpirun -hostfile hostfile -np 12 -mca btl ^openib rci_mpi < rci_mpi.input")
-                logger.info("             rci done")
-                logger.info(f"             rci运行时间:{time.time() - scfstart_time}")
-            
+                os.system("mpirun  -np 46  rmcdhf_mem_mpi < rmcdhf_mem_mpi.input2")
+            logger.info("             rmcdhf done")
+            logger.info(f"             rmcdhf运行时间:{time.time() - scfstart_time}")
+            os.system("rsave " + file_name)
             excution_time = time.time() - start_time
-            subprocess.run(["jj2lsj"], input=(conf + '_{}_{}'.format(spetral_term_index,b)).encode() + b"\ny\ny\ny\n", stdout=open("jj2lsj{}.log".format(spetral_term_index), "w"), stderr=open("jj2lsj{}.log".format(spetral_term_index), "w"), shell=True)
+            subprocess.run(["jj2lsj"], input=(conf + '_{}_{}'.format(spetral_term_index,b)).encode() + b"\nn\ny\ny\n", stdout=open("jj2lsj{}.log".format(spetral_term_index), "w"), stderr=open("jj2lsj{}.log".format(spetral_term_index), "w"), shell=True)
             logger.info("             从头算计算完成")
 
             # Read the information
-            os.system("rlevels " + file_name + ".cm >>" + file_name +".lev")
+            os.system("rlevels " + file_name + ".m >>" + file_name +".lev")
             energylist = gdp.extract_rlevels_to_dict(file_name + ".lev")
             energy = [energylist[i]['Energy'] for i in range(len(energylist))]
             outconf = [energylist[i]['Configuration'] for i in range(len(energylist))]
@@ -125,15 +119,15 @@ def main(cfg):
                 logger.info("************************************************")
                 # Get mix coefficient
                 plottest = {
-                    "atom": "NdGelike", 
+                    "atom": "cv4odd1", 
                     "file_dir": original_path, 
-                    "file_name": file_name+ ".cm", 
-                    "level_parameter": "cv3pCI",
+                    "file_name": file_name+ ".m", 
+                    "level_parameter": "as3_odd1",
                     "file_type": "mix"
                     }
-                # ci_file = gdp.GraspFileLoad(plottest).data_file_process()
-                # ci_temp = ci_file.mix_coefficient_list[spetral_term_index-1]
-                ci_temp = gdp.GraspFileLoad(plottest).data_file_process()[-1][0]# ci_temp type is np.array
+                ci_file = gdp.GraspFileLoad(plottest).data_file_process()
+                ci_temp = ci_file.mix_coefficient_list[spetral_term_index-1]
+                # ci_temp = gdp.GraspFileLoad(plottest).data_file_process()[-1][0]# ci_temp type is np.array
                 unique_indices = gdp.deduplicateanddemerge(ci_temp,cutoff_value)
                 ci_desc = np.zeros(ci_temp.shape[1], dtype=bool)
                 ci_desc[unique_indices] = True
@@ -274,7 +268,7 @@ def main(cfg):
                 else:
                     logger.info('     耦合出现问题')
                 logger.info("正在重选组态")
-                indexs_import_temp=np.load("results/indexs_import_ab{}_{}.npy".format(spetral_term_index,b-1))
+                indexs_import_temp=np.load(f"results/indexs_import_ab{spetral_term_index}_{b-1}.npy")
                 stay_indexs = gdp.pop_other_ci(indexs_temp, indexs_import_temp)
                 ML_sampling_ratio = None
                 mc_addcsf = np.random.choice(stay_indexs,size=expansion_ratio*sum_num,replace=False).tolist()
@@ -294,49 +288,49 @@ if __name__ == "__main__":
         datefmt='%Y-%m-%d %H:%M:%S',
     )
     logger = logging.getLogger(__name__)
-    term = [["5s(2).5p(6).4f(14)1S1_1S.6s(2).5d_2D"],
+    term = [["5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D"],
             ["5s(2).5p(6).4f(14)1S1_1S.6s(2).5d_2D"],
             ["5s(2).5p(6).4f(14)1S1_1S.6s(2).5d_2D"],
             ["5s(2).5p(6).4f(14)1S1_1S.6s(2).5d_2D"],
             ["5s(2).5p(6).4f(14)1S1_1S.6s(2).5d_2D"]]
-    for block in range(1,5):
-        cfg = {
-            "atom": "NdGelike",#原子体系
-            "conf": "5d6s2",
-            "block": block,
-            "difference": 0,#是否严格要求波函数改进
-            "cutoff_value": 1e-7,#截断值
-            "initial_ratio": 0.06,#初始化比例
-            "expansion_ratio": 2,#拓展比例，下一次实际计算的组态数N=expansion_ratio*重要组态
-            "target_pool_file": "5d6s2_10.c",#目标组态空间文件
-            "root_path": "/home/workstation1/8thdd/recode_mlsci/mlsciscript_rerun",
-            "spetral_term": term[block-1],
-        }
-        cfg['root_path'] = f"/home/workstation1/8thdd/recode_mlsci/mlsciscript_rerun/{cfg['atom']}_{cfg['conf']}_{cfg['block']}"
-        # 使用 types.SimpleNamespace 将 dict 转为 class
-        from types import SimpleNamespace
-        cfg = SimpleNamespace(**cfg)
-        if not os.path.exists(cfg.root_path):
-            os.makedirs(cfg.root_path)
-        # 将参数写入日志文件
-        with open(cfg.root_path+'/config.txt', 'w') as f:
-            for key, value in cfg.__dict__.items():
-                f.write(f"{key}: {value}\n")
-        # ====================== 日志配置 ======================
-        # 为每个模型创建独立的文件处理器
-        # 日志配置
-        os.makedirs("logs", exist_ok=True)
-        logging.basicConfig(
-            filename="logs/pipeline.log",
-            level=logging.INFO,
-            format="%(asctime)s - %(levelname)s - %(message)s",
-        )
-        logger = logging.getLogger()
-        
-        file_handler = logging.FileHandler(cfg.root_path+'/calculation.log')
-        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        logger.addHandler(file_handler)
+    # for block in range(1,5):
+    cfg = {
+        "atom": "GdI",#原子体系
+        "conf": "cv4odd1as3_odd1",
+        "block": 1,
+        "difference": 0,#是否严格要求波函数改进
+        "cutoff_value": 1e-9,#截断值
+        "initial_ratio": 0.3,#初始化比例
+        "expansion_ratio": 2,#拓展比例，下一次实际计算的组态数N=expansion_ratio*重要组态
+        "target_pool_file": "cv4odd1as3_odd1.c",#目标组态空间文件
+        "root_path": "/home/workstation3/caldata/GdI/cvodd1/as3_odd1",
+        "spetral_term": term[0],
+    }
+    # cfg['root_path'] = f"/home/workstation3/caldata/GdI/cvodd1/as3_odd1/{cfg['atom']}_{cfg['conf']}_{cfg['block']}"
+    # 使用 types.SimpleNamespace 将 dict 转为 class
+    from types import SimpleNamespace
+    cfg = SimpleNamespace(**cfg)
+    if not os.path.exists(cfg.root_path):
+        os.makedirs(cfg.root_path)
+    # 将参数写入日志文件
+    with open(cfg.root_path+'/config.txt', 'w') as f:
+        for key, value in cfg.__dict__.items():
+            f.write(f"{key}: {value}\n")
+    # ====================== 日志配置 ======================
+    # 为每个模型创建独立的文件处理器
+    # 日志配置
+    os.makedirs("logs", exist_ok=True)
+    logging.basicConfig(
+        filename="logs/pipeline.log",
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+    logger = logging.getLogger()
+    
+    file_handler = logging.FileHandler(cfg.root_path+'/calculation.log')
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(file_handler)
 
-        logger.info("开始计算")
+    logger.info("开始计算")
 
-        main(cfg)
+    main(cfg)
