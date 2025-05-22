@@ -642,6 +642,15 @@ def level_data_compare(levels_file_1: List, levels_file_2: List):
 
 #######################################################################
 
+def continue_calculate(cal_root_path: str, continue_calculate: bool):
+    with open(f'{cal_root_path}/run.input', 'rw') as file:
+        file.write(continue_calculate)
+        
+    return f'Continue calculate is set to {continue_calculate}'
+
+
+#######################################################################
+
 def csfs_index_storange(blocks_csfs_index: Dict, save_file_path: str):
     """
     将CSFs索引存储到指定的文件中。
