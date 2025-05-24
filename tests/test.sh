@@ -20,7 +20,8 @@ module load mpi/openmpi-x86_64
 ###########################################
 
 ## configuration
-conf="GdIoddImlcias3"
+atom=GdI
+conf="oddImlcias3"
 varied="3"
 rwfnestimate_file="rwfnestimate.inp"
 
@@ -52,6 +53,14 @@ do
     # 控制循环速度
     sleep 1
 ###########################################
+
+## 机器学习预处理
+echo "================执行机器学习预处理================"
+python mlci.py 
+if [ $? -ne 0 ]; then
+    echo "机器学习预处理失败!"
+    exit 1
+fi
 
 ## grasp calculation routine
 mkdir ${conf}_${loop}

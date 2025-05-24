@@ -34,7 +34,7 @@ from .data_modules import MixCoefficientData
     
     rmix data dictionary:
     {
-        'block_CSFs_nums': List[length of each block],
+        'block_num': List[length of each block],
         'block_energy_count_list': List[levels of each block],
         'block_energy_list': List[energy of each block],
         'block_index_list': List[index of each block],
@@ -86,7 +86,7 @@ def single_asf_mix_square_above_threshold(asf_mix_data_array: np.ndarray, thresh
 def batch_asfs_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, threshold=0.1):
     
     csfs_mix_square_data_above_threshold = {}
-    for block in range(asfs_mix_data.CSFs_blocks_num):
+    for block in range(asfs_mix_data.block_num):
         block_level_num = len(asfs_mix_data.mix_coefficient_list[block])
     
         for level in range(block_level_num):
@@ -400,7 +400,7 @@ def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selec
         selected_csfs_indices: 已选CSF索引列表(可选)
         
     返回:
-        tuple: (选中的CSF列表, 对应的索引列表)
+        tuple: (选中的CSF列表, 对应的索引列表, 未选择的索引列表)
     """
     block_csfs_num = len(block_csfs_list)
     selected_csfs_num = len(selected_csfs_indices)
@@ -413,21 +413,40 @@ def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selec
     
     if choose_csfs_num < 0:
         # 如果已选数量已超过比例要求，直接返回已选
-        return [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], selected_csfs_indices
+        unselected_indices = [i for i in range(block_csfs_num) if i not in selected_csfs_indices]
+        return ([CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], 
+                selected_csfs_indices,
+                unselected_indices)
     elif choose_csfs_num == 0:
         # 如果刚好达到比例要求
-        return [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], selected_csfs_indices
+        unselected_indices = [i for i in range(block_csfs_num) if i not in selected_csfs_indices]
+        return ([CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], 
+                selected_csfs_indices,
+                unselected_indices)
     
-    # 生成新的随机索引(确保不重复)
-    random_indices = generate_unique_random_numbers(block_csfs_num, choose_csfs_num)
+    if selected_csfs_num > 0:
+        selected_csfs_indices_set = set(selected_csfs_indices)
+        all_csfs_indices = [i for i in range(block_csfs_num)]
+        drop_selected_indices_list = [x for x in all_csfs_indices if x not in selected_csfs_indices_set]
+        
+        random_indices = generate_unique_random_numbers(len(drop_selected_indices_list), choose_csfs_num)
+        
+        # 映射回真实索引
+        random_indices = [drop_selected_indices_list[idx] for idx in random_indices]
+        
+    elif selected_csfs_num <= 0:
+        random_indices = generate_unique_random_numbers(block_csfs_num, choose_csfs_num)
     
     # 合并新旧索引并去重(保持顺序)
     chosen_csfs_indices = union_lists_with_order(random_indices, selected_csfs_indices)
+    
+    # 获取未选择的索引
+    unselected_indices = [i for i in range(block_csfs_num) if i not in chosen_csfs_indices]
 
     # 获取对应的CSF数据
     chosen_csfs = [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in chosen_csfs_indices]
     
-    return chosen_csfs, chosen_csfs_indices
+    return chosen_csfs, chosen_csfs_indices, unselected_indices
 
 
 

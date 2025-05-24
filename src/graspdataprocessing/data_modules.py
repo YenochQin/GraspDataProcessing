@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class MixCoefficientData:
-    CSFs_blocks_num: int
+    block_num: int
     block_index_list: list
     block_CSFs_nums: list
     block_energy_count_list: list 
@@ -29,3 +29,4 @@ class CSFs:
     parity: str
     CSFs_block_data: list
     CSFs_block_length: list
+    block_num: int

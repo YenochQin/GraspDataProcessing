@@ -24,8 +24,24 @@ from .tool_function import *
 from .CSFs_compress_extract import *
 from .CSFs_choosing import *
 from .data_modules import *
+
+
 class GraspFileLoad:
     # the initialization function of the class "GraspFileLoad"
+    @classmethod
+    def from_filepath(cls, filepath, file_type=None):
+        """从文件路径直接创建实例的类方法"""
+        file_dir = str(Path(filepath).parent)
+        file_name = Path(filepath).name
+        config = {
+            "atom": "",
+            "file_dir": file_dir,
+            "file_name": file_name,
+            "level_parameter": "",
+            "this_as": 0,
+            "file_type": file_type
+        }
+        return cls(config)
 
     def __init__(self, data_file_info: Dict):
         """初始化文件加载器
@@ -36,7 +52,7 @@ class GraspFileLoad:
                 - file_dir: 数据文件目录路径
                 - file_type: 文件类型标识
                 - level_parameter: 能级参数
-                - this_as: this active space no.
+                - this_as: this active space No.
                 - file_name: 具体文件名（可选）
         """
         # 原子系统标识初始化
@@ -301,6 +317,7 @@ class GraspFileLoad:
         block_csfs = [last_block_data[i:i+3] for i in range(0, len(last_block_data), 3)]
         self.CSFs_block_length.append(len(block_csfs))        
         self.CSFs_block_data.append(block_csfs)  # 添加最后一个块的数据
+        self.CSFs_block_length = np.array(self.CSFs_block_length)
         
         return self.subshell_info_raw, self.CSFs_block_j_value, self.parity, self.CSFs_block_data, self.CSFs_block_length
 
@@ -455,7 +472,7 @@ class GraspFileLoad:
 
             # set mix file data as a class
             self.mix_file_data = MixCoefficientData(
-                CSFs_blocks_num=self.num_block,
+                block_num=self.num_block,
                 block_index_list=self.index_block_list,
                 block_CSFs_nums=self.ncfblk_list,
                 block_energy_count_list=self.block_energy_count_list,
@@ -496,12 +513,15 @@ class GraspFileLoad:
             # GraspFileLoad.file_read(self) module cannot be utilized here, as the parsing of CSFs files serves exclusively for CSF refinement purposes, and preservation of trailing newline characters is mandatory.
             GraspFileLoad.csfs_file_read(self)
             
+            self.block_num = len(self.CSFs_block_length)
+            
             self.csfs_file_data = CSFs(
-                subshell_info_raw=self.subshell_info_raw,
-                CSFs_block_j_value=self.CSFs_block_j_value,
-                parity=self.parity,
-                CSFs_block_data=self.CSFs_block_data,
-                CSFs_block_length=self.CSFs_block_length
+                subshell_info_raw = self.subshell_info_raw,
+                CSFs_block_j_value = self.CSFs_block_j_value,
+                parity = self.parity,
+                CSFs_block_data = self.CSFs_block_data,
+                CSFs_block_length = self.CSFs_block_length,
+                block_num = self.block_num
             )
 
             return self.csfs_file_data
@@ -511,7 +531,21 @@ class GraspFileLoad:
 
 #######################################################################
 class EnergyFile2csv():
-
+    @classmethod
+    def from_filepath(cls, filepath, store_csv_path: str=''):
+        """从文件路径直接创建实例的类方法"""
+        file_dir = str(Path(filepath).parent)
+        file_name = Path(filepath).name
+        config = {
+            "atom": "",
+            "file_dir": file_dir,
+            "file_name": file_name,
+            "level_parameter": "",
+            "this_as": 0,
+            "file_type": "ENERGY",
+            "store_csv_path": store_csv_path
+        }
+        return cls(config)
     def __init__(self, data_file_info: Dict):
         self.data_file_info = data_file_info
         self.atom = data_file_info.get("atom")
@@ -536,7 +570,10 @@ class EnergyFile2csv():
         self.this_as = data_file_info.get("this_as")
         # self.load_file_path = Path(self.raw_data_file_dir, self.file)
         # self.store_file_path = Path(self.raw_data_file_dir)
-        self.store_file_path = Path(self.data_file_dir).joinpath("csv_file")
+        if data_file_info.get("store_csv_path"):
+            self.store_file_path = Path(data_file_info.get("store_csv_path"))
+        else:
+            self.store_file_path = Path(self.data_file_dir).joinpath("level_csv_file")
         if not self.store_file_path.exists():
             self.store_file_path.mkdir()
 
@@ -658,7 +695,7 @@ def csfs_index_storange(blocks_csfs_index: Dict, save_file_path: str):
         blocks_csfs_index (Dict): 包含CSFs索引的字典。
         save_file_path (str): 存储文件的路径。
     """
-    with open('save_file_path', 'wb') as f:
+    with open(save_file_path, 'wb') as f:
         msgpack.dump(blocks_csfs_index, f)
         
     return f'CSFs index has been stored to {save_file_path}'
