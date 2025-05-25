@@ -463,12 +463,15 @@ class GraspFileLoad:
                     temp_energy.append(self.block_energy_list[jblock-1]+self.block_level_energy_list[jblock-1][pos-1])
 
             level_index = np.argsort(temp_energy)
+            level_energy_list = []
 
             for i in range(len(level_index)):
                 if i == 0:
                     print(f"{i+1:3}{temp_pos[level_index[i]]:3}{temp_J[level_index[i]]:>4}   {temp_parity[level_index[i]]:1}    {temp_energy[level_index[i]]:14.7f}{0.0000000:12.2f}")
+                    level_energy_list.append(temp_energy[level_index[i]])
                 else:
                     print(f"{i+1:3}{temp_pos[level_index[i]]:3}{temp_J[level_index[i]]:>4}   {temp_parity[level_index[i]]:1}    {temp_energy[level_index[i]]:14.7f}{energy_au_cm(temp_energy[level_index[i]]-temp_energy[level_index[0]]):12.2f}")
+                    level_energy_list.append(temp_energy[level_index[i]])
 
             # set mix file data as a class
             self.mix_file_data = MixCoefficientData(
@@ -481,7 +484,8 @@ class GraspFileLoad:
                 block_levels_index_list=self.ivec_list,
                 block_energy_list=self.block_energy_list,
                 block_level_energy_list=self.block_level_energy_list,
-                mix_coefficient_list=self.mix_coefficient_list
+                mix_coefficient_list=self.mix_coefficient_list,
+                level_list=level_energy_list
             )
             return self.mix_file_data
 
@@ -599,6 +603,7 @@ class EnergyFile2csv():
         with open(self.saved_csv_file_path, 'w', newline='') as csv_file:
             # write the data file into the csv file
             writer = csv.writer(csv_file)
+            writer.writerow(['No', 'Pos', 'J', 'Parity', 'EnergyTotal', 'EnergyLevel', 'splitting', 'configuration'])
             writer.writerows(self.save_level_data)
             # for item in self.save_level_data:
             #     # writer.writerow(item)

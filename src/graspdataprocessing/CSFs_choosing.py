@@ -57,31 +57,32 @@ from .data_modules import MixCoefficientData
 #######################################################################
 def single_asf_mix_square_above_threshold(asf_mix_data_array: np.ndarray, threshold=0.1):
     """
-    筛选并排序混合数据中绝对值超过阈值的元素
+    筛选并排序混合数据中绝对值超过阈值的元素的索引
     
     参数：
         mix_data_array: 输入的混合数据数组
         threshold: 阈值，默认0.1
         
     返回：
-        按绝对值降序排列的字典，键为索引数组（转换为元组），值为对应元素值
+        按绝对值降序排列的索引列表(元组形式)
     """
     # 生成布尔掩码标识绝对值超过阈值的元素
     square_above_threshold_mask = np.square(asf_mix_data_array) > threshold
 
-    # 提取超过阈值的实际值
-    values_above_threshold = asf_mix_data_array[square_above_threshold_mask]
-
     # 获取满足条件的元素索引（返回二维坐标数组）
     indices_where_square_above_threshold = np.argwhere(square_above_threshold_mask)
-
-    # 将索引数组转换为元组作为键，值与索引配对组合
-    result_dict = {tuple(index): value for index, value in zip(indices_where_square_above_threshold, values_above_threshold)}
     
-    # 按元素绝对值降序排序
-    sorted_result = dict(sorted(result_dict.items(), key=lambda x: abs(x[1]), reverse=True))
+    # 提取对应的值用于排序
+    # values_above_threshold = asf_mix_data_array[square_above_threshold_mask]
     
-    return sorted_result
+    # 将索引和值组合并排序
+    sorted_indices = sorted(
+        [tuple(index) for index in indices_where_square_above_threshold],
+        key=lambda x: abs(asf_mix_data_array[x]),  # 根据原始数组中的值排序
+        reverse=True
+    )
+    
+    return sorted_indices
 
 def batch_asfs_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, threshold=0.1):
     
@@ -94,6 +95,24 @@ def batch_asfs_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, thr
             csfs_mix_square_data_above_threshold[(block, level)] = temp_coeff
             
     return csfs_mix_square_data_above_threshold
+
+def batch_blocks_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, threshold=0.1):
+    
+    block_csfs_mix_square_data_above_threshold = {}
+    for block in range(asfs_mix_data.block_num):
+        block_level_num = len(asfs_mix_data.mix_coefficient_list[block])
+    
+        temp_block_coeff = []
+        for level in range(block_level_num):
+            temp_coeff = single_asf_mix_square_above_threshold(asfs_mix_data.mix_coefficient_list[block][level], threshold)
+            # block_csfs_mix_square_data_above_threshold[(block, level)] = temp_coeff
+            temp_block_coeff.extend(temp_coeff)
+            
+        unique_indices = union_lists_with_order(temp_block_coeff)
+        
+        block_csfs_mix_square_data_above_threshold[(block,)] = unique_indices
+
+    return block_csfs_mix_square_data_above_threshold
 
 def asf_mix_square_above_threshold_coupling_info(mix_square_data_above_threshold: Dict, csf_data_list: List):
     csf_list = []

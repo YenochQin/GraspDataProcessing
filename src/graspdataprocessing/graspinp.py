@@ -40,7 +40,7 @@ def lines_to_csf(orbs, csf_3lines, J2tot):
     for ich in range(0, lenchunks):
         orb = num_chunk[ich][:5]
         num = int(num_chunk[ich][6:8])
-        maxnum = get_max_num(orb[3:5])
+        # maxnum = get_max_num(orb[3:5])
         J2nu = J2nu_chunk[ich].split(';')
         J2 = readj2(J2nu[-1], 0)
         nu = int(J2nu[0]) if len(J2nu)==2 else np.nan
@@ -113,25 +113,36 @@ def count_prim_pool(flnm_full, flnm_head):
 
 def produce_basis_npy(flnm_npy, flnm_full, J2tot):
 
+    # 统计CSF文件中原始组态和池组态的数量
     csfs_prim_num, csfs_pool_num = count_prim_pool(flnm_full, flnm_full)
+    
+    # 提取轨道信息
     orbs = extract_orbs(flnm_full)
     
+    # 初始化NumPy数组 (池组态数量 × 3×轨道数)
     csfs_np = np.zeros( ( csfs_pool_num, 3*len(orbs) ), dtype=np.float32)
     
+    # 读取CSF文件并处理每3行为一个CSF
     with open(flnm_full, "r") as f_full:
-        # for _ in range(5 + 3*csfs_prim_num):
+        # 跳过前5行头信息
         for _ in range(5):
             f_full.readline()
-
+    
+        # 逐CSF处理
         for csf_ii in range(csfs_pool_num):
+            # 读取3行CSF数据
             ln1 = f_full.readline()
             ln2 = f_full.readline()
             ln3 = f_full.readline()
+            # 转换为数值并存入数组
             csfs_np[csf_ii, :] = lines_to_csf(orbs, [ln1, ln2, ln3], J2tot)
-
-    with open(flnm_npy, "wb") as f_npy:
-        np.save(f_npy, csfs_np)
-    return csfs_prim_num, csfs_pool_num
+    
+        # 保存NumPy数组到文件
+        with open(flnm_npy, "wb") as f_npy:
+            np.save(f_npy, csfs_np)
+    
+        # 返回原始组态和池组态数量
+        return csfs_prim_num, csfs_pool_num
 
 def remove_first_char_from_file(input_file, output_file):
     with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:

@@ -20,7 +20,7 @@ class MixCoefficientData:
     block_energy_list: list
     block_level_energy_list: list
     mix_coefficient_list: list
-    
+    level_list: list
     
 @dataclass
 class CSFs:

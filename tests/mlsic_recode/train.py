@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+'''
+@Id :train.py
+@date :2025/05/25 13:53:10
+@author :YenochQin (秦毅)
+'''
 import yaml
 import argparse
 import logging
@@ -8,8 +15,14 @@ import csv
 import sys
 import math
 import numpy as np
+import pandas as pd
 import time
-
+import joblib
+import json
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 sys.path.append('/home/workstation2/AppFiles/GraspDataProcessing/src')
 import graspdataprocessing as gdp
@@ -27,19 +40,32 @@ def setup_logging(config):
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler("logs/pipeline.log"),
+            logging.FileHandler("logs/machine_learning_training.log"),
             logging.StreamHandler()
         ]
     )
     return logging.getLogger(__name__)
 
+def level_energy_configuration_compare(config):
+    
+
+def traning_model(config):
+    """训练模型"""
+    logger = setup_logging(config)
+    logger.info("开始训练模型")
+    
+
 def main(config):
+    
+    config.file_name = f'{config.conf}_{config.cal_loop_num}'
     """主程序逻辑"""
     logger = setup_logging(config)
-    logger.info("程序启动")
+    logger.info("机器学习训练程序启动")
+    excution_time = time.time()
 
     # 使用 pathlib 创建目录
     root_path = Path(config.root_path)
+    cal_path = root_path.joinpath(f'{config.conf}_{config.cal_loop_num}')
     (root_path / "models").mkdir(parents=True, exist_ok=True)
     (root_path / "descripotors").mkdir(parents=True, exist_ok=True)
     (root_path / "descripotors_stay").mkdir(parents=True, exist_ok=True)
@@ -80,61 +106,230 @@ def main(config):
         logger.error(f"加载CSFs文件时发生未知错误: {str(e)}")
         raise
 
-    initial_csfs_data_load = gdp.GraspFileLoad.from_filepath(initial_csfs_path, file_type='CSF')
-    initial_csfs_data = initial_csfs_data_load.data_file_process()
-    # initial_csfs_data has the following attributes:
-    ## initial_csfs_data.subshell_info_raw
-    ## initial_csfs_data.CSFs_block_j_value
-    ## initial_csfs_data.parity
-    ## initial_csfs_data.CSFs_block_data
-    ## initial_csfs_data.CSFs_block_length
-    ## initial_csfs_data.block_num
+    energy_level_file_path = root_path.joinpath(f'{cal_path}/{config.conf}_{config.cal_loop_num}.level')
+    energy_level_file_load = gdp.GraspFileLoad.from_filepath(energy_level_file_path)
     
-    chosen_csfs_indices_dict = {}
-    chosen_csfs_dict = {}
-    unselected_indices_dict = {}
-    # 加载索引文件
-    if hasattr(config, 'selected_csfs_index_file'):
-        selected_csfs_indices_dict = {}
-        selected_csfs_indices_dict = gdp.csfs_index_load(config.selected_csfs_index_file)
+    energy_level_data_pd = energy_level_file_load.energy_level_2_pd()
     
-    # 加载CSF文件并建立映射
-    if hasattr(config, 'selected_csfs_file'):
-        selected_csfs_load = gdp.GraspFileLoad.from_filepath(config.selected_csfs_file, file_type='CSF')  # 修正变量名
-        selected_csfs_indices_dict = {}
-        selected_csfs_data = selected_csfs_load.data_file_process()
-        selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
-            selected_csfs_data.CSFs_block_data, 
-            initial_csfs_data.CSFs_block_data
+    cal_configuration_set = set(energy_level_data_pd['configuration'])
+    
+    if set(config.spetral_term).issubset(cal_configuration_set):
+        logger.info(f"cal_loop {config.cal_loop_num} 组态耦合正确")
+        cal_result = True
+    else:
+        logger.error(f"cal_loop {config.cal_loop_num} 组态耦合错误")
+        cal_result = False
+        
+    rmix_file_load = gdp.GraspFileLoad.from_filepath(f'{cal_path}/{config.conf}_{config.cal_loop_num}.m', 'mix')
+    rmix_file_data = rmix_file_load.data_file_process()
+    ## rmix_file_data.block_num
+    ## rmix_file_data.block_index_list
+    ## rmix_file_data.block_CSFs_nums
+    ## rmix_file_data.block_energy_count_list
+    ## rmix_file_data.j_value_location_list
+    ## rmix_file_data.parity_list
+    ## rmix_file_data.block_levels_index_list
+    ## rmix_file_data.block_energy_list
+    ## rmix_file_data.block_level_energy_list
+    ## rmix_file_data.mix_coefficient_list
+    
+    raw_csf_file_load = gdp.GraspFileLoad.from_filepath(f'{config.target_pool_file}.c')
+    raw_csf_data = raw_csf_file_load.data_file_process()
+    
+    indices_temp = [i for i in range(raw_csf_data.CSFs_block_length[0])]
+    sum_num_list = []
+    sum_num_min = round(math.ceil(raw_csf_data.CSFs_block_length[0] * config.initial_ratio))
+
+    ## cal loop_num > 1 --> 用于判断能量有没有下降
+    if cal_result:
+        for level in rmix_file_data.level_list:
+            logger.info(f"             迭代能量：{level}")
+        logger.info(f"             耦合正确")
+        logger.info("************************************************")
+        
+        cut_off_csfs_indices_dict = gdp.batch_blocks_mix_square_above_threshold(rmix_file_data, config.cutoff_value)
+        ci_temp = cut_off_csfs_indices_dict[0]
+        
+        unique_indices = gdp.deduplicateanddemerge(ci_temp, config.cutoff_value)
+        ci_desc = np.zeros(ci_temp.shape[1], dtype=bool)
+        ci_desc[unique_indices] = True
+        
+        csfs_prim_num, csfs_pool_num = gdp.produce_basis_npy(f'{config.file_name}.npy', f'{config.file_name}.c', 3)
+        csfs_prim_num_stay, csfs_pool_num_stay = gdp.produce_basis_npy(f'{config.file_name}_stay.npy', f'{config.file_name}_stay.c', 3)
+
+        descriptors_pool = pd.DataFrame(np.load(f'{config.file_name}.npy'))
+        
+        new_descriptors_pool = pd.concat([descriptors_pool, pd.DataFrame(ci_desc.T)], axis=1)
+        new_descriptors_pool.to_csv(f'descripotors/{config.file_name}_desc.csv', index=False)
+
+        stay_descriptors_pool = pd.DataFrame(np.load(f'{config.file_name}_stay.npy'))
+        stay_descriptors_pool.to_csv(f'descripotors/{config.file_name}_stay_desc.csv', index=False)
+        
+        logger.info("<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>")
+        logger.info("             特征提取完成")
+        
+        total_data = pd.read_csv(f'descripotors/{config.file_name}_desc.csv')
+        X = total_data.iloc[:, :-1]
+        y = total_data.iloc[:, -1]
+        
+        stay_data = pd.read_csv(f'descripotors_stay/{config.file_name}_stay_desc.csv')
+        X_stay = stay_data.iloc[:, :].values
+        X_train, X_test, y_train, y_test = train_test_split(X.values, y.values, test_size=0.2, random_state=42)
+        
+        logger.info("             训练模型")
+        
+        if config.cal_loop_num == 1:
+            model = RandomForestClassifier(class_weight={0:1, 1:3},n_estimators=1000, verbose=True, n_jobs= -1)
+        else:
+            model = joblib.load(f"models/{config.conf}_{config.cal_loop_num-1}.pkl")
+
+        results = pd.read_csv(f'{config.root_path}/results/iteration_results.csv')
+
+        
+        #################### weight ##################
+        weight = [1, max(1, 12 - 2*config.cal_loop_num)]
+        logger.info("weight:{}".format(weight))
+        
+        X_resampled, y_resampled = gdp.ANNClassifier.resampling(X_train, y_train, weight)
+        start_time = time.time()
+        model.fit(X_resampled, y_resampled)
+        training_time = time.time() - start_time
+        
+        # Test set validation and configuration prediction
+        logger.info("             预测与评估")
+        y_pred = model.predict(X_test)
+        start_time = time.time()
+        y_pred_other = model.predict(X_stay)
+        eval_time = time.time() - start_time
+        all_time = excution_time + training_time + eval_time
+        y_proba = model.predict_proba(X_test)[:, 1]
+        y_pred_train = model.predict(X_train)
+        y_proba_train = model.predict_proba(X_train)[:, 1]
+        
+        # Model evaluation
+        roc_auc, pr_auc = gdp.ANNClassifier.plot_curve(y_test, y_proba, config.file_name)
+        f1, roc_auc, accuracy, precision, recall = gdp.ANNClassifier.model_evaluation(y_test, y_pred, y_proba)
+        
+        # Overfitting and underfitting monitoring
+        f1_train, roc_auc_train, accuracy_train, precision_train, recall_train = gdp.ANNClassifier.model_evaluation(y_train, y_pred_train, y_proba_train)
+        
+        # Save the result
+        result_file = f"test_data/{config.file_name}.csv"
+        pd.DataFrame({"y_test": y_test, "y_pred": y_pred, "y_proba": y_proba}).to_csv(result_file, index=False)
+        joblib.dump(model, f"models/{config.file_name}.pkl")
+        logger.info(f"预测结果与模型保存成功")
+        logger.info("<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>")
+        
+        # Update the minimum number of CI
+        sum_num = len(unique_indices)
+        sum_num_list.append(sum_num)
+        logging.info(f"当前重要组态数目: {sum_num}")
+        logging.info(f"迭代重要组态数目: {sum_num_list}")
+        if sum_num <= sum_num_min:
+            sum_num=sum_num_min
+        
+        # Update Important configuration indexes
+        indexs_import = unique_indices.tolist()
+        indexs_import_temp = [index[i] for i in indexs_import]
+        indexs_import_stay = np.where(y_pred_other == 1)[0].tolist()
+        indexs_import_stay_temp = [stay_indexs[i] for i in indexs_import_stay]
+        np.save(f"results/indexs_import_ab{config.cal_loop_num}.npy",indexs_import_temp)
+        np.save(f"results/indexs_import_ml{config.cal_loop_num}.npy",indexs_import_stay_temp)
+        
+        # Selective configuration
+        logger.info(f"开始选择组态，当前重要组态数为：{len(indexs_import_temp)}")
+        if config.cal_loop_num != 1:
+            logging.info("记录前一步的ML采样率信息")
+            results['MLsampling_ratio'][config.cal_loop_num-2] = (len(indexs_import_temp)-len(import_before))/len(ml_addcsf)
+
+            results.to_csv(f'{config.root_path}/results/iteration_results.csv', index=False)
+        
+        if  len(indexs_import_stay) >= config.expansion_ratio * sum_num:
+            ml_addcsf = np.random.choice(indexs_import_stay_temp,
+                                         size = config.expansion_ratio * sum_num,
+                                         replace = False).tolist()
+            mc_addcsf = None
+            new_addcsf = ml_addcsf
+        elif len(indexs_import_stay) <= config.expansion_ratio * sum_num:
+            stay_index = gdp.pop_other_ci(indices_temp, 
+                                          indexs_import_stay_temp+indexs_import_temp)
+            ml_addcsf = indexs_import_stay_temp
+            mc_addcsf = np.random.choice(stay_index, 
+                                         size = config.expansion_ratio * sum_num - len(indexs_import_stay_temp),
+                                         replace=False).tolist()
+            new_addcsf = ml_addcsf + mc_addcsf
+        MLsampling_ratio = None
+        chosen_index = np.sort(np.array(indexs_import_temp + new_addcsf))
+        import_before = indexs_import_temp
+
+        logger.info(f"下一步计算组态数为：{len(chosen_index)}")
+        
+        ## !TODO: 这里需要修改
+        chosen_csfs_data = [csf for i in chosen_index for csf in raw_csf_data.CSFs_block_data[0][i]]
+        
+        gdp.write_sorted_CSFs_to_cfile(
+                                        raw_csf_data.CSFs_file_info,
+                                        chosen_csfs_data,
+                                        root_path.joinpath(f'{config.conf}_{config.cal_loop_num+1}.c')
         )
-    
-    for block in range(initial_csfs_data.block_num):
-        # 计算每个块的初始采样数量
-        chosen_csfs_dict[block], chosen_csfs_indices_dict[block], unselected_indices_dict[block] = gdp.radom_choose_csfs(initial_csfs_data.CSFs_block_data[block], config.initial_ratio, selected_csfs_indices_dict[block])
-    
-    chosen_csfs_list = [value for key, value in chosen_csfs_dict.items()]
-    ## CSFs_file_info: List, sorted_CSFs_data_list: List, output_file: str
-    gdp.write_sorted_CSFs_to_cfile(
-                                    initial_csfs_data.CSFs_file_info,
-                                    chosen_csfs_list,
-                                    root_path.joinpath(f'{config.conf}_{config.cal_loop_num}.c')
-    )
-    logger.info(f"CSFs选择完成，保存到文件{config.conf}_{config.cal_loop_num}.c")
-    
-    gdp.csfs_index_storange(
-                            unselected_indices_dict,
-                            root_path.joinpath(f'{config.conf}_{config.cal_loop_num}_unselected_indices.msgpack'
+
+        stay_indices= np.array(gdp.pop_other_ci(indices_temp, chosen_index))
+        
+        unchosen_csfs_data = [csf for i in stay_indices for csf in raw_csf_data.CSFs_block_data[0][i]]
+        gdp.write_sorted_CSFs_to_cfile(
+                                        raw_csf_data.CSFs_file_info,
+                                        unchosen_csfs_data,
+                                        root_path.joinpath(f'{config.conf}_{config.cal_loop_num+1}_stay.c')
         )
-    logger.info(f"未选择CSFs的索引保存到文件{config.conf}_{config.cal_loop_num}_unselected_indices.msgpack")
-    
-    logger.info("组态筛选完成")
+        # Save results
+        with open(f'{config.root_path}/results/iteration_results.csv', mode="a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([
+                training_time, eval_time, excution_time, all_time, f1, roc_auc, accuracy,precision, recall,
+                0, len(unique_indices), len(indexs_import_stay), MLsampling_ratio, len(chosen_index),
+                weight, f1_train, roc_auc_train, accuracy_train, precision_train, recall_train
+            ])
+        
+        # Perform convergence calculations
+        if len(Es_term) >= 3:
+            logger.info(f"执行方差计算：{b}")
+            E_std = np.std(Es_term[-3:], ddof=1)
+            N_rsd = np.std(sum_num_list[-3:], ddof=1)/abs(np.mean(Es_term[-3:]))
+            logger.info(f"第{b}次迭代，能量的标准偏差为：{E_std}，重要组态数的相对标准偏差为：{N_rsd}")
+            if E_std <= 5e-05 and N_rsd <= 0.005:
+                logger.info("达到收敛精度，迭代结束")
+                break
+        b += 1
+        c = 0
+    else:
+        c += 1
+        if c == 3:
+            logger.info("连续三次波函数未改进，迭代收敛，退出筛选程序")
+            break
+        logger.info('组态选择出现问题：')
+        if term in outconf:
+            logger.info('     能量未降低，波函数未得到改进')
+        else:
+            logger.info('     耦合出现问题')
+        logger.info("正在重选组态")
+        indexs_import_temp=np.load(f"results/indexs_import_ab{spetral_term_index}_{b-1}.npy")
+        stay_indexs = gdp.pop_other_ci(indices_temp, indexs_import_temp)
+        ML_sampling_ratio = None
+        mc_addcsf = np.random.choice(stay_indexs,size=expansion_ratio*sum_num,replace=False).tolist()
+        index= np.sort(np.array(list(indexs_import_temp)+mc_addcsf))
+        gdp.save_ci(index, path+ file_name + ".c", N_ci, cis_ts, head)
+        stay_indexs= np.array(gdp.pop_other_ci(indices_temp, index))
+        gdp.save_ci(stay_indexs, path+ file_name + "_stay.c", N_ci, cis_ts, head)
+        pass
+        
 
 
 if __name__ == "__main__":
     # 解析命令行参数
-    parser = argparse.ArgumentParser(description='机器学习配置交互程序')
+    parser = argparse.ArgumentParser(description='机器学习训练程序')
     parser.add_argument('--config', type=str, default='config.yaml', help='配置文件路径')
     args = parser.parse_args()
+    
 
     # 加载配置
     try:

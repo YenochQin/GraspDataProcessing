@@ -11,7 +11,8 @@ import re
 
 import numpy as np
 import pandas as pd
-
+from dataclasses import dataclass
+from pathlib import Path
 from tqdm import tqdm
 
 from .data_IO import GraspFileLoad, EnergyFile2csv
@@ -98,6 +99,21 @@ class LevelsEnergyData:
     '''
     This class is used to read the energy data from the grasp output file and format the data.
     '''
+    @classmethod
+    def from_filepath(cls, filepath, store_csv_path: str=''):
+        """从文件路径直接创建实例的类方法"""
+        file_dir = str(Path(filepath).parent)
+        file_name = Path(filepath).name
+        config = {
+            "atom": "",
+            "file_dir": file_dir,
+            "file_name": file_name,
+            "level_parameter": "",
+            "this_as": 0,
+            "file_type": "ENERGY",
+            "store_csv_path": store_csv_path
+        }
+        return cls(config)
     def __init__(self, data_file_info):
         self.data_file_info = data_file_info
         self.cut_off_subshell =  data_file_info.get("cut_off_subshell", "")
@@ -122,7 +138,19 @@ class LevelsEnergyData:
         self.saved_csv_file_path = self.raw_data2csv.energy_file2csv()
         
         # self.level_read_df = pd.read_csv(f"{self.saved_csv_file_path}", sep=r'\s+', names=['No', 'Pos', 'J', 'Parity', f'Energy_Total_{self.level_parameter}{self.this_as}', f'E_as{self.this_as}', 'Splitting', f'Configuration_{self.level_parameter}{self.this_as}raw'], dtype=str)
-        self.level_read_df = pd.read_csv(f"{self.saved_csv_file_path}", names=['No', 'Pos', 'J', 'Parity', f'Energy_Total_{self.level_parameter}{self.this_as}', f'E_as{self.this_as}', 'Splitting', f'Configuration_{self.level_parameter}{self.this_as}raw'], dtype=str)
+        self.level_read_df = pd.read_csv(f"{self.saved_csv_file_path}", header=0, names=['No', 'Pos', 'J', 'Parity', f'Energy_Total_{self.level_parameter}{self.this_as}', f'E_as{self.this_as}', 'Splitting', f'Configuration_{self.level_parameter}{self.this_as}raw'], dtype=str)
+        
+        return self.level_read_df
+    def energy_level_2_pd(self):
+        
+        self.raw_data_file = GraspFileLoad(self.data_file_info)
+        
+        self.raw_data2csv = EnergyFile2csv(self.data_file_info)
+        
+        self.saved_csv_file_path = self.raw_data2csv.energy_file2csv()
+        
+        # self.level_read_df = pd.read_csv(f"{self.saved_csv_file_path}", sep=r'\s+', names=['No', 'Pos', 'J', 'Parity', f'Energy_Total_{self.level_parameter}{self.this_as}', f'E_as{self.this_as}', 'Splitting', f'Configuration_{self.level_parameter}{self.this_as}raw'], dtype=str)
+        self.level_read_df = pd.read_csv(f"{self.saved_csv_file_path}", header=0)
         
         return self.level_read_df
         

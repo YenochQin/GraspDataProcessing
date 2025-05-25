@@ -15,7 +15,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from .tool_function import *
-
+from .data_modules import CSFs
 
 #######################################################################
 # CSFs source data compress to a simplified form
@@ -51,34 +51,64 @@ def if_subshell_full_charged(subshell_name: str, subshell_charged_num: int) -> b
     }
     return full_charged.get(subshell_name, 0) == subshell_charged_num
 
-def CSF_subshell_split(CSFs_configuration_raw: str) -> Dict[str, int]:
+# def CSF_subshell_split(CSFs_configuration_raw: str) -> Dict[str, int]:
 
-    subshells_charged = re.split(r'(\d*\w[\s|-]\(\s\d*\))', CSFs_configuration_raw)
-    print(subshells_charged)
+#     subshells_charged = re.split(r'(\d*\w[\s|-]\(\s\d*\))', CSFs_configuration_raw)
+#     print(subshells_charged)
     
-    subshells_charged = [item for item in subshells_charged if item.strip()]
+#     subshells_charged = [item for item in subshells_charged if item.strip()]
     
-    subshell_unfully_charged = {}
-    subshell_fully_charged = {}
+#     subshell_unfully_charged = {}
+#     subshell_fully_charged = {}
     
-    csf_electron_num = 0
-    for subshell in subshells_charged:
-        temp_subshell_charged_state = subshell_charged_state(subshell)
+#     csf_electron_num = 0
+#     for subshell in subshells_charged:
+#         temp_subshell_charged_state = subshell_charged_state(subshell)
 
-        temp_quantum_num = temp_subshell_charged_state['subshell_main_quantum_num']
-        temp_subshell = temp_subshell_charged_state['subshell_name']
-        temp_charged_num = temp_subshell_charged_state['subshell_charged_num']
-        csf_electron_num += temp_charged_num
-        if if_subshell_full_charged(temp_subshell, temp_charged_num):
-            print(f"{temp_quantum_num}{temp_subshell}({temp_charged_num}) is fully charged.")
-            subshell_fully_charged[temp_quantum_num + temp_subshell] = temp_charged_num
-        else:
-            subshell_unfully_charged[temp_quantum_num + temp_subshell] = temp_charged_num
+#         temp_quantum_num = temp_subshell_charged_state['subshell_main_quantum_num']
+#         temp_subshell = temp_subshell_charged_state['subshell_name']
+#         temp_charged_num = temp_subshell_charged_state['subshell_charged_num']
+#         csf_electron_num += temp_charged_num
+#         if if_subshell_full_charged(temp_subshell, temp_charged_num):
+#             print(f"{temp_quantum_num}{temp_subshell}({temp_charged_num}) is fully charged.")
+#             subshell_fully_charged[temp_quantum_num + temp_subshell] = temp_charged_num
+#         else:
+#             subshell_unfully_charged[temp_quantum_num + temp_subshell] = temp_charged_num
     
-    return {
-        'unfully_charged_subshell': subshell_unfully_charged,
-        'fully_charged_subshell': subshell_fully_charged
-        }
+#     return {
+#         'unfully_charged_subshell': subshell_unfully_charged,
+#         'fully_charged_subshell': subshell_fully_charged
+#         }
+    
+def CSF_subshell_split(CSFs_configuration_raw: str) -> List:
+    
+    # CSFs_configuration_raw need drop '\n' first !!!
+
+    subshells_charged = [CSFs_configuration_raw[i:i+9] for i in range(0, len(CSFs_configuration_raw), 9)]
+
+    return subshells_charged
+
+def get_CSFs_peel_subshells(CSFs_file_data: CSFs) -> List:
+
+    peel_subshells = CSFs_file_data.subshell_info_raw[-1]
+    
+    return peel_subshells.split()
+
+def CSF_subshell_transform(subshells_charged: str, CSFs_file_Peel_subshells: List) -> List[int]:
+    
+    ## 暂时用不了
+    subshells_charged_list = CSF_subshell_split(subshells_charged)
+    
+    filled_dict = {}
+    
+    for item in subshells_charged_list:
+        subshell, e_charges = re.findall(r'([0-9]*[s,p,d,f,g][\s,-])\( (\d+)\)', item)[0]
+        filled_dict[subshell] = int(e_charges)
+    
+    transform_subshells_charged = [filled_dict.get(subshell, 0) for subshell in CSFs_file_Peel_subshells]
+    
+    return transform_subshells_charged
+    
 
 #######################################################################
 
