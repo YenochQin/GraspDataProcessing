@@ -33,6 +33,23 @@ def load_config(config_path):
         config = yaml.safe_load(f)
     return SimpleNamespace(**config)
 
+def update_config(config_path, updates):
+    """更新YAML配置文件
+    
+    Args:
+        config_path: 配置文件路径
+        updates: 要更新的键值对字典
+    """
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    # 更新配置值
+    config.update(updates)
+    
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+
 def setup_logging(config):
     """配置日志系统"""
     os.makedirs("logs", exist_ok=True)
@@ -46,7 +63,7 @@ def setup_logging(config):
     )
     return logging.getLogger(__name__)
 
-def level_energy_configuration_compare(config):
+# def level_energy_configuration_compare(config):
     
 
 def traning_model(config):
@@ -298,29 +315,54 @@ def main(config):
             logger.info(f"第{b}次迭代，能量的标准偏差为：{E_std}，重要组态数的相对标准偏差为：{N_rsd}")
             if E_std <= 5e-05 and N_rsd <= 0.005:
                 logger.info("达到收敛精度，迭代结束")
-                break
-        b += 1
-        c = 0
+                # break
+                with open(f'{config.root_path}/run.input', 'w') as file:
+                    file.write('False')
+                 
+        config.cal_loop_num += 1
+        update_config(f'{config.root_path}/config.yaml', {'cal_loop_num': config.cal_loop_num})
+        
     else:
-        c += 1
-        if c == 3:
+        cal_error_num = config.cal_error_num + 1
+        update_config(f'{config.root_path}/config.yaml', {'cal_error_num': cal_error_num})
+        if cal_error_num == 3:
             logger.info("连续三次波函数未改进，迭代收敛，退出筛选程序")
-            break
+            with open(f'{config.root_path}/run.input', 'w') as file:
+                    file.write('False')
+            # break
         logger.info('组态选择出现问题：')
-        if term in outconf:
+        if set(config.spetral_term).issubset(cal_configuration_set):
             logger.info('     能量未降低，波函数未得到改进')
         else:
             logger.info('     耦合出现问题')
         logger.info("正在重选组态")
-        indexs_import_temp=np.load(f"results/indexs_import_ab{spetral_term_index}_{b-1}.npy")
+        indexs_import_temp=np.load(f"results/indexs_import_ab{b-1}.npy")
         stay_indexs = gdp.pop_other_ci(indices_temp, indexs_import_temp)
         ML_sampling_ratio = None
-        mc_addcsf = np.random.choice(stay_indexs,size=expansion_ratio*sum_num,replace=False).tolist()
+        # mc_addcsf = np.random.choice(stay_indexs, size=expansion_ratio*sum_num,replace=False).tolist()
+        mc_addcsf = np.random.choice(stay_index, 
+                                         size = config.expansion_ratio * sum_num - len(indexs_import_stay_temp),
+                                         replace=False).tolist()
         index= np.sort(np.array(list(indexs_import_temp)+mc_addcsf))
-        gdp.save_ci(index, path+ file_name + ".c", N_ci, cis_ts, head)
-        stay_indexs= np.array(gdp.pop_other_ci(indices_temp, index))
-        gdp.save_ci(stay_indexs, path+ file_name + "_stay.c", N_ci, cis_ts, head)
-        pass
+        chosen_csfs_data = [csf for i in chosen_index for csf in raw_csf_data.CSFs_block_data[0][i]]
+        
+        gdp.write_sorted_CSFs_to_cfile(
+                                        raw_csf_data.CSFs_file_info,
+                                        chosen_csfs_data,
+                                        root_path.joinpath(f'{config.conf}_{config.cal_loop_num}.c')
+        )
+
+        stay_indices= np.array(gdp.pop_other_ci(indices_temp, chosen_index))
+        
+        unchosen_csfs_data = [csf for i in stay_indices for csf in raw_csf_data.CSFs_block_data[0][i]]
+        gdp.write_sorted_CSFs_to_cfile(
+                                        raw_csf_data.CSFs_file_info,
+                                        unchosen_csfs_data,
+                                        root_path.joinpath(f'{config.conf}_{config.cal_loop_num}_stay.c')
+        )
+
+        
+
         
 
 
