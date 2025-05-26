@@ -64,7 +64,6 @@ class GraspFileLoad:
             raise ValueError("数据目录不存在")  # 严格校验目录有效性
         else:
             self.data_file_dir = Path(self.file_dir)
-            print(f"Data file {self.data_file_dir} loaded.")
 
         # 加载文件配置参数
         self.file_type = data_file_info.get("file_type")    # 文件类型标识
@@ -75,8 +74,11 @@ class GraspFileLoad:
         self.file_name = data_file_info.get("file_name")
         if Path(self.file_dir).is_file():
             self.data_file_path = Path(self.file_dir)  # 直接使用完整路径
+            print(f"Data file {self.data_file_path} loaded.")
+            
         elif isinstance(self.file_name, str) and self.file_name:
             self.data_file_path = self.data_file_dir / self.file_name  # 路径拼接
+            print(f"Data file {self.data_file_path} loaded.")
         else:
             self.data_file_path = None  # 无明确文件名时需要后续处理
 

@@ -308,7 +308,7 @@ def merge_multiple_dicts_with_ordered_union(*dicts: Dict[Tuple[int], List]) -> d
         # 收集所有字典中该键对应的列表
         lists_to_merge = [d[key] for d in dicts]
         # 使用union_lists_with_order合并列表
-        merged_result[key] = gdp.union_lists_with_order(*lists_to_merge)
+        merged_result[key] = union_lists_with_order(*lists_to_merge)
     
     return merged_result
 
@@ -336,7 +336,7 @@ def merge_csfs_indices_lists_by_block_key(chosen_csfs_indices: Dict[Tuple[int, i
     }
 
 
-def CSFs_sort_by_mix_coefficient(CSFs_block: List, *mix_coefficients: np.ndarray, threshold: float = None):
+def CSFs_sort_by_mix_coefficient(CSFs_block: List, *mix_coefficients: np.ndarray, threshold = None):
     """
     根据多个混合系数的对应元素和来对CSF块进行排序，并可选择返回截断值对应的索引
 
@@ -442,7 +442,8 @@ def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selec
         return ([CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], 
                 selected_csfs_indices,
                 unselected_indices)
-    
+
+    random_indices = []
     if selected_csfs_num > 0:
         selected_csfs_indices_set = set(selected_csfs_indices)
         all_csfs_indices = [i for i in range(block_csfs_num)]
