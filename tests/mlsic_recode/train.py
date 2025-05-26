@@ -307,6 +307,8 @@ def main(config):
                 weight, f1_train, roc_auc_train, accuracy_train, precision_train, recall_train
             ])
         
+
+        ## 先将能级结果写道一个csv中，然后看csv的长度，长度超过3，再来分析收敛性
         # Perform convergence calculations
         if len(Es_term) >= 3:
             logger.info(f"执行方差计算：{b}")
