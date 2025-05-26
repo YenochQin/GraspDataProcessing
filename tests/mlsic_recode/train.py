@@ -257,26 +257,26 @@ def main(config):
         logger.info(f"开始选择组态，当前重要组态数为：{len(indexs_import_temp)}")
         if config.cal_loop_num != 1:
             logging.info("记录前一步的ML采样率信息")
-            results['MLsampling_ratio'][config.cal_loop_num-2] = (len(indexs_import_temp)-len(import_before))/len(ml_addcsf)
+            results['MLsampling_ratio'][config.cal_loop_num-2] = (len(indexs_import_temp)-len(import_before))/len(ml_add_csfs)
 
             results.to_csv(f'{config.root_path}/results/iteration_results.csv', index=False)
         
         if  len(indexs_import_stay) >= config.expansion_ratio * sum_num:
-            ml_addcsf = np.random.choice(indexs_import_stay_temp,
+            ml_add_csfs= np.random.choice(indexs_import_stay_temp,
                                          size = config.expansion_ratio * sum_num,
                                          replace = False).tolist()
-            mc_addcsf = None
-            new_addcsf = ml_addcsf
+            mc_add_csfs= None
+            new_add_csfs= ml_add_csfs
         elif len(indexs_import_stay) <= config.expansion_ratio * sum_num:
             stay_index = gdp.pop_other_ci(indices_temp, 
                                           indexs_import_stay_temp+indexs_import_temp)
-            ml_addcsf = indexs_import_stay_temp
-            mc_addcsf = np.random.choice(stay_index, 
+            ml_add_csfs= indexs_import_stay_temp
+            mc_add_csfs= np.random.choice(stay_index, 
                                          size = config.expansion_ratio * sum_num - len(indexs_import_stay_temp),
                                          replace=False).tolist()
-            new_addcsf = ml_addcsf + mc_addcsf
+            new_add_csfs= ml_add_csfs+ mc_add_csfs
         MLsampling_ratio = None
-        chosen_index = np.sort(np.array(indexs_import_temp + new_addcsf))
+        chosen_index = np.sort(np.array(indexs_import_temp + new_add_csfs))
         import_before = indexs_import_temp
 
         logger.info(f"下一步计算组态数为：{len(chosen_index)}")
@@ -339,11 +339,11 @@ def main(config):
         indexs_import_temp=np.load(f"results/indexs_import_ab{b-1}.npy")
         stay_indexs = gdp.pop_other_ci(indices_temp, indexs_import_temp)
         ML_sampling_ratio = None
-        # mc_addcsf = np.random.choice(stay_indexs, size=expansion_ratio*sum_num,replace=False).tolist()
-        mc_addcsf = np.random.choice(stay_index, 
+        # mc_add_csfs= np.random.choice(stay_indexs, size=expansion_ratio*sum_num,replace=False).tolist()
+        mc_add_csfs= np.random.choice(stay_index, 
                                          size = config.expansion_ratio * sum_num - len(indexs_import_stay_temp),
                                          replace=False).tolist()
-        index= np.sort(np.array(list(indexs_import_temp)+mc_addcsf))
+        index= np.sort(np.array(list(indexs_import_temp)+mc_add_csfs))
         chosen_csfs_data = [csf for i in chosen_index for csf in raw_csf_data.CSFs_block_data[0][i]]
         
         gdp.write_sorted_CSFs_to_cfile(

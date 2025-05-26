@@ -17,7 +17,8 @@ from tqdm import tqdm
 
 from .CSFs_compress_extract import *
 from .data_modules import MixCoefficientData
-
+from concurrent.futures import ProcessPoolExecutor
+import multiprocessing
 '''
     csfs data dictionary:
     {   
@@ -473,38 +474,75 @@ def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selec
 
 #######################################################################
 
-def maping_two_csfs_indices(small_as_csfs_data: List[List[List[str]]], large_as_csfs_data: List[List[List[str]]]) -> Dict[Tuple[int], List[int]]:
-    """def find_subset_indices(original_data: List[List[List[str]]], subset_data: List[List[List[str]]]) -> List[int]:
-    找出子集CSF数据在原CSF数据中的索引位置
+def process_block(args):
+    """Helper function for parallel processing moved to global scope"""
+    block_idx, small_data, large_data = args
+    # 预生成large数据的哈希映射
+    large_map = {
+        ''.join(item for sublist in large_csf for item in sublist): idx
+        for idx, large_csf in enumerate(large_data[block_idx])
+    }
     
-    参数:
-        original_data: 原始CSF数据列表(三层嵌套)
-        subset_data: 子集CSF数据列表(三层嵌套)
-        
-    返回:
-        包含子集每个元素在原始数据中索引的列表
-    """
-    indices = {}
-    block_num = len(small_as_csfs_data)
-    
-    def flatten_block(csf):
-        return [item for sublist in csf for item in sublist]
-    
-    for block in range(block_num):
-        
-        block_to_index = {
-        tuple(flatten_block(large_csfs)): idx  # 展平后转为 tuple
-        for idx, large_csfs in enumerate(large_as_csfs_data[block])
-                        }
+    return [
+        large_map[''.join(item for sublist in small_csf for item in sublist)]
+        for small_csf in small_data[block_idx]
+        if ''.join(item for sublist in small_csf for item in sublist) in large_map
+    ]
 
-        block_indices = [
-            block_to_index[tuple(flatten_block(small_csfs))]
-            for small_csfs in small_as_csfs_data[block]
-            if tuple(flatten_block(small_csfs)) in block_to_index
-                ]
-        indices[block] = block_indices
+def maping_two_csfs_indices(small_as_csfs_data: List[List[List[str]]], 
+                          large_as_csfs_data: List[List[List[str]]]) -> Dict[int, List[int]]:
+    """优化版的大规模CSF索引映射函数
     
-    return indices
+    修复了多进程序列化问题
+    """
+    # 准备参数
+    params = [(i, small_as_csfs_data, large_as_csfs_data) 
+              for i in range(len(small_as_csfs_data))]
+    
+    # 使用多进程并行处理
+    with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+        results = list(tqdm(
+            executor.map(process_block, params),
+            total=len(params),
+            desc="Processing blocks"
+        ))
+    
+    return {block_idx: block_indices for block_idx, block_indices in enumerate(results)}
+
+
+## 注释的太慢了
+# def maping_two_csfs_indices(small_as_csfs_data: List[List[List[str]]], large_as_csfs_data: List[List[List[str]]]) -> Dict[Tuple[int], List[int]]:
+#     """def find_subset_indices(original_data: List[List[List[str]]], subset_data: List[List[List[str]]]) -> List[int]:
+#     找出子集CSF数据在原CSF数据中的索引位置
+    
+#     参数:
+#         original_data: 原始CSF数据列表(三层嵌套)
+#         subset_data: 子集CSF数据列表(三层嵌套)
+        
+#     返回:
+#         包含子集每个元素在原始数据中索引的列表
+#     """
+#     indices = {}
+#     block_num = len(small_as_csfs_data)
+    
+#     def flatten_block(csf):
+#         return [item for sublist in csf for item in sublist]
+    
+#     for block in range(block_num):
+        
+#         block_to_index = {
+#         tuple(flatten_block(large_csfs)): idx  # 展平后转为 tuple
+#         for idx, large_csfs in enumerate(large_as_csfs_data[block])
+#                         }
+
+#         block_indices = [
+#             block_to_index[tuple(flatten_block(small_csfs))]
+#             for small_csfs in small_as_csfs_data[block]
+#             if tuple(flatten_block(small_csfs)) in block_to_index
+#                 ]
+#         indices[block] = block_indices
+    
+#     return indices
 
 
 
