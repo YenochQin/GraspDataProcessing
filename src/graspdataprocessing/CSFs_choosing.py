@@ -14,7 +14,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 
 from tqdm import tqdm
-
+from .data_IO import load_large_hash
 from .CSFs_compress_extract import *
 from .data_modules import MixCoefficientData
 from concurrent.futures import ProcessPoolExecutor
@@ -410,64 +410,50 @@ def generate_unique_random_numbers(max_num: int, count: int) -> list:
     
     return numbers
 
-def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selected_csfs_indices: List =[]):
+def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selected_csfs_indices: List = []):
     """
-    从CSF列表中随机选择指定比例的CSF，可合并已选索引
+    优化版的大规模CSF随机选择函数
     
-    参数:
-        block_csfs_list: 待选择的CSF列表
-        ratio_CSFs_select_num: 选择比例(0-1之间)
-        selected_csfs_indices: 已选CSF索引列表(可选)
-        
-    返回:
-        tuple: (选中的CSF列表, 对应的索引列表, 未选择的索引列表)
+    优化点：
+    1. 使用numpy加速数组操作
+    2. 减少中间变量创建
+    3. 优化索引计算逻辑
     """
     block_csfs_num = len(block_csfs_list)
     selected_csfs_num = len(selected_csfs_indices)
     
-    # 计算总需要选择的数量（基于总数比例）
+    # 计算需要选择的总数
     total_needed = int(block_csfs_num * ratio_CSFs_select_num)
     
     # 计算还需要补充的数量
-    choose_csfs_num = total_needed - selected_csfs_num
+    choose_csfs_num = max(0, total_needed - selected_csfs_num)
     
-    if choose_csfs_num < 0:
-        # 如果已选数量已超过比例要求，直接返回已选
-        unselected_indices = [i for i in range(block_csfs_num) if i not in selected_csfs_indices]
-        return ([CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], 
-                selected_csfs_indices,
-                unselected_indices)
-    elif choose_csfs_num == 0:
-        # 如果刚好达到比例要求
-        unselected_indices = [i for i in range(block_csfs_num) if i not in selected_csfs_indices]
-        return ([CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in selected_csfs_indices], 
-                selected_csfs_indices,
-                unselected_indices)
-
-    random_indices = []
+    # 使用numpy数组加速操作
+    all_indices = np.arange(block_csfs_num)
+    
     if selected_csfs_num > 0:
-        selected_csfs_indices_set = set(selected_csfs_indices)
-        all_csfs_indices = [i for i in range(block_csfs_num)]
-        drop_selected_indices_list = [x for x in all_csfs_indices if x not in selected_csfs_indices_set]
+        # 使用numpy的set操作
+        selected_set = set(selected_csfs_indices)
+        unselected_mask = ~np.isin(all_indices, list(selected_set))
+        unselected_indices = all_indices[unselected_mask]
         
-        random_indices = generate_unique_random_numbers(len(drop_selected_indices_list), choose_csfs_num)
-        
-        # 映射回真实索引
-        random_indices = [drop_selected_indices_list[idx] for idx in random_indices]
-        
-    elif selected_csfs_num <= 0:
-        random_indices = generate_unique_random_numbers(block_csfs_num, choose_csfs_num)
-    
-    # 合并新旧索引并去重(保持顺序)
-    chosen_csfs_indices = union_lists_with_order(random_indices, selected_csfs_indices)
+        if choose_csfs_num > 0:
+            # 使用numpy的随机选择
+            random_indices = np.random.choice(unselected_indices, size=choose_csfs_num, replace=False)
+            chosen_csfs_indices = np.concatenate([selected_csfs_indices, random_indices])
+        else:
+            chosen_csfs_indices = np.array(selected_csfs_indices)
+    else:
+        # 直接随机选择
+        chosen_csfs_indices = np.random.choice(all_indices, size=total_needed, replace=False)
     
     # 获取未选择的索引
-    unselected_indices = [i for i in range(block_csfs_num) if i not in chosen_csfs_indices]
-
-    # 获取对应的CSF数据
-    chosen_csfs = [CSFs_block_get_CSF(block_csfs_list, (idx,)) for idx in chosen_csfs_indices]
+    unselected_indices = np.setdiff1d(all_indices, chosen_csfs_indices)
     
-    return chosen_csfs, chosen_csfs_indices, unselected_indices
+    # 使用列表推导式获取CSF数据
+    chosen_csfs = [block_csfs_list[idx] for idx in chosen_csfs_indices]
+    
+    return chosen_csfs, chosen_csfs_indices.tolist(), unselected_indices.tolist()
 
 
 
@@ -489,26 +475,24 @@ def process_block(args):
         if ''.join(item for sublist in small_csf for item in sublist) in large_map
     ]
 
-def maping_two_csfs_indices(small_as_csfs_data: List[List[List[str]]], 
-                          large_as_csfs_data: List[List[List[str]]]) -> Dict[int, List[int]]:
-    """优化版的大规模CSF索引映射函数
+def maping_two_csfs_indices(
+    small_as_csfs_data: List[List[str]],
+    large_hash_file: str = "large_data_hash.pkl"  # 哈希文件路径
+) -> Dict[int, List[int]]:
+    # 加载预计算的哈希
+    large_hash = load_large_hash(large_hash_file)
     
-    修复了多进程序列化问题
-    """
-    # 准备参数
-    params = [(i, small_as_csfs_data, large_as_csfs_data) 
-              for i in range(len(small_as_csfs_data))]
+    # 处理 small_data
+    results = []
+    for block in small_as_csfs_data:
+        matched_indices = [
+            large_hash[''.join(small_csf)]
+            for small_csf in block
+            if ''.join(small_csf) in large_hash
+        ]
+        results.append(matched_indices)
     
-    # 使用多进程并行处理
-    with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-        results = list(tqdm(
-            executor.map(process_block, params),
-            total=len(params),
-            desc="Processing blocks"
-        ))
-    
-    return {block_idx: block_indices for block_idx, block_indices in enumerate(results)}
-
+    return {idx: indices for idx, indices in enumerate(results)}
 
 ## 注释的太慢了
 # def maping_two_csfs_indices(small_as_csfs_data: List[List[List[str]]], large_as_csfs_data: List[List[List[str]]]) -> Dict[Tuple[int], List[int]]:

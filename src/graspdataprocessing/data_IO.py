@@ -25,6 +25,7 @@ from .CSFs_compress_extract import *
 from .CSFs_choosing import *
 from .data_modules import *
 
+import pickle
 
 class GraspFileLoad:
     # the initialization function of the class "GraspFileLoad"
@@ -713,3 +714,22 @@ def csfs_index_load(load_csfs_index_file_path: str):
         blocks_csfs_index = msgpack.load(f)
         
     return blocks_csfs_index
+
+#######################################################################
+def precompute_large_hash(
+    large_data: List[List[str]], 
+    save_path: str = "large_data_hash.pkl"
+) -> Dict[str, int]:
+    """预计算 large_data 的哈希映射并保存到文件"""
+    large_hash = {''.join(csf): idx for idx, csf in enumerate(large_data)}
+    
+    # 保存为二进制文件（高效）
+    with open(save_path, "wb") as f:
+        pickle.dump(large_hash, f)
+    
+    return large_hash
+
+def load_large_hash(file_path: str) -> Dict[str, int]:
+    """从文件加载预计算的哈希映射"""
+    with open(file_path, "rb") as f:
+        return pickle.load(f)
