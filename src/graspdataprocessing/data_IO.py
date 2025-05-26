@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 from .tool_function import *
 from .CSFs_compress_extract import *
-from .CSFs_choosing import *
+# from .CSFs_choosing import *
 from .data_modules import *
 
 import pickle
