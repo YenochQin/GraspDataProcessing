@@ -7,26 +7,43 @@
 '''
 
 from dataclasses import dataclass
+import numpy as np
+from typing import Union, List
+
 
 @dataclass(frozen=True)
 class MixCoefficientData:
     block_num: int
-    block_index_list: list
-    block_CSFs_nums: list
-    block_energy_count_list: list 
-    j_value_location_list: list
-    parity_list: list
-    block_levels_index_list: list
-    block_energy_list: list
-    block_level_energy_list: list
-    mix_coefficient_list: list
-    level_list: list
-    
+    block_index_List: List
+    block_CSFs_nums: List
+    block_energy_count_List: List 
+    j_value_location_List: List
+    parity_List: List
+    block_levels_index_List: List
+    block_energy_List: List
+    block_level_energy_List: List
+    mix_coefficient_List: List
+    level_List: List
+
 @dataclass
 class CSFs:
-    subshell_info_raw: list
-    CSFs_block_j_value: list
+    subshell_info_raw: List[str]
+    CSFs_block_j_value: List[str]
     parity: str
-    CSFs_block_data: list
-    CSFs_block_length: list
+    CSFs_block_data: List
+    CSFs_block_length: Union[List[int], np.ndarray]  # 兼容列表或ndarray
     block_num: int
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'CSFs':
+        """从字典创建CSFs实例（自动处理NumPy数组转换）"""
+        return cls(
+            subshell_info_raw=data.get('subshell_info_raw', []),
+            CSFs_block_j_value=data.get('CSFs_block_j_value', []),
+            parity=data.get('parity', ''),
+            CSFs_block_data=data.get('CSFs_block_data', []),
+            CSFs_block_length=np.array(data['CSFs_block_length']) 
+                if isinstance(data.get('CSFs_block_length', []), List) 
+                else data.get('CSFs_block_length', np.array([])),
+            block_num=data.get('block_num', 0)
+        )

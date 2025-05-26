@@ -17,14 +17,14 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import struct
-
+import json
 from tqdm import tqdm
 
 from .tool_function import *
 from .CSFs_compress_extract import *
 # from .CSFs_choosing import *
 from .data_modules import *
-
+import gzip
 import pickle
 
 class GraspFileLoad:
@@ -641,20 +641,68 @@ def write_sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data_list: List
             file.write(line)  
         
         file.write('CSF(s):\n')
-        if blocks_num > 1:
-            for index, block in enumerate(sorted_CSFs_data_list):
-                if index!= blocks_num-1:
-                    for csf in block:
-                        for line in csf:
-                            file.write(line)
-                    file.write(' *\n')
-                else:
-                    for csf in block:
-                        for line in csf:
-                            file.write(line)
-        elif blocks_num == 1:
-            for line in sorted_CSFs_data_list:
-                file.write(line)
+        for index, block in enumerate(sorted_CSFs_data_list):
+            if index!= blocks_num-1:
+                for csf in block:
+                    for line in csf:
+                        file.write(line)
+                file.write(' *\n')
+            else:
+                for csf in block:
+                    for line in csf:
+                        file.write(line)
+                
+def save_csf_metadata(csf_obj: CSFs, filepath: str):
+    """保存CSFs元数据（排除CSFs_block_data）到pickle文件"""
+    metadata = {
+        'subshell_info_raw': csf_obj.subshell_info_raw,
+        'CSFs_block_j_value': csf_obj.CSFs_block_j_value,
+        'parity': csf_obj.parity,
+        'CSFs_block_length': csf_obj.CSFs_block_length,
+        'block_num': csf_obj.block_num
+    }
+    
+    with open(filepath, 'wb') as f:
+        pickle.dump(metadata, f)
+        
+def load_csf_metadata(filepath: str) -> dict:
+    with open(filepath, 'rb') as f:
+        return pickle.load(f)
+
+def save_csfs_binary(csf_obj: CSFs, filepath: str):
+    filepath = Path(filepath)
+    
+    # 元数据存储
+    metadata = {
+        'subshell_info_raw': csf_obj.subshell_info_raw,
+        'CSFs_block_j_value': csf_obj.CSFs_block_j_value,
+        'parity': csf_obj.parity,
+        'CSFs_block_length': np.asarray(csf_obj.CSFs_block_length),
+        'block_num': csf_obj.block_num,
+        'data_type': 'nested_string'  # 标记特殊数据结构
+    }
+    
+    # 专用压缩存储
+    with gzip.open(filepath.with_suffix('.pkl.gz'), 'wb') as f:
+        pickle.dump({
+            'metadata': metadata,
+            'block_data': csf_obj.CSFs_block_data  # 直接存储原始结构
+        }, f, protocol=pickle.HIGHEST_PROTOCOL)
+    
+def load_csfs_binary(filepath: str) -> CSFs:
+    filepath = Path(filepath)
+    
+    with gzip.open(filepath.with_suffix('.pkl.gz'), 'rb') as f:
+        data = pickle.load(f)
+    
+    return CSFs(
+        subshell_info_raw=data['metadata']['subshell_info_raw'],
+        CSFs_block_j_value=data['metadata']['CSFs_block_j_value'],
+        parity=data['metadata']['parity'],
+        CSFs_block_data=data['block_data'],  # 原始嵌套结构
+        CSFs_block_length=data['metadata']['CSFs_block_length'],
+        block_num=data['metadata']['block_num']
+    )
 
 #######################################################################
 
@@ -717,19 +765,29 @@ def csfs_index_load(load_csfs_index_file_path: str):
 
 #######################################################################
 def precompute_large_hash(
-    large_data: List[List[str]], 
+    large_data: List[List[List[str]]], 
     save_path: str = "large_data_hash.pkl"
-) -> Dict[str, int]:
-    """预计算 large_data 的哈希映射并保存到文件"""
-    large_hash = {''.join(csf): idx for idx, csf in enumerate(large_data)}
+):
+    """
+    预计算 large_data 的哈希映射（双层字典结构）
     
-    # 保存为二进制文件（高效）
+    返回:
+        {block_idx: {csf_str: csf_index}}
+    """
+    large_hash = {
+        block_idx: {
+            ''.join(item for sublist in csf for item in sublist): idx
+            for idx, csf in enumerate(block_data)
+        }
+        for block_idx, block_data in enumerate(large_data)
+    }
+    
     with open(save_path, "wb") as f:
         pickle.dump(large_hash, f)
     
-    return large_hash
+    return f'hash file has written in file {save_path}'
 
-def load_large_hash(file_path: str) -> Dict[str, int]:
+def load_large_hash(file_path) -> Dict[int, Dict[str, int]]:
     """从文件加载预计算的哈希映射"""
     with open(file_path, "rb") as f:
         return pickle.load(f)

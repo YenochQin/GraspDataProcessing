@@ -12,9 +12,9 @@ import numpy as np
 import pandas as pd
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-
+import pickle
 from tqdm import tqdm
-
+from .data_IO import load_large_hash
 from .CSFs_compress_extract import *
 from .data_modules import MixCoefficientData
 from concurrent.futures import ProcessPoolExecutor
@@ -476,23 +476,32 @@ def process_block(args):
     ]
 
 def maping_two_csfs_indices(
-    small_as_csfs_data: List[List[str]],
-    large_hash_file: str = "large_data_hash.pkl"  # 哈希文件路径
+    small_as_csfs_data: List[List[List[str]]],
+    large_hash_file: str = "large_data_hash.pkl"
 ) -> Dict[int, List[int]]:
-    # 加载预计算的哈希
-    large_hash = load_large_hash(large_hash_file)
+    """
+    将 small_as_csfs_data 映射到预计算的 large_hash
     
-    # 处理 small_data
+    返回:
+        {small_block_idx: [matched_large_indices]}
+    """
+    large_hash = load_large_hash(large_hash_file)  # Dict[int, Dict[str, int]]
+    
     results = []
-    for block in small_as_csfs_data:
-        matched_indices = [
-            large_hash[''.join(small_csf)]
-            for small_csf in block
-            if ''.join(small_csf) in large_hash
-        ]
-        results.append(matched_indices)
+    for small_block_idx, small_block in enumerate(small_as_csfs_data):
+        matched_indices = []
+        for small_csf in small_block:
+            csf_str = ''.join(item for sublist in small_csf for item in sublist)
+            # 在所有 large block 中查找匹配
+            for large_block_idx, block_map in large_hash.items():
+                if csf_str in block_map:
+                    matched_indices.append((large_block_idx, block_map[csf_str]))
+        
+        # 仅保留匹配的 large_csf 全局索引（按需调整）
+        results.append([idx for (_, idx) in matched_indices])
     
-    return {idx: indices for idx, indices in enumerate(results)}
+    return {block_idx: indices for block_idx, indices in enumerate(results)}
+
 
 ## 注释的太慢了
 # def maping_two_csfs_indices(small_as_csfs_data: List[List[List[str]]], large_as_csfs_data: List[List[List[str]]]) -> Dict[Tuple[int], List[int]]:
