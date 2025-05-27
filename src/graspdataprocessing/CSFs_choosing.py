@@ -46,7 +46,7 @@ import multiprocessing
                                         block[level index]
                                     ],
         'j_value_location_list': List[location of j value],
-        'mix_coefficient_list': List[
+        'mix_coefficient_List': List[
                                     block numpy.ndarray[
                                                         level numpy.ndarray[mix coefficient]
                                     ]
@@ -89,10 +89,10 @@ def batch_asfs_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, thr
     
     csfs_mix_square_data_above_threshold = {}
     for block in range(asfs_mix_data.block_num):
-        block_level_num = len(asfs_mix_data.mix_coefficient_list[block])
+        block_level_num = len(asfs_mix_data.mix_coefficient_List[block])
     
         for level in range(block_level_num):
-            temp_coeff = single_asf_mix_square_above_threshold(asfs_mix_data.mix_coefficient_list[block][level], threshold)
+            temp_coeff = single_asf_mix_square_above_threshold(asfs_mix_data.mix_coefficient_List[block][level], threshold)
             csfs_mix_square_data_above_threshold[(block, level)] = temp_coeff
             
     return csfs_mix_square_data_above_threshold
@@ -101,11 +101,11 @@ def batch_blocks_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, t
     
     block_csfs_mix_square_data_above_threshold = {}
     for block in range(asfs_mix_data.block_num):
-        block_level_num = len(asfs_mix_data.mix_coefficient_list[block])
+        block_level_num = len(asfs_mix_data.mix_coefficient_List[block])
     
         temp_block_coeff = []
         for level in range(block_level_num):
-            temp_coeff = single_asf_mix_square_above_threshold(asfs_mix_data.mix_coefficient_list[block][level], threshold)
+            temp_coeff = single_asf_mix_square_above_threshold(asfs_mix_data.mix_coefficient_List[block][level], threshold)
             # block_csfs_mix_square_data_above_threshold[(block, level)] = temp_coeff
             temp_block_coeff.extend(temp_coeff)
             
@@ -197,13 +197,13 @@ def batch_blocks_csfs_final_coupling_J_collection(blocks_csfs_list: List[List], 
         blocks_coupling_J_collection[block] = block_coupling_J_collection
     return blocks_coupling_J_collection
 
-def single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_collection_dict: Dict, mix_coefficient_list: List) -> Dict:
+def single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_collection_dict: Dict, mix_coefficient_List: List) -> Dict:
     
     for index, element in enumerate(block_csfs_coupling_J_collection_dict):
         print(f"元素 {element} 出现次数: {block_csfs_coupling_J_collection_dict[element]['count']}")
         sum_ci = 0
         for ci in block_csfs_coupling_J_collection_dict[element]['indices']:
-            sum_ci += mix_coefficient_list[ci]**2
+            sum_ci += mix_coefficient_List[ci]**2
         print(f"元素 {element} 对应的索引之和: {sum_ci}")
         block_csfs_coupling_J_collection_dict[element]['sum_ci'] = sum_ci
         print(f"元素 {element} 对应的索引之和: {block_csfs_coupling_J_collection_dict[element]['sum_ci']}")
@@ -215,7 +215,7 @@ def single_asf_csfs_final_coupling_J_mix_coefficient_sum(block_csfs_coupling_J_c
     # return sorted_block_csfs_coupling_J_collection_dict
     return block_csfs_coupling_J_collection_dict
 
-def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, block_asfs_mix_coefficient_list: List, coupling_level: int = -1) -> Dict:
+def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, block_asfs_mix_coefficient_List: List, coupling_level: int = -1) -> Dict:
     # 获取初始耦合信息
     base_coupling_dict = single_block_csfs_final_coupling_J_collection(block_CSFs, coupling_level)
     
@@ -223,7 +223,7 @@ def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, b
     
     for index, element in enumerate(base_coupling_dict):
         base_coupling_dict[element]['sum_ci'] = []
-        for asf_index, asf_mix_coefficient in enumerate(block_asfs_mix_coefficient_list):
+        for asf_index, asf_mix_coefficient in enumerate(block_asfs_mix_coefficient_List):
             sum_ci = 0
             for csf_index in base_coupling_dict[element]['indices']:
                 sum_ci += asf_mix_coefficient[csf_index]**2
@@ -233,9 +233,9 @@ def single_block_batch_asfs_CSFs_final_coupling_J_collection(block_CSFs: List, b
     # return block_asfs_coupling_J_sum_ci
     return base_coupling_dict
 
-def batch_blocks_CSFs_final_coupling_J_mix_coefficient_sum(blocks_CSFs_list: List, blocks_asfs_mix_coefficient_list: List, coupling_level: int = -1) -> Dict:
+def batch_blocks_CSFs_final_coupling_J_mix_coefficient_sum(blocks_CSFs_list: List, blocks_asfs_mix_coefficient_List: List, coupling_level: int = -1) -> Dict:
     blocks_asfs_coupling_J_sum_ci = {}
-    for block, (block_csfs, block_asfs_mix) in enumerate(zip(blocks_CSFs_list, blocks_asfs_mix_coefficient_list)):
+    for block, (block_csfs, block_asfs_mix) in enumerate(zip(blocks_CSFs_list, blocks_asfs_mix_coefficient_List)):
         print(f"第{block+1}个block包含{len(block_asfs_mix)}个asf")
         if any(len(asf_mix) != len(block_csfs)  for asf_mix in block_asfs_mix):
             raise ValueError("block_CSFs和block_asfs_mix_coefficient长度不匹配")

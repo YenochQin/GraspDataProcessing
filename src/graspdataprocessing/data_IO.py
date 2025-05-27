@@ -479,16 +479,16 @@ class GraspFileLoad:
             # set mix file data as a class
             self.mix_file_data = MixCoefficientData(
                 block_num=self.num_block,
-                block_index_list=self.index_block_list,
+                block_index_List=self.index_block_list,  # 注意大小写和命名一致性
                 block_CSFs_nums=self.ncfblk_list,
-                block_energy_count_list=self.block_energy_count_list,
-                j_value_location_list=self.j_value_location_list,
-                parity_list=self.parity_list,
-                block_levels_index_list=self.ivec_list,
-                block_energy_list=self.block_energy_list,
-                block_level_energy_list=self.block_level_energy_list,
-                mix_coefficient_list=self.mix_coefficient_list,
-                level_list=level_energy_list
+                block_energy_count_List=self.block_energy_count_list,
+                level_J_value_List=temp_J,
+                parity_List=self.parity_list,
+                block_levels_index_List=self.ivec_list,
+                block_energy_List=self.block_energy_list,
+                block_level_energy_List=self.block_level_energy_list,
+                mix_coefficient_List=self.mix_coefficient_list,
+                level_List=level_energy_list
             )
             return self.mix_file_data
 
