@@ -83,12 +83,12 @@ def main(config):
     # 使用 pathlib 创建目录
     root_path = Path(config.root_path)
     cal_path = root_path.joinpath(f'{config.conf}_{config.cal_loop_num}')
-    (root_path / "models").mkdir(parents=True, exist_ok=True)
-    (root_path / "descripotors").mkdir(parents=True, exist_ok=True)
-    (root_path / "descripotors_stay").mkdir(parents=True, exist_ok=True)
-    (root_path / "test_data").mkdir(parents=True, exist_ok=True)
-    (root_path / "roc_curves").mkdir(parents=True, exist_ok=True)
-    (root_path / "results").mkdir(parents=True, exist_ok=True)
+    (cal_path / "models").mkdir(parents=True, exist_ok=True)
+    (cal_path / "descripotors").mkdir(parents=True, exist_ok=True)
+    (cal_path / "descripotors_stay").mkdir(parents=True, exist_ok=True)
+    (cal_path / "test_data").mkdir(parents=True, exist_ok=True)
+    (cal_path / "roc_curves").mkdir(parents=True, exist_ok=True)
+    (cal_path / "results").mkdir(parents=True, exist_ok=True)
 
     logger.info(f"初始比例: {config.initial_ratio}")
     logger.info(f"光谱项: {config.spetral_term}")
@@ -110,20 +110,23 @@ def main(config):
         raise
     
     # initial csfs data load
-    initial_csfs_path = root_path.joinpath(config.target_pool_file)
+    target_pool_file_path = root_path.joinpath(config.target_pool_file)
     try:
-        if not initial_csfs_path.is_file():  # 检查是否是有效文件
-            logger.error(f"初始CSFs文件无效或不存在: {initial_csfs_path}")
-            raise FileNotFoundError(f"初始CSFs文件无效或不存在: {initial_csfs_path}")
-        logger.info(f"成功加载初始CSFs文件: {initial_csfs_path}")
+        if not target_pool_file_path.is_file():  # 检查是否是有效文件
+            logger.error(f"初始CSFs文件无效或不存在: {target_pool_file_path}")
+            raise FileNotFoundError(f"初始CSFs文件无效或不存在: {target_pool_file_path}")
+        logger.info(f"成功加载初始CSFs文件: {target_pool_file_path}")
     except PermissionError as e:
-        logger.error(f"无权限访问CSFs文件: {initial_csfs_path}")
+        logger.error(f"无权限访问CSFs文件: {target_pool_file_path}")
         raise
     except Exception as e:
         logger.error(f"加载CSFs文件时发生未知错误: {str(e)}")
         raise
-
-    energy_level_file_path = root_path.joinpath(f'{cal_path}/{config.conf}_{config.cal_loop_num}.level')
+    
+    
+#############################################################################################
+## 检查计算结果耦合是否正确
+    energy_level_file_path = cal_path.joinpath(f'{config.conf}_{config.cal_loop_num}.level')
     energy_level_file_load = gdp.GraspFileLoad.from_filepath(energy_level_file_path)
     
     energy_level_data_pd = energy_level_file_load.energy_level_2_pd()
@@ -136,7 +139,8 @@ def main(config):
     else:
         logger.error(f"cal_loop {config.cal_loop_num} 组态耦合错误")
         cal_result = False
-        
+#############################################################################################
+
     rmix_file_load = gdp.GraspFileLoad.from_filepath(f'{cal_path}/{config.conf}_{config.cal_loop_num}.m', 'mix')
     rmix_file_data = rmix_file_load.data_file_process()
     ## rmix_file_data.block_num
@@ -150,13 +154,13 @@ def main(config):
     ## rmix_file_data.block_level_energy_list
     ## rmix_file_data.mix_coefficient_list
     
-    raw_csf_file_load = gdp.GraspFileLoad.from_filepath(f'{config.target_pool_file}.c')
+    raw_csf_file_load = gdp.GraspFileLoad.from_filepath(config.target_pool_file_path)
     raw_csf_data = raw_csf_file_load.data_file_process()
     
-    indices_temp = [i for i in range(raw_csf_data.CSFs_block_length[0])]
+    indices_temp = [i for i in range(raw_csf_data.CSFs_block_length[0])] ## 这个可以用enumerate代替
     sum_num_list = []
-    sum_num_min = round(math.ceil(raw_csf_data.CSFs_block_length[0] * config.initial_ratio))
-
+    retain_csfs_num = math.ceil(raw_csf_data.CSFs_block_length[0] * config.initial_ratio)
+    
     ## cal loop_num > 1 --> 用于判断能量有没有下降
     if cal_result:
         for level in rmix_file_data.level_list:
@@ -242,8 +246,8 @@ def main(config):
         sum_num_list.append(sum_num)
         logging.info(f"当前重要组态数目: {sum_num}")
         logging.info(f"迭代重要组态数目: {sum_num_list}")
-        if sum_num <= sum_num_min:
-            sum_num=sum_num_min
+        if sum_num <= retain_csfs_num:
+            sum_num=retain_csfs_num
         
         # Update Important configuration indexes
         indexs_import = unique_indices.tolist()
