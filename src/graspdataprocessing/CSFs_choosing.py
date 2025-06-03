@@ -56,47 +56,83 @@ import multiprocessing
 '''
 
 #######################################################################
-def single_asf_mix_square_above_threshold(asf_mix_data_array: np.ndarray, threshold=0.1):
+def single_asf_mix_square_above_threshold(asf_mix_data_array: np.ndarray, threshold: float = 0.1) -> List[Tuple[int]]:
     """
-    筛选并排序混合数据中绝对值超过阈值的元素的索引
+    获取一维数组中平方值超过阈值的元素的索引，并按绝对值降序排序
     
-    参数：
-        mix_data_array: 输入的混合数据数组
-        threshold: 阈值，默认0.1
+    Args:
+        asf_mix_data_array: 一维输入数组
+        threshold: 阈值(平方值比较)，默认0.1
         
-    返回：
-        按绝对值降序排列的索引列表(元组形式)
+    Returns:
+        包含索引的元组列表，如[(index1,), (index2,), ...]，按绝对值降序排列
+        如果数组为空或没有元素超过阈值，返回空列表
     """
-    # 生成布尔掩码标识绝对值超过阈值的元素
-    square_above_threshold_mask = np.square(asf_mix_data_array) > threshold
+    # 检查输入是否为一维数组
+    if asf_mix_data_array.ndim != 1:
+        raise ValueError("输入数组必须是一维的")
+    
+    # 找出平方值超过阈值的索引
+    indices = np.where(np.square(asf_mix_data_array) > threshold)[0]
+    
+    # 如果没有满足条件的元素，返回空列表
+    if len(indices) == 0:
+        return []
+    
+    # 获取对应的值
+    values = asf_mix_data_array[indices]
+    
+    # 按绝对值降序排序索引
+    sorted_indices = indices[np.argsort(-np.abs(values))]
+    
+    # 返回索引元组列表
+    return [(idx,) for idx in sorted_indices]
 
-    # 获取满足条件的元素索引（返回二维坐标数组）
-    indices_where_square_above_threshold = np.argwhere(square_above_threshold_mask)
+def batch_asfs_mix_square_above_threshold(asfs_mix_data, threshold: float = 0.1) -> Dict[int, np.ndarray]:
+    """
+    批量处理多个块的混合系数数据，找出每个块中所有层级中超过阈值的系数索引
     
-    # 提取对应的值用于排序
-    # values_above_threshold = asf_mix_data_array[square_above_threshold_mask]
+    Args:
+        asfs_mix_data: 包含以下属性的对象:
+            - block_num: 块的总数
+            - mix_coefficient_List: 按块组织的系数列表(每个块包含多个层级的一维数组)
+        threshold: 阈值(平方值比较)，默认0.1
+        
+    Returns:
+        字典，键是block编号，值是该块中所有超过阈值的系数索引(已去重的排序数组)
+        如果没有满足条件的索引，对应的值为空数组
+    """
+    result = {}
     
-    # 将索引和值组合并排序
-    sorted_indices = sorted(
-        [tuple(index) for index in indices_where_square_above_threshold],
-        key=lambda x: abs(asf_mix_data_array[x]),  # 根据原始数组中的值排序
-        reverse=True
-    )
-    
-    return sorted_indices
-
-def batch_asfs_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, threshold=0.1):
-    
-    csfs_mix_square_data_above_threshold = {}
     for block in range(asfs_mix_data.block_num):
-        block_level_num = len(asfs_mix_data.mix_coefficient_List[block])
-    
-        for level in range(block_level_num):
-            temp_coeff = single_asf_mix_square_above_threshold(asfs_mix_data.mix_coefficient_List[block][level], threshold)
-            csfs_mix_square_data_above_threshold[(block, level)] = temp_coeff
+        # 检查块是否存在或数据是否有效
+        if (block >= len(asfs_mix_data.mix_coefficient_List) or 
+            asfs_mix_data.mix_coefficient_List[block] is None):
+            result[block] = np.array([], dtype=np.int64)
+            continue
             
-    return csfs_mix_square_data_above_threshold
+        # 使用集合来存储索引以实现去重
+        unique_indices = set()
+        
+        for level_data in asfs_mix_data.mix_coefficient_List[block]:
+            if level_data is None:
+                continue
+                
+            # 获取该层级的重要系数索引并添加到集合中
+            level_indices = single_asf_mix_square_above_threshold(level_data, threshold)
+            unique_indices.update(idx[0] for idx in level_indices)  # 解包单元素元组
+        
+        # 转换为排序后的numpy数组
+        if unique_indices:
+            result[block] = np.array(sorted(unique_indices), dtype=np.int64)
+        else:
+            result[block] = np.array([], dtype=np.int64)
+        
+    return result
 
+
+
+#### batch_blocks_mix_square_above_threshold 重复了，以后不再使用
 def batch_blocks_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, threshold=0.1):
     
     block_csfs_mix_square_data_above_threshold = {}
@@ -502,69 +538,3 @@ def maping_two_csfs_indices(
     
     return {block_idx: indices for block_idx, indices in enumerate(results)}
 
-
-## 注释的太慢了
-# def maping_two_csfs_indices(small_as_csfs_data: List[List[List[str]]], large_as_csfs_data: List[List[List[str]]]) -> Dict[Tuple[int], List[int]]:
-#     """def find_subset_indices(original_data: List[List[List[str]]], subset_data: List[List[List[str]]]) -> List[int]:
-#     找出子集CSF数据在原CSF数据中的索引位置
-    
-#     参数:
-#         original_data: 原始CSF数据列表(三层嵌套)
-#         subset_data: 子集CSF数据列表(三层嵌套)
-        
-#     返回:
-#         包含子集每个元素在原始数据中索引的列表
-#     """
-#     indices = {}
-#     block_num = len(small_as_csfs_data)
-    
-#     def flatten_block(csf):
-#         return [item for sublist in csf for item in sublist]
-    
-#     for block in range(block_num):
-        
-#         block_to_index = {
-#         tuple(flatten_block(large_csfs)): idx  # 展平后转为 tuple
-#         for idx, large_csfs in enumerate(large_as_csfs_data[block])
-#                         }
-
-#         block_indices = [
-#             block_to_index[tuple(flatten_block(small_csfs))]
-#             for small_csfs in small_as_csfs_data[block]
-#             if tuple(flatten_block(small_csfs)) in block_to_index
-#                 ]
-#         indices[block] = block_indices
-    
-#     return indices
-
-
-
-# def main()
-#     if len(sys.argv) != 2:
-#         print("用法: python test.py <文件名>")
-#         sys.exit(1)
-        
-#     csf_file = sys.argv[1]
-#     load_csf_data = []
-#     with open(csf_file, 'r') as load_csf_file:
-#         load_csf_data = load_csf_file.readlines()
-
-
-#     csf_list = load_csf_data[5:]
-
-#     csf_block_list = split_by_asterisk(csf_list)
-#     print(len(csf_block_list[0]), len(csf_block_list[1]), len(csf_block_list[2]))
-    
-#     csf_random_list = []
-#     for block in csf_block_list:
-#         csf_random_list.append(shuffle_three_line_groups(block))
-        
-#     with open(f'random.c', 'w') as write_csf_file:
-#         write_csf_file.write(''.join(load_csf_data[:5]))
-#         for index, block in enumerate(csf_random_list):
-#             write_csf_file.write(''.join(block))
-#             if index != len(csf_random_list) - 1:
-#                 write_csf_file.write(' *\n')
-
-# if __name__ == "__main__":
-#     main()

@@ -179,17 +179,38 @@ def CSF_subshell_extract(simplified_str):
 
 #######################################################################
 
-def CSF_J(csf_3rd_line: str):
+def csf_J(csf_3rd_line: str):
     '''
     extract J from CSF 3rd line
     '''
-    J_parity = re.search(r'(\d+)([+-])\n', csf_3rd_line)
+    # 按空格分割字符串
+    parts = csf_3rd_line.split()
     
-    if J_parity:
-        J_value = J_parity.group(1)
-        parity = J_parity.group(2)
-        return J_value, parity
+    # 最后一个部分包含J值和宇称
+    j_parity_part = parts[-1]
+    
+    # 分离J值和宇称
+    j_str = j_parity_part[:-1]  # 去掉最后一个字符（宇称符号）
+    parity = j_parity_part[-1]   # 最后一个字符就是宇称符号
+    
+    # 返回J字符串和宇称符号
+    return j_str, parity
 
+def J_to_doubleJ(J_str: str) -> int:
+    """
+    将J字符串转换为二倍值(2J)
+    示例:
+    '3/2' -> 3
+    '2' -> 4
+    '5/2' -> 5
+    """
+    if '/' in J_str:
+        # 处理半整数情况
+        numerator, _ = map(int, J_str.split('/'))
+        return numerator
+    else:
+        # 处理整数情况
+        return int(J_str) * 2
 
 def CSF_info_2_dict(CSF_item_list: List[str]) -> Dict:
 
@@ -266,7 +287,7 @@ def get_CSFs_file_info(csfs_file_data: List) -> Dict:
     CSFs_file_info['CSFs_block_data'] = []  # 初始化 CSFs_block_data 列表
 
     for index in star_indices:
-        temp_j_value, temp_parity = CSF_J(csfs_file_data[index - 1])
+        temp_j_value, temp_parity = csf_J(csfs_file_data[index - 1])
         CSFs_j_value.append(temp_j_value)
         CSFs_block_parity.append(temp_parity)
         # 处理每个块的数据，而不是一次性存储所有块
@@ -276,7 +297,7 @@ def get_CSFs_file_info(csfs_file_data: List) -> Dict:
         CSFs_file_info['CSFs_block_data'].append(block_data)  # 添加当前块的数据
         prev_index = index + 1
 
-    temp_j_value, temp_parity = CSF_J(csfs_file_data[-1])
+    temp_j_value, temp_parity = csf_J(csfs_file_data[-1])
     CSFs_j_value.append(temp_j_value)
     CSFs_block_parity.append(temp_parity)
     CSFs_file_info['CSFs_j_value'] = CSFs_j_value

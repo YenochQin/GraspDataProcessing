@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from tqdm import tqdm
-
+from .data_modules import CSFs
 ######################################################################
 
 '''
@@ -210,3 +210,21 @@ def read_fortran_record(file, dtype, count=1):
         raise ValueError(f"Record length mismatch: {record_len_before} != {record_len_after}")
     
     return data
+
+
+######################################################################
+
+def chunk_string(s: str, n: int) -> list[str]:
+    """将字符串分割成固定长度的块"""
+    return [s[i:i+n] for i in range(0, len(s), n)]
+
+######################################################################
+
+def get_csfs_file_peel_subshells(csfs_file_data: CSFs) -> list[str]:
+    # 从CSFs文件数据中获取最外层电子壳层信息
+    peel_subshells = csfs_file_data.subshell_info_raw[-1].rstrip('\n')
+    
+    # 将长字符串按每5个字符一组分割成列表
+    return chunk_string(peel_subshells, 5)
+
+######################################################################

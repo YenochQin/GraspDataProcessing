@@ -289,7 +289,7 @@ class GraspFileLoad:
 
         prev_index = 5
         for index in star_indices:
-            temp_j_value, temp_parity = CSF_J(csfs_file_data[index - 1])
+            temp_j_value, temp_parity = csf_J(csfs_file_data[index - 1])
             self.CSFs_block_j_value.append(temp_j_value)
             CSFs_block_parity.append(temp_parity)
             # 处理每个块的数据，而不是一次性存储所有块
@@ -303,7 +303,7 @@ class GraspFileLoad:
             self.CSFs_block_data.append(block_csfs)  # 添加当前块的数据
             prev_index = index + 1
             
-        temp_j_value, temp_parity = CSF_J(csfs_file_data[-1])
+        temp_j_value, temp_parity = csf_J(csfs_file_data[-1])
         self.CSFs_block_j_value.append(temp_j_value)
         CSFs_block_parity.append(temp_parity)
 
@@ -791,3 +791,5 @@ def load_large_hash(file_path) -> Dict[int, Dict[str, int]]:
     """从文件加载预计算的哈希映射"""
     with open(file_path, "rb") as f:
         return pickle.load(f)
+    
+#######################################################################
