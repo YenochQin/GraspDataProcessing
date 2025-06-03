@@ -24,7 +24,7 @@ import multiprocessing
     {   
         'CSFs_block_data': List[
                                 blocks[
-                                       block_csfs[CSF_item]
+                                       block_csfs[CSF_item[csf_1], CSF_item[csf_2], ...]]
                                        ]
                                 ],
         'CSFs_block_j_value',

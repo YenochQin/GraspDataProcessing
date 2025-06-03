@@ -220,11 +220,5 @@ def chunk_string(s: str, n: int) -> list[str]:
 
 ######################################################################
 
-def get_csfs_file_peel_subshells(csfs_file_data: CSFs) -> list[str]:
-    # 从CSFs文件数据中获取最外层电子壳层信息
-    peel_subshells = csfs_file_data.subshell_info_raw[-1].rstrip('\n')
-    
-    # 将长字符串按每5个字符一组分割成列表
-    return chunk_string(peel_subshells, 5)
 
 ######################################################################
