@@ -793,3 +793,173 @@ def load_large_hash(file_path) -> Dict[int, Dict[str, int]]:
         return pickle.load(f)
     
 #######################################################################
+
+def save_descriptors(descriptors: np.ndarray, save_path: str, file_format: str = 'npy'):
+    """
+    保存描述符数组
+    
+    Args:
+        descriptors (np.ndarray): 描述符数组
+        save_path (str): 保存路径（不含扩展名）
+        file_format (str): 保存格式 ('npy', 'csv', 'pkl')
+    
+    Example:
+        >>> descriptors = batch_process_csfs_to_descriptors(csfs_data)
+        >>> save_descriptors(descriptors, 'output/csf_descriptors', 'csv')
+    """
+    import pandas as pd
+    import pickle
+    
+    if file_format.lower() == 'npy':
+        np.save(f"{save_path}.npy", descriptors)
+        print(f"Descriptors saved to: {save_path}.npy")
+        
+    elif file_format.lower() == 'csv':
+        df = pd.DataFrame(descriptors)
+        df.to_csv(f"{save_path}.csv", index=False)
+        print(f"Descriptors saved to: {save_path}.csv")
+        
+    elif file_format.lower() == 'pkl':
+        with open(f"{save_path}.pkl", 'wb') as f:
+            pickle.dump(descriptors, f)
+        print(f"Descriptors saved to: {save_path}.pkl")
+        
+    else:
+        raise ValueError("file_format must be 'npy', 'csv', or 'pkl'")
+
+
+def save_descriptors_with_multi_block(descriptors: np.ndarray, 
+                                labels: np.ndarray, 
+                                save_path: str, 
+                                file_format: str = 'csv'):
+    """
+    保存带标签的描述符数组
+    
+    Args:
+        descriptors (np.ndarray): 描述符数组
+        labels (np.ndarray): 标签数组
+        save_path (str): 保存路径（不含扩展名）
+        file_format (str): 保存格式 ('csv', 'npy', 'pkl')
+    
+    Example:
+        >>> X, y = batch_process_csfs_with_multi_block(csfs_data)
+        >>> save_descriptors_with_multi_block(X, y, 'ml_data/features', 'csv')
+    """
+    import pandas as pd
+    import pickle
+    
+    if file_format.lower() == 'csv':
+        # CSV格式：将标签作为最后一列
+        df = pd.DataFrame(descriptors)
+        df['label'] = labels
+        df.to_csv(f"{save_path}.csv", index=False)
+        print(f"Descriptors with labels saved to: {save_path}.csv")
+        
+    elif file_format.lower() == 'npy':
+        # NPY格式：分别保存数据和标签
+        np.save(f"{save_path}_data.npy", descriptors)
+        np.save(f"{save_path}_multi_block.npy", labels)
+        print(f"Descriptors saved to: {save_path}_data.npy")
+        print(f"Labels saved to: {save_path}_multi_block.npy")
+        
+    elif file_format.lower() == 'pkl':
+        # PKL格式：保存为字典
+        data_dict = {
+            'descriptors': descriptors,
+            'labels': labels
+        }
+        with open(f"{save_path}.pkl", 'wb') as f:
+            pickle.dump(data_dict, f)
+        print(f"Descriptors and labels saved to: {save_path}.pkl")
+        
+    else:
+        raise ValueError("file_format must be 'csv', 'npy', or 'pkl'")
+
+def save_ml_dataset(dataset: Dict, save_path: str, file_format: str = 'npy'):
+    """
+    保存机器学习数据集
+    
+    Args:
+        dataset (Dict): 包含训练和测试数据的字典
+        save_path (str): 保存路径前缀
+        file_format (str): 保存格式 ('npy', 'pkl')
+    
+    Example:
+        >>> dataset = create_csf_dataset_for_ml(csfs_data)
+        >>> save_ml_dataset(dataset, 'ml_data/dataset', 'npy')
+    """
+    import pickle
+    
+    if file_format.lower() == 'npy':
+        np.save(f"{save_path}_X_train.npy", dataset['X_train'])
+        np.save(f"{save_path}_X_test.npy", dataset['X_test'])
+        np.save(f"{save_path}_y_train.npy", dataset['y_train'])
+        np.save(f"{save_path}_y_test.npy", dataset['y_test'])
+        
+        # 保存元数据
+        metadata = {
+            'feature_shape': dataset['feature_shape'],
+            'n_classes': dataset['n_classes'],
+            'total_samples': dataset['total_samples']
+        }
+        with open(f"{save_path}_metadata.pkl", 'wb') as f:
+            pickle.dump(metadata, f)
+            
+        print(f"Dataset saved:")
+        print(f"  Training data: {save_path}_X_train.npy, {save_path}_y_train.npy")
+        print(f"  Test data: {save_path}_X_test.npy, {save_path}_y_test.npy")
+        print(f"  Metadata: {save_path}_metadata.pkl")
+        
+    elif file_format.lower() == 'pkl':
+        with open(f"{save_path}_complete.pkl", 'wb') as f:
+            pickle.dump(dataset, f)
+        print(f"Complete dataset saved to: {save_path}_complete.pkl")
+        
+    else:
+        raise ValueError("file_format must be 'npy' or 'pkl'")
+
+
+def load_ml_dataset(save_path: str, file_format: str = 'npy') -> Dict:
+    """
+    加载已保存的机器学习数据集
+    
+    Args:
+        save_path (str): 保存路径前缀
+        file_format (str): 文件格式 ('npy', 'pkl')
+    
+    Returns:
+        Dict: 包含训练和测试数据的字典
+    
+    Example:
+        >>> dataset = load_ml_dataset('ml_data/dataset', 'npy')
+        >>> X_train = dataset['X_train']
+    """
+    import pickle
+    
+    if file_format.lower() == 'npy':
+        dataset = {
+            'X_train': np.load(f"{save_path}_X_train.npy"),
+            'X_test': np.load(f"{save_path}_X_test.npy"),
+            'y_train': np.load(f"{save_path}_y_train.npy"),
+            'y_test': np.load(f"{save_path}_y_test.npy")
+        }
+        
+        # 加载元数据
+        try:
+            with open(f"{save_path}_metadata.pkl", 'rb') as f:
+                metadata = pickle.load(f)
+            dataset.update(metadata)
+        except FileNotFoundError:
+            print("Warning: Metadata file not found. Some information may be missing.")
+            
+        print(f"Dataset loaded successfully from: {save_path}_*.npy")
+        return dataset
+        
+    elif file_format.lower() == 'pkl':
+        with open(f"{save_path}_complete.pkl", 'rb') as f:
+            dataset = pickle.load(f)
+        print(f"Dataset loaded successfully from: {save_path}_complete.pkl")
+        return dataset
+        
+    else:
+        raise ValueError("file_format must be 'npy' or 'pkl'")
