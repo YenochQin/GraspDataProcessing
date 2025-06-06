@@ -559,7 +559,7 @@ def batch_process_csfs_with_multi_block(CSFs_file_data: CSFs,
     
     Returns:
         Tuple[np.ndarray, np.ndarray]: (描述符数组, 标签数组)
-    
+    355 236 443  prVZ7Y7t
     Example:
         >>> # 使用块内索引
         >>> X, y = batch_process_csfs_with_multi_block(csfs_data, label_type='sequential')
