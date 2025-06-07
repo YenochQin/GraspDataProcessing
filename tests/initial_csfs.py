@@ -102,16 +102,32 @@ def main(config):
         logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符计算成功")
 
         target_pool_path = root_path.joinpath(config.conf)
-        
+
         gdp.save_descriptors_with_multi_block(descriptors_array, labels_array, target_pool_path, 'npy')
         logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符保存成功")
 
         gdp.save_csfs_binary(target_pool_csfs_data, target_pool_path)
         logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 保存成功")
         
-        # 第一次运行时初始化空的已选择索引字典
-        selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
-        
+        if config.selected_csfs_file:
+            gdp.precompute_large_hash(target_pool_csfs_data.CSFs_block_data, target_pool_path.with_suffix('.pkl'))
+            logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 哈希校验文件保存成功")
+            
+            target_pool_csfs_hash_file = target_pool_path.with_suffix('.pkl')
+            
+            selected_csfs_file_path = root_path.joinpath(config.selected_csfs_file)
+            selected_csfs_load = gdp.GraspFileLoad.from_filepath(selected_csfs_file_path, file_type='CSF')
+            selected_csfs_data = selected_csfs_load.data_file_process()
+            logger.info(f"已选择CSFs文件{config.target_pool_file} CSFs 读取成功")
+            
+            selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
+                selected_csfs_data.CSFs_block_data, 
+                target_pool_csfs_hash_file
+            )
+            logger.info(f"已选择CSFs文件{config.target_pool_file} CSFs 索引映射成功")
+            
+        else:
+            selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
     else:
         target_pool_csfs_data = gdp.load_csfs_binary(target_pool_file_path)
         logger.info(f"初始CSFs文件{target_pool_file_path} CSFs 读取成功")

@@ -10,7 +10,7 @@ import re
 import csv 
 import msgpack
 from pathlib import Path
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional, Union
 
 from dataclasses import dataclass
 
@@ -669,7 +669,7 @@ def load_csf_metadata(filepath: str) -> dict:
     with open(filepath, 'rb') as f:
         return pickle.load(f)
 
-def save_csfs_binary(csf_obj: CSFs, filepath: str):
+def save_csfs_binary(csf_obj: CSFs, filepath: Union[str, Path]):
     filepath = Path(filepath)
     
     # 元数据存储
@@ -689,7 +689,7 @@ def save_csfs_binary(csf_obj: CSFs, filepath: str):
             'block_data': csf_obj.CSFs_block_data  # 直接存储原始结构
         }, f, protocol=pickle.HIGHEST_PROTOCOL)
     
-def load_csfs_binary(filepath: str) -> CSFs:
+def load_csfs_binary(filepath: Union[str, Path]) -> CSFs:
     filepath = Path(filepath)
     
     with gzip.open(filepath.with_suffix('.pkl.gz'), 'rb') as f:
