@@ -10,7 +10,7 @@ import re
 import csv 
 import msgpack
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 
 from dataclasses import dataclass
 
@@ -744,22 +744,50 @@ def continue_calculate(cal_root_path: str, continue_calculate: bool):
 
 #######################################################################
 
-def csfs_index_storange(blocks_csfs_index: Dict, save_file_path: str):
+def csfs_index_storange(blocks_csfs_index: Dict, save_file_path):
     """
     将CSFs索引存储到指定的文件中。
     Args:
         blocks_csfs_index (Dict): 包含CSFs索引的字典。
-        save_file_path (str): 存储文件的路径。
+        save_file_path: 存储文件的路径（字符串或Path对象）。
     """
-    with open(save_file_path, 'wb') as f:
-        msgpack.dump(blocks_csfs_index, f)
-        
-    return f'CSFs index has been stored to {save_file_path}'
-
-def csfs_index_load(load_csfs_index_file_path: str):
+    # 转换为Path对象并检查是否有扩展名
+    file_path = Path(save_file_path)
+    if not file_path.suffix:
+        file_path = file_path.with_suffix('.pkl')
     
-    with open(load_csfs_index_file_path, 'rb') as f:
-        blocks_csfs_index = msgpack.load(f)
+    with open(file_path, 'wb') as f:
+        pickle.dump(blocks_csfs_index, f, protocol=pickle.HIGHEST_PROTOCOL)
+        
+    return f'CSFs index has been stored to {file_path}'
+
+def csfs_index_load(load_csfs_index_file_path):
+    
+    # 转换为Path对象便于处理
+    file_path = Path(load_csfs_index_file_path)
+    
+    # 检查路径是否有扩展名
+    if not file_path.suffix:
+        # 没有扩展名时，按优先级尝试不同格式
+        for ext in ['.pkl', '.msgpack']:
+            full_path = file_path.with_suffix(ext)
+            if full_path.exists():
+                file_path = full_path
+                break
+        else:
+            # 如果都不存在，默认使用.pkl扩展名（会在下面报错）
+            file_path = file_path.with_suffix('.pkl')
+    
+    # 根据文件扩展名选择加载方式
+    if file_path.suffix == '.msgpack':
+        # 向后兼容：加载旧的msgpack格式文件
+        import msgpack
+        with open(file_path, 'rb') as f:
+            blocks_csfs_index = msgpack.load(f, strict_map_key=False)
+    else:
+        # 默认使用pickle格式
+        with open(file_path, 'rb') as f:
+            blocks_csfs_index = pickle.load(f)
         
     return blocks_csfs_index
 
@@ -807,8 +835,6 @@ def save_descriptors(descriptors: np.ndarray, save_path: str, file_format: str =
         >>> descriptors = batch_process_csfs_to_descriptors(csfs_data)
         >>> save_descriptors(descriptors, 'output/csf_descriptors', 'csv')
     """
-    import pandas as pd
-    import pickle
     
     if file_format.lower() == 'npy':
         np.save(f"{save_path}.npy", descriptors)
@@ -845,8 +871,6 @@ def save_descriptors_with_multi_block(descriptors: np.ndarray,
         >>> X, y = batch_process_csfs_with_multi_block(csfs_data)
         >>> save_descriptors_with_multi_block(X, y, 'ml_data/features', 'csv')
     """
-    import pandas as pd
-    import pickle
     
     if file_format.lower() == 'csv':
         # CSV格式：将标签作为最后一列
@@ -875,6 +899,170 @@ def save_descriptors_with_multi_block(descriptors: np.ndarray,
     else:
         raise ValueError("file_format must be 'csv', 'npy', or 'pkl'")
 
+def load_descriptors(load_path: str, file_format: Optional[str] = None) -> Optional[np.ndarray]:
+    """
+    加载描述符数组
+    
+    Args:
+        load_path (str): 加载路径（可含或不含扩展名）
+        file_format (Optional[str]): 文件格式，如果为None则从文件扩展名自动推断
+    
+    Returns:
+        Optional[np.ndarray]: 描述符数组，加载失败返回None
+    
+    Example:
+        >>> descriptors = load_descriptors('output/csf_descriptors.npy')
+        >>> descriptors = load_descriptors('output/csf_descriptors', 'csv')
+    """
+    
+    # 自动推断文件格式
+    if file_format is None:
+        if load_path.endswith('.npy'):
+            file_format = 'npy'
+            load_path = load_path[:-4]  # 移除扩展名
+        elif load_path.endswith('.csv'):
+            file_format = 'csv'
+            load_path = load_path[:-4]
+        elif load_path.endswith('.pkl'):
+            file_format = 'pkl'
+            load_path = load_path[:-4]
+        else:
+            # 尝试自动检测
+            if Path(f"{load_path}.npy").exists():
+                file_format = 'npy'
+            elif Path(f"{load_path}.csv").exists():
+                file_format = 'csv'
+            elif Path(f"{load_path}.pkl").exists():
+                file_format = 'pkl'
+            else:
+                print(f"Error: Cannot find file with path: {load_path}")
+                return None
+    
+    try:
+        if file_format.lower() == 'npy':
+            file_path = f"{load_path}.npy"
+            if not Path(file_path).exists():
+                print(f"Error: File not found: {file_path}")
+                return None
+            descriptors = np.load(file_path)
+            print(f"Descriptors loaded from: {file_path}")
+            return descriptors
+            
+        elif file_format.lower() == 'csv':
+            file_path = f"{load_path}.csv"
+            if not Path(file_path).exists():
+                print(f"Error: File not found: {file_path}")
+                return None
+            df = pd.read_csv(file_path)
+            descriptors = df.values
+            print(f"Descriptors loaded from: {file_path}")
+            return descriptors
+            
+        elif file_format.lower() == 'pkl':
+            file_path = f"{load_path}.pkl"
+            if not Path(file_path).exists():
+                print(f"Error: File not found: {file_path}")
+                return None
+            with open(file_path, 'rb') as f:
+                descriptors = pickle.load(f)
+            print(f"Descriptors loaded from: {file_path}")
+            return descriptors
+            
+        else:
+            print(f"Error: Unsupported file format: {file_format}")
+            return None
+            
+    except Exception as e:
+        print(f"Error loading descriptors: {str(e)}")
+        return None
+
+
+def load_descriptors_with_multi_block(load_path: str, 
+                                     file_format: Optional[str] = None) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+    """
+    加载带标签的描述符数组
+    
+    Args:
+        load_path (str): 加载路径（不含扩展名）
+        file_format (Optional[str]): 文件格式，如果为None则自动推断
+    
+    Returns:
+        Optional[Tuple[np.ndarray, np.ndarray]]: (描述符数组, 标签数组)，加载失败返回None
+    
+    Example:
+        >>> descriptors, labels = load_descriptors_with_multi_block('ml_data/features')
+        >>> descriptors, labels = load_descriptors_with_multi_block('ml_data/features', 'csv')
+    """
+    
+    # 自动推断文件格式
+    if file_format is None:
+        if Path(f"{load_path}.csv").exists():
+            file_format = 'csv'
+        elif Path(f"{load_path}_data.npy").exists() and Path(f"{load_path}_multi_block.npy").exists():
+            file_format = 'npy'
+        elif Path(f"{load_path}.pkl").exists():
+            file_format = 'pkl'
+        else:
+            print(f"Error: Cannot find files with path: {load_path}")
+            return None
+    
+    try:
+        if file_format.lower() == 'csv':
+            file_path = f"{load_path}.csv"
+            if not Path(file_path).exists():
+                print(f"Error: File not found: {file_path}")
+                return None
+                
+            df = pd.read_csv(file_path)
+            # 最后一列是标签，其余是描述符
+            descriptors = df.iloc[:, :-1].to_numpy()
+            labels = df.iloc[:, -1].to_numpy()
+            print(f"Descriptors and labels loaded from: {file_path}")
+            return descriptors, labels
+            
+        elif file_format.lower() == 'npy':
+            data_path = f"{load_path}_data.npy"
+            labels_path = f"{load_path}_multi_block.npy"
+            
+            if not Path(data_path).exists():
+                print(f"Error: Data file not found: {data_path}")
+                return None
+            if not Path(labels_path).exists():
+                print(f"Error: Labels file not found: {labels_path}")
+                return None
+                
+            descriptors = np.load(data_path)
+            labels = np.load(labels_path)
+            print(f"Descriptors loaded from: {data_path}")
+            print(f"Labels loaded from: {labels_path}")
+            return descriptors, labels
+            
+        elif file_format.lower() == 'pkl':
+            file_path = f"{load_path}.pkl"
+            if not Path(file_path).exists():
+                print(f"Error: File not found: {file_path}")
+                return None
+                
+            with open(file_path, 'rb') as f:
+                data_dict = pickle.load(f)
+                
+            if 'descriptors' not in data_dict or 'labels' not in data_dict:
+                print(f"Error: Invalid data format in {file_path}")
+                return None
+                
+            descriptors = data_dict['descriptors']
+            labels = data_dict['labels']
+            print(f"Descriptors and labels loaded from: {file_path}")
+            return descriptors, labels
+            
+        else:
+            print(f"Error: Unsupported file format: {file_format}")
+            return None
+            
+    except Exception as e:
+        print(f"Error loading descriptors with labels: {str(e)}")
+        return None
+
 def save_ml_dataset(dataset: Dict, save_path: str, file_format: str = 'npy'):
     """
     保存机器学习数据集
@@ -888,7 +1076,6 @@ def save_ml_dataset(dataset: Dict, save_path: str, file_format: str = 'npy'):
         >>> dataset = create_csf_dataset_for_ml(csfs_data)
         >>> save_ml_dataset(dataset, 'ml_data/dataset', 'npy')
     """
-    import pickle
     
     if file_format.lower() == 'npy':
         np.save(f"{save_path}_X_train.npy", dataset['X_train'])
@@ -934,7 +1121,6 @@ def load_ml_dataset(save_path: str, file_format: str = 'npy') -> Dict:
         >>> dataset = load_ml_dataset('ml_data/dataset', 'npy')
         >>> X_train = dataset['X_train']
     """
-    import pickle
     
     if file_format.lower() == 'npy':
         dataset = {

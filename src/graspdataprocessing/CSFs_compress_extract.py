@@ -571,16 +571,12 @@ def batch_process_csfs_with_multi_block(CSFs_file_data: CSFs,
     all_descriptors = []
     all_multi_block = []
     
-    # 设置进度条
-    iterator = enumerate(CSFs_file_data.CSFs_block_data)
-    if progress_bar:
-        iterator = enumerate(tqdm(CSFs_file_data.CSFs_block_data, desc="Processing blocks with labels"))
     
     global_csf_counter = 0  # 全局计数器
     
-    for block_idx, block in iterator:
+    for block_idx, block in enumerate(CSFs_file_data.CSFs_block_data):
         # 遍历块中的每个CSF项
-        for csf_idx, csf_item in enumerate(block):
+        for csf_idx, csf_item in enumerate(tqdm(block)):
             try:
                 # 检查CSF项是否包含3行
                 if len(csf_item) != 3:
