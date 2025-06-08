@@ -5,12 +5,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_curve, auc, roc_auc_score, precision_recall_curve, auc, confusion_matrix
 from sklearn.calibration import calibration_curve
-from sklearn.calibration import calibration_curve
 import matplotlib.pyplot as plt
 import seaborn as sns
-import torch
-import torch.nn as nn
-import torch.optim as optim
+
 import numpy as np
 import pandas as pd
 import joblib
@@ -278,19 +275,3 @@ class ANNClassifier:
         recall = recall_score(y_test, y_pred)
         
         return f1, roc_auc, accuracy, precision, recall
-    
-# # 读取特征并训练模型
-# total_data = pd.read_csv("/home/workstation1/ssd2t/ANNSCI/Lu_4f145d6s2_J3_1e-09_1to3/descripotors/5d6s2_temp_1_1_desc.csv")
-# X = total_data.iloc[:, :-1]
-# stay_data = pd.read_csv("/home/workstation1/ssd2t/ANNSCI/Lu_4f145d6s2_J3_1e-09_1to3/descripotors_stay/5d6s2_temp_1_1_stay_desc.csv")
-# X_stay = stay_data.iloc[:, :].values
-# y = (total_data.iloc[:, -1] ** 2 > 1e-9).astype(int)
-# X_train, X_test, y_train, y_test = train_test_split(X.values, y.values, test_size=0.2, random_state=42)
-
-# ann_model = ANNClassifier(input_size=X_train.shape[1], hidden_size=150)
-# X_resampled, y_resampled = X_train, y_train
-# ann_model.fit(X_resampled, y_resampled)
-
-# y_pred = ann_model.predict(X_test)
-# y_pred_other = ann_model.predict(X_stay)
-# y_proba = ann_model.predict_proba(X_test)[:, 1]

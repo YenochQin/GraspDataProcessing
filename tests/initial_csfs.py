@@ -23,7 +23,9 @@ from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
+# sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
+sys.path.append('D:\\PythonPrograms\\GraspDataProcessing\\src')
+
 import graspdataprocessing as gdp
 
 def load_config(config_path):

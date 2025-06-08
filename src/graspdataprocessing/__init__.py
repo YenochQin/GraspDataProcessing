@@ -22,16 +22,14 @@ from .CSFs_choosing import *
 from .CSFs_compress_extract import *
 from .data_modules import *
 from .ANN import *
-from .vmcci import *
-from .graspinp import *
 
-__all__ = [
-           'GraspFileLoad',
-           'EnergyFile2csv',
-           'set_size',
-           'mcdhf_energy_data_collection',
-           'ci_energy_data_collection',
-           'CSF_subshell_split',
-           'CSF_item_2_dict',
-           '__version__'
-           ]
+# __all__ = [
+#            'GraspFileLoad',
+#            'EnergyFile2csv',
+#            'set_size',
+#            'mcdhf_energy_data_collection',
+#            'ci_energy_data_collection',
+#            'CSF_subshell_split',
+#            'CSF_item_2_dict',
+#            '__version__'
+#            ]

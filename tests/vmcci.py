@@ -2,50 +2,51 @@ import numpy as np
 import pandas as pd
 import re
 import os
+from bitarray import bitarray
+import random
 
-def get_total_ci(input_file):
+def get_total_ci(input_path):
     datas = []
-    with open(input_file, "r", encoding='utf-8') as f:
+    with open(input_path, "r", encoding='utf-8') as f:
         for line in f:
             datas.append(line)
 
     head = datas[0:5]
     cis = datas[5:]
     cis_t = []
-    count = []
+    count = [-1]
 
+    # 标记每个数据块的边界
     for i in range(len(cis)):
         if "*" in cis[i]:
             count.append(i)
+    count.append(len(cis))  # 修改：使用len(cis)确保包含所有数据
 
     cis_ts = []
     indexss = []
-
-    start = 0
-    for end in count:
-        ci = cis[start:end]
+    
+    # 处理每个数据块
+    for i in range(len(count)-1):
+        ci = cis[count[i]+1:count[i+1]]
         cis_t = []
-        for j in range(int(len(ci) / 3)):
-            cis_t.append([ci[j * 3 + 0], ci[j * 3 + 1], ci[j * 3 + 2]])
-            indexss.append([j * 3 + 0, j * 3 + 1, j * 3 + 2])
+        
+        # 修改：确保处理所有数据，即使不是3的倍数
+        for j in range(0, len(ci), 3):
+            # 确保不会越界
+            if j + 2 < len(ci):
+                cis_t.append([ci[j], ci[j+1], ci[j+2]])
+                indexss.append([j, j+1, j+2])
+            else:
+                # 处理不足3行的情况
+                remaining = ci[j:]
+                if remaining:
+                    cis_t.append(remaining)
+                    indexss.append(list(range(j, j+len(remaining))))
+        
         cis_ts.append(cis_t)
-        start = end + 1
 
-    # 处理最后一部分数据
-    ci = cis[start:]
-    cis_t = []
-    for j in range(int(len(ci) / 3)):
-        cis_t.append([ci[j * 3 + 0], ci[j * 3 + 1], ci[j * 3 + 2]])
-        indexss.append([j * 3 + 0, j * 3 + 1, j * 3 + 2])
-    cis_ts.append(cis_t)
-
-    N_ci = []
-    for ci in cis_ts:
-        N_ci.append(len(ci))
+    N_ci = [len(ci) for ci in cis_ts]
     return N_ci, cis_ts, head, indexss
-    ## csffiledata.CSFs_block_length = N_ci
-    ## csffiledata.CSFs_block_data = cis_ts
-    ## csffiledata.subshell_info_raw = head (without 'CSFs:\n')
 
 def save_ci(index, output_path, N_ci, cis_ts, head):
     id_split = [0]+np.cumsum(N_ci).tolist()
@@ -158,6 +159,21 @@ def pop_other_ci(indexs, indexs_import):
             stay_indexs.append(i)
     return stay_indexs
 
+def pop_other_ci_bitmap(indexs, indexs_import):
+    # 确定位图的大小（假设 indexs 中的元素都是非负整数）
+    max_val = max(indexs) if indexs else 0
+    bitmap = bitarray(max_val + 1)
+    bitmap.setall(False)
+    
+    # 将 indexs_import 中的元素在位图中标记为 True
+    for i in indexs_import:
+        if i <= max_val:  # 确保不超出位图范围
+            bitmap[i] = True
+    
+    # 过滤 indexs
+    return [i for i in indexs if not bitmap[i]]
+
+
 def trans_ci(index, indexs_import):
     return index[indexs_import]
 
@@ -191,16 +207,28 @@ def readconf(conf,b,suffix,spetral_term,spetral_term_index):
     else:
         return outconf
 
-def initial_configuration(N_ci, indexs, sum_num_min, n):
-    # N_ci, cis_ts, head, indexs = get_total_ci(path+ conf +"_10.c")
-    indexs = np.arange(sum(N_ci)-1)
-    indexs_temp = indexs+1
-    index = indexs_temp[:sum_num_min-1]#np.random.choice(indexs_temp,size=1000,replace=False)
-    indexs_select = [i for i in indexs_temp if i not in index]
-    indexs_select= index.tolist()+np.random.choice(indexs_select,size=n * sum_num_min,replace=False).tolist()
-    # indexs_select= np.sort(np.array(index).tolist())
-    index = np.array([0]+indexs_select)
-    index.sort()
+def designation_initial_configuration(N_ci, sum_num_min, n , index):
+    indexs_temp = np.arange(sum(N_ci))
+    num_sample = n * sum_num_min
+    indexs_select = np.random.randint(sum_num_min,len(indexs_temp), num_sample*2)
+    indexs_select = np.unique(indexs_select)
+    indexs_select = indexs_temp[indexs_select[:num_sample]]
+    index = np.concatenate((index,indexs_select))
+    return index,indexs_temp
+
+def fixedratio_initial_configuration(N_ci, sum_num_min):
+    indexs_temp = np.arange(sum(N_ci))
+    index = indexs_temp[:sum_num_min]
+    return index,indexs_temp
+
+def random_initial_configuration(N_ci, sum_num_min, n):
+    indexs_temp = np.arange(sum(N_ci))
+    index = indexs_temp[:sum_num_min]
+    num_sample = n * sum_num_min
+    indexs_select = np.random.randint(sum_num_min,len(indexs_temp), num_sample*2)
+    indexs_select = np.unique(indexs_select)
+    indexs_select = indexs_temp[indexs_select[:num_sample]]
+    index = np.concatenate((index,indexs_select))
     return index,indexs_temp
 
 def iteration_index(indexs_temp,sum_num,spetral_term_inoutconf,Block,index,spetral_term_index,indexs_import_temp_term):
@@ -247,16 +275,15 @@ def divide_poolwithorb(cis_ts,orb_groups):
             if any(any(orb in line for line in sub_list) for orb in orb_list):
                 index_pool[orb_name].append(i)
         csfs_pool[orb_name] = [cis_ts[0][i] for i in index_pool[orb_name]]
+        
     return index_pool, csfs_pool
-def deduplicateanddemerge(ci_temp,cutoff_value):
-    valid_indices_list = []
-    for i in range(ci_temp.shape[0]):
-        squared_coeffs = np.square(ci_temp[i])
-        valid_indices = np.where(squared_coeffs > cutoff_value)[0]
-        valid_indices_list.append(valid_indices)
-        all_valid_indices = np.concatenate(valid_indices_list)
-        unique_indices = np.unique(all_valid_indices)
-        return unique_indices
+
+def deduplicateanddemerge(ci_temp, cutoff_value):
+    squared_coeffs = np.square(ci_temp)
+    row_indices, col_indices = np.where(squared_coeffs > cutoff_value)
+    unique_indices = np.unique(col_indices)
+    
+    return unique_indices
 
 def extract_rlevels_to_dict(filepath):
     data_dict_list = []
@@ -289,3 +316,96 @@ def save_data(data, output_file):
             energy = item.get('Energy', '')
             config = item.get('Configuration', '')
             f.write(f"{energy}\t{config}\n")
+
+def random_choice(indexs, Num):
+    index_rand = np.random.randint(0, len(indexs), size=Num*3)
+    index_rand = np.unique(index_rand)
+    index_rand = index_rand[np.random.permutation(len(index_rand))]
+    return indexs[index_rand[:Num]]
+
+# def process_ci_temp(index, ci_temp):
+#     max_idx = np.argmax(ci_temp, axis=0)
+#     min_idx = np.argmin(ci_temp, axis=0)
+    
+#     # 计算每列的最大值和最小值
+#     max_vals = ci_temp[max_idx, np.arange(ci_temp.shape[1])]
+#     min_vals = ci_temp[min_idx, np.arange(ci_temp.shape[1])]
+    
+#     # 比较最大值和最小值的绝对值，选择较大的
+#     abs_max = np.abs(max_vals)
+#     abs_min = np.abs(min_vals)
+#     mask = abs_max >= abs_min
+    
+#     # 创建结果数组
+#     result_indices = np.where(mask, max_idx, min_idx)
+#     result_weights = np.where(mask, max_vals, min_vals)
+    
+#     # 构建DataFrame
+#     result_df = pd.DataFrame({
+#         'index': index[np.arange(ci_temp.shape[1])],
+#         'weight': result_weights
+#     })
+    
+#     return result_df
+
+def process_ci_temp(index, ci_temp):
+    max_idx = np.argmax(ci_temp, axis=0)
+    min_idx = np.argmin(ci_temp, axis=0)
+    
+    # 计算每列的最大值和最小值
+    max_vals = ci_temp[max_idx, np.arange(ci_temp.shape[1])]
+    min_vals = ci_temp[min_idx, np.arange(ci_temp.shape[1])]
+    
+    # 比较最大值和最小值的绝对值，选择较大的
+    abs_max = np.abs(max_vals)
+    abs_min = np.abs(min_vals)
+    mask = abs_max >= abs_min
+    
+    # 创建结果数组
+    result_indices = np.where(mask, max_idx, min_idx)
+    result_weights = np.where(mask, max_vals, min_vals)
+    
+    # 确保索引不超出范围
+    valid_indices = np.arange(min(len(index), ci_temp.shape[1]))
+    
+    # 构建DataFrame
+    result_df = pd.DataFrame({
+        'index': index[valid_indices],
+        'weight': result_weights[valid_indices]
+    })
+    
+    return result_df
+
+def read_dataset(root_path, step=1):
+    # start_step = max(0, step - 6)  # 读取最近5次的数据（包含当前step）
+    # if step <= cfg.classifier.dataset['init_step']:
+    #     start_step = 0
+    # else:
+    #     start_step = min(step-cfg.classifier.dataset['max_step'], 2*(step - cfg.classifier.dataset['init_step']))
+    start_step = step
+    # 读取dadaset/下的csv文件
+    files = os.listdir(root_path+'/dataset/')
+    files = sorted([root_path+'/dataset/'+file for file in files])
+    dataset = pd.read_csv(files[0])
+    # 初始化dataset
+    # dataset = dataset.iloc[:2]
+    for i in range(start_step, len(files)):
+        dataset_path = files[i]
+        if os.path.exists(dataset_path):
+            dataset_temp = pd.read_csv(dataset_path)
+            dataset_temp.columns = dataset_temp.columns.astype(str)
+            # 垂直拼接数据集，保留历史数据
+            dataset = pd.concat([dataset, dataset_temp], ignore_index=True, axis=0)
+
+    # 去重并保留最大权重
+    if not dataset.empty:
+        identifier_col = 'index'
+        dataset = dataset.groupby(identifier_col, as_index=False).agg({
+            **{col: 'first' for col in dataset.columns[:-1]},
+            'weight': 'max'
+        }).reset_index(drop=True)
+
+    ci = dataset['weight'].values
+    index = dataset['index'].values
+
+    return index, ci
