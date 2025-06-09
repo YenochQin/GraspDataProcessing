@@ -11,7 +11,8 @@ import csv
 import msgpack
 from pathlib import Path
 from typing import Dict, Tuple, List, Optional, Union
-
+from types import SimpleNamespace
+import yaml
 from dataclasses import dataclass
 
 import numpy as np
@@ -1063,89 +1064,93 @@ def load_descriptors_with_multi_block(load_path: str,
         print(f"Error loading descriptors with labels: {str(e)}")
         return None
 
-def save_ml_dataset(dataset: Dict, save_path: str, file_format: str = 'npy'):
-    """
-    保存机器学习数据集
+def load_config(config_path):
+    """加载YAML配置文件并进行类型转换和数据处理"""
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    # 类型转换和数据处理
+    config = _process_config_data(config)
+    
+    return SimpleNamespace(**config)
+
+def _process_config_data(config):
+    """处理配置数据，进行类型转换和验证"""
+    # 浮点数转换
+    config['cutoff_value'] = float(config['cutoff_value'])
+    config['initial_ratio'] = float(config['initial_ratio'])
+    config['expansion_ratio'] = float(config['expansion_ratio'])
+    
+    # 整数转换
+    config['cal_loop_num'] = int(config['cal_loop_num'])
+    config['difference'] = int(config['difference'])
+    
+    # 路径转换
+    config['root_path'] = Path(config['root_path'])
+    config['scf_cal_path'] = config['root_path'] / f'{config['conf']}_{config['cal_loop_num']}'
+    
+    # 模型参数处理
+    if 'model_params' in config:
+        model_params = config['model_params']
+        
+        # 转换模型参数中的整数
+        if 'n_estimators' in model_params:
+            model_params['n_estimators'] = int(model_params['n_estimators'])
+        if 'random_state' in model_params:
+            model_params['random_state'] = int(model_params['random_state'])
+            
+        # 处理class_weight字典，确保键为整数
+        if 'class_weight' in model_params and isinstance(model_params['class_weight'], dict):
+            class_weight = {}
+            for k, v in model_params['class_weight'].items():
+                class_weight[int(k)] = float(v)
+            model_params['class_weight'] = class_weight
+    
+    # 数据验证
+    _validate_config_data(config)
+    
+    return config
+
+def _validate_config_data(config):
+    """验证配置数据的有效性"""
+    # 验证必需字段
+    required_fields = ['atom', 'conf', 'cal_loop_num', 'cutoff_value', 'initial_ratio']
+    missing_fields = [field for field in required_fields if field not in config]
+    if missing_fields:
+        raise ValueError(f"配置文件缺少必需字段: {missing_fields}")
+    
+    # 验证数值范围
+    if 'cutoff_value' in config:
+        if config['cutoff_value'] <= 0:
+            raise ValueError("cutoff_value 必须大于 0")
+    
+    if 'initial_ratio' in config:
+        if not (0 < config['initial_ratio'] <= 1):
+            raise ValueError("initial_ratio 必须在 (0, 1] 范围内")
+    
+    if 'expansion_ratio' in config:
+        if config['expansion_ratio'] < 1:
+            raise ValueError("expansion_ratio 必须大于等于 1")
+    
+    # 验证光谱项列表
+    if 'spetral_term' in config:
+        if not isinstance(config['spetral_term'], list) or len(config['spetral_term']) == 0:
+            raise ValueError("spetral_term 必须是非空列表")
+    
+    print(f"配置验证通过: cutoff_value={config.get('cutoff_value')}, initial_ratio={config.get('initial_ratio')}")
+    
+def update_config(config_path, updates):
+    """更新YAML配置文件
     
     Args:
-        dataset (Dict): 包含训练和测试数据的字典
-        save_path (str): 保存路径前缀
-        file_format (str): 保存格式 ('npy', 'pkl')
-    
-    Example:
-        >>> dataset = create_csf_dataset_for_ml(csfs_data)
-        >>> save_ml_dataset(dataset, 'ml_data/dataset', 'npy')
+        config_path: 配置文件路径
+        updates: 要更新的键值对字典
     """
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
     
-    if file_format.lower() == 'npy':
-        np.save(f"{save_path}_X_train.npy", dataset['X_train'])
-        np.save(f"{save_path}_X_test.npy", dataset['X_test'])
-        np.save(f"{save_path}_y_train.npy", dataset['y_train'])
-        np.save(f"{save_path}_y_test.npy", dataset['y_test'])
-        
-        # 保存元数据
-        metadata = {
-            'feature_shape': dataset['feature_shape'],
-            'n_classes': dataset['n_classes'],
-            'total_samples': dataset['total_samples']
-        }
-        with open(f"{save_path}_metadata.pkl", 'wb') as f:
-            pickle.dump(metadata, f)
-            
-        print(f"Dataset saved:")
-        print(f"  Training data: {save_path}_X_train.npy, {save_path}_y_train.npy")
-        print(f"  Test data: {save_path}_X_test.npy, {save_path}_y_test.npy")
-        print(f"  Metadata: {save_path}_metadata.pkl")
-        
-    elif file_format.lower() == 'pkl':
-        with open(f"{save_path}_complete.pkl", 'wb') as f:
-            pickle.dump(dataset, f)
-        print(f"Complete dataset saved to: {save_path}_complete.pkl")
-        
-    else:
-        raise ValueError("file_format must be 'npy' or 'pkl'")
-
-
-def load_ml_dataset(save_path: str, file_format: str = 'npy') -> Dict:
-    """
-    加载已保存的机器学习数据集
+    # 更新配置值
+    config.update(updates)
     
-    Args:
-        save_path (str): 保存路径前缀
-        file_format (str): 文件格式 ('npy', 'pkl')
-    
-    Returns:
-        Dict: 包含训练和测试数据的字典
-    
-    Example:
-        >>> dataset = load_ml_dataset('ml_data/dataset', 'npy')
-        >>> X_train = dataset['X_train']
-    """
-    
-    if file_format.lower() == 'npy':
-        dataset = {
-            'X_train': np.load(f"{save_path}_X_train.npy"),
-            'X_test': np.load(f"{save_path}_X_test.npy"),
-            'y_train': np.load(f"{save_path}_y_train.npy"),
-            'y_test': np.load(f"{save_path}_y_test.npy")
-        }
-        
-        # 加载元数据
-        try:
-            with open(f"{save_path}_metadata.pkl", 'rb') as f:
-                metadata = pickle.load(f)
-            dataset.update(metadata)
-        except FileNotFoundError:
-            print("Warning: Metadata file not found. Some information may be missing.")
-            
-        print(f"Dataset loaded successfully from: {save_path}_*.npy")
-        return dataset
-        
-    elif file_format.lower() == 'pkl':
-        with open(f"{save_path}_complete.pkl", 'rb') as f:
-            dataset = pickle.load(f)
-        print(f"Dataset loaded successfully from: {save_path}_complete.pkl")
-        return dataset
-        
-    else:
-        raise ValueError("file_format must be 'npy' or 'pkl'")
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)

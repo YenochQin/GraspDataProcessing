@@ -179,7 +179,7 @@ class ANNClassifier:
 
         # 学习率调度器
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, mode='min', factor=0.5, patience=10, verbose=True
+            self.optimizer, mode='min', factor=0.5, patience=10
         )
         
         # 早停机制
@@ -426,7 +426,8 @@ class ANNClassifier:
         y_resampled = y_resampled[shuffle_index]
         return X_resampled, y_resampled
     
-    def plot_curve(self, y_test, y_proba, filename):
+    @staticmethod
+    def plot_curve(cal_mix_coeff_List, y_proba_all, y_test, y_proba, filename):
         # 绘制 ROC 曲线
         fpr, tpr, _ = roc_curve(y_test, y_proba)
         roc_auc = roc_auc_score(y_test, y_proba)
@@ -457,14 +458,17 @@ class ANNClassifier:
         plt.xlabel('Predicted Label')
         plt.ylabel('True Label')
 
-        # 绘制校准曲线
-        prob_true, prob_pred = calibration_curve(y_test, y_proba, n_bins=10)
+        # 绘制可解释性曲线
         plt.subplot(2, 2, 4)
-        plt.plot(prob_pred, prob_true, 's-')
-        plt.plot([0, 1], [0, 1], '--', color='gray')
-        plt.title('Calibration Curve')
-        plt.xlabel('Mean Predicted Probability')
-        plt.ylabel('Fraction of Positives')
+        # 确保两个数组大小一致
+        min_len = min(len(y_proba_all[:, 1]), len(cal_mix_coeff_List))
+        if min_len > 0:
+            plt.scatter(y_proba_all[:min_len, 1], np.log(abs(cal_mix_coeff_List[:min_len])))
+            plt.xlabel('Predicted Probability')
+            plt.ylabel('Log|Ci Values|')
+            plt.title('Ci Values vs Predicted Probability')
+        else:
+            plt.text(0.5, 0.5, 'No data to plot', ha='center', va='center', transform=plt.gca().transAxes)
 
         plt.tight_layout()
         

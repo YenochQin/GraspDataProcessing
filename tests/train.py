@@ -18,131 +18,22 @@ import numpy as np
 import pandas as pd
 import time
 import joblib
-import json
+import json 
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-sys.path.append('/home/workstation2/AppFiles/GraspDataProcessing/src')
+# sys.path.append('/home/workstation2/AppFiles/GraspDataProcessing/src')
+sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
 try:
     import graspdataprocessing as gdp
 except ImportError:
     print("警告: 无法导入 graspdataprocessing 模块")
     gdp = None
 
-def load_config(config_path):
-    """加载YAML配置文件"""
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    return SimpleNamespace(**config)
 
-def update_config(config_path, updates):
-    """更新YAML配置文件
-    
-    Args:
-        config_path: 配置文件路径
-        updates: 要更新的键值对字典
-    """
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    
-    # 更新配置值
-    config.update(updates)
-    
-    with open(config_path, 'w') as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
-def setup_logging(config):
-    """配置日志系统"""
-    os.makedirs("logs", exist_ok=True)
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler("logs/machine_learning_training.log"),
-            logging.StreamHandler()
-        ]
-    )
-    return logging.getLogger(__name__)
-
-def setup_directories(root_path):
-    """创建必要的目录结构"""
-    root_path = Path(root_path)
-    directories = ["models", "descripotors", "descripotors_stay", "test_data", "roc_curves", "results"]
-    
-    for directory in directories:
-        (root_path / directory).mkdir(parents=True, exist_ok=True)
-    
-    return root_path
-
-def initialize_results_file(result_csv_path, logger):
-    """初始化结果CSV文件"""
-    try:
-        if not result_csv_path.exists():
-            with result_csv_path.open(mode="w", newline="") as file:
-                writer = csv.writer(file)
-                writer.writerow([
-                    'training_time', 'eval_time', 'abinitio_time', 'all_time',
-                    'f1', 'roc_auc', 'accuracy', 'precision', 'recall',
-                    'Es', 'abimport_csfnum', 'MLimport_csfnum', 'MLsampling_ratio', 'next_itr_num',
-                    'weight', 'f1_train', 'roc_auc_train', 'accuracy_train', 'precision_train', 'recall_train'
-                ])
-    except IOError as e:
-        logger.error(f"无法创建结果文件 {result_csv_path}: {str(e)}")
-        raise
-
-def validate_initial_files(config, root_path, logger):
-    """验证初始文件的存在和有效性"""
-    # 验证初始CSFs文件
-    initial_csfs_path = root_path / config.target_pool_file
-    try:
-        if not initial_csfs_path.is_file():
-            logger.error(f"初始CSFs文件无效或不存在: {initial_csfs_path}")
-            raise FileNotFoundError(f"初始CSFs文件无效或不存在: {initial_csfs_path}")
-        logger.info(f"成功加载初始CSFs文件: {initial_csfs_path}")
-    except PermissionError as e:
-        logger.error(f"无权限访问CSFs文件: {initial_csfs_path}")
-        raise
-    except Exception as e:
-        logger.error(f"加载CSFs文件时发生未知错误: {str(e)}")
-        raise
-    
-    return initial_csfs_path
-
-def check_configuration_coupling(config, energy_level_data_pd, logger):
-    """检查组态耦合是否正确"""
-    cal_configuration_set = set(energy_level_data_pd['configuration'])
-    
-    if set(config.spetral_term).issubset(cal_configuration_set):
-        logger.info(f"cal_loop {config.cal_loop_num} 组态耦合正确")
-        return True
-    else:
-        logger.error(f"cal_loop {config.cal_loop_num} 组态耦合错误")
-        return False
-
-def load_data_files(config, root_path, logger):
-    """加载数据文件"""
-    if gdp is None:
-        raise ImportError("graspdataprocessing 模块未正确导入")
-    
-    cal_path = root_path / f'{config.conf}_{config.cal_loop_num}'
-    
-    # 加载能级文件
-    energy_level_file_path = cal_path / f'{config.conf}_{config.cal_loop_num}.level'
-    energy_level_file_load = gdp.GraspFileLoad.from_filepath(str(energy_level_file_path))
-    energy_level_data_pd = energy_level_file_load.energy_level_2_pd()
-    
-    # 加载rmix文件
-    rmix_file_path = cal_path / f'{config.conf}_{config.cal_loop_num}.m'
-    rmix_file_load = gdp.GraspFileLoad.from_filepath(str(rmix_file_path), 'mix')
-    rmix_file_data = rmix_file_load.data_file_process()
-    
-    # 加载原始CSF文件
-    raw_csf_file_load = gdp.GraspFileLoad.from_filepath(str(config.target_pool_file), 'CSFs')
-    raw_csf_data = raw_csf_file_load.data_file_process()
-    
-    return energy_level_data_pd, rmix_file_data, raw_csf_data
 
 def extract_features(config, rmix_file_data, logger):
     """提取特征"""
@@ -150,7 +41,7 @@ def extract_features(config, rmix_file_data, logger):
         raise ImportError("graspdataprocessing 模块未正确导入")
     
     # 获取重要配置索引
-    cut_off_csfs_indices_dict = gdp.batch_blocks_mix_square_above_threshold(
+    cut_off_csfs_indices_dict = gdp.batch_asfs_mix_square_above_threshold(
         rmix_file_data, float(config.cutoff_value)
     )
     unique_indices = cut_off_csfs_indices_dict[0]
@@ -425,7 +316,7 @@ def handle_calculation_error(config, indices_temp, raw_csf_data, root_path, logg
         raise ImportError("graspdataprocessing 模块未正确导入")
     
     cal_error_num = getattr(config, 'cal_error_num', 0) + 1
-    update_config(f'{config.root_path}/config.yaml', {'cal_error_num': cal_error_num})
+    gdp.update_config(f'{config.root_path}/config.yaml', {'cal_error_num': cal_error_num})
     
     if cal_error_num >= 3:
         logger.info("连续三次波函数未改进，迭代收敛，退出筛选程序")
@@ -479,7 +370,8 @@ def main(config):
     
     try:
         # 加载数据文件
-        energy_level_data_pd, rmix_file_data, raw_csf_data = load_data_files(config, root_path, logger)
+        energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict = load_data_files(config)
+        raw_csf_data = target_pool_csfs_data  # 为了保持兼容性
         
         # 检查组态耦合
         cal_result = check_configuration_coupling(config, energy_level_data_pd, logger)
@@ -545,7 +437,7 @@ if __name__ == "__main__":
     
     # 加载配置
     try:
-        cfg = load_config(args.config)
+        cfg = gdp.load_config(args.config)
         main(cfg)
     except FileNotFoundError:
         print(f"错误: 配置文件 {args.config} 不存在")
