@@ -18,70 +18,79 @@ import pandas as pd
 import time
 import joblib
 import json 
+from typing import Dict, Tuple, List, Optional
+
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 from .CSFs_choosing import batch_asfs_mix_square_above_threshold
+from .ANN import ANNClassifier
+from .data_modules import MixCoefficientData
 
 
 
 
-
-def train_model(config, logger):
+def train_model(config, caled_csfs_descriptors: np.ndarray, rmix_file_data: MixCoefficientData,logger):
     """训练机器学习模型"""
     
-    # 加载数据
-    desc_file_path = Path('descripotors') / f'{config.file_name}_desc.csv'
-    total_data = pd.read_csv(desc_file_path)
-    X = total_data.iloc[:, :-1]
-    y = total_data.iloc[:, -1]
+    X = caled_csfs_descriptors[:, :-1]
+    y = caled_csfs_descriptors[:, -1]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_resampled, y_resampled = X_train, y_train
+    model = ANNClassifier(input_size=X_train.shape[1], hidden_size=128)
+
+    # Model training
+    logger.info("             训练模型")
+    start_time = time.time()
+    model.fit(X_resampled, y_resampled)
+    training_time = time.time() - start_time
+
+    # Model evaluation
+    logger.info("             预测与评估")
+    y_pred = model.predict(X_test)
+    y_proba = model.predict_proba(X_test)[:, 1]
+    y_pred_train = model.predict(X_train)
+    y_proba_train = model.predict_proba(X_train)[:, 1]
+    y_proba_all = model.predict_proba(X)
+    print(y_proba_all[:, 1].shape)
+    roc_auc, pr_auc = ANNClassifier.plot_curve(rmix_file_data.mix_coefficient_List[0], y_proba_all, y_test, y_proba, config.cal_path.joinpath('roc_auc.png'))
+    f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(y_test, y_pred, y_proba)
+    logger.info ("测试集预测结果:")
+    logger.info (f"AUC:{roc_auc}, pr_auc:{pr_auc}, f1:{f1}, accuracy:{accuracy}, precision:{precision}, recall:{recall}")
     
-    stay_desc_file_path = Path('descripotors_stay') / f'{config.file_name}_stay_desc.csv'
-    stay_data = pd.read_csv(stay_desc_file_path)
-    X_stay = stay_data.iloc[:, :].values
-    
-    # 划分训练测试集
-    X_train, X_test, y_train, y_test = train_test_split(
-        X.values, y.values, test_size=0.2, random_state=42
-    )
-    
-    logger.info("开始训练模型")
-    
+    # Overfitting and underfitting monitoring
+    f1_train, roc_auc_train, accuracy_train, precision_train, recall_train = ANNClassifier.model_evaluation(y_train, y_pred_train, y_proba_train)
+    logger.info (f"训练集预测结果:")
+    logger.info (f"AUC:{roc_auc_train}, f1:{f1_train}, accuracy:{accuracy_train}, precision:{precision_train}, recall:{recall_train}")
     # 初始化或加载模型
     models_dir = Path("models")
     models_dir.mkdir(exist_ok=True)
     
     if config.cal_loop_num == 1:
-        model = RandomForestClassifier(
-            class_weight={0:1, 1:3}, n_estimators=1000, verbose=True, n_jobs=-1
-        )
+        model = ANNClassifier(input_size=X_train.shape[1], hidden_size=128)
     else:
         model_path = models_dir / f"{config.conf}_{config.cal_loop_num-1}.pkl"
         if model_path.exists():
             model = joblib.load(model_path)
         else:
-            model = RandomForestClassifier(
-                class_weight={0:1, 1:3}, n_estimators=1000, verbose=True, n_jobs=-1
-            )
+            model = ANNClassifier(input_size=X_train.shape[1], hidden_size=128)
     
     # 设置权重
     weight = [1, max(1, 12 - 2*config.cal_loop_num)]
     logger.info(f"权重: {weight}")
     
     # 重采样和训练
-    X_resampled, y_resampled = gdp.ANNClassifier.resampling(X_train, y_train, weight)
+    X_resampled, y_resampled = model.resampling(X_train, y_train, weight)
     start_time = time.time()
     model.fit(X_resampled, y_resampled)
     training_time = time.time() - start_time
     
-    return model, X_train, X_test, y_train, y_test, X_stay, training_time, weight
+    return model, X_train, X_test, y_train, y_test, training_time, weight
 
-def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logger):
+def evaluate_model(model, X_train, X_test, y_train, y_test, config, logger):
     """评估模型性能"""
-    if gdp is None:
-        raise ImportError("graspdataprocessing 模块未正确导入")
     
     logger.info("开始预测与评估")
     
@@ -292,3 +301,29 @@ def handle_calculation_error(config, indices_temp, raw_csf_data, root_path, logg
     
     # 写入组态文件
     write_configuration_files(chosen_index, raw_csf_data, config, root_path, indices_temp)
+
+def get_stay_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_dict: Dict[int, List[int]]) -> np.ndarray:
+    """
+    找出不在chosen_csfs_indices_dict索引中的描述符
+    
+    Args:
+        raw_csfs_descriptors: 原始CSFs描述符数组
+        chosen_csfs_indices_dict: 已选择的CSFs索引字典，格式为{block_index: [indices]}
+        
+    Returns:
+        np.ndarray: 不在chosen_csfs_indices_dict中的描述符数组
+    """
+    # 获取所有已选择的索引
+    chosen_indices = []
+    for block_indices in chosen_csfs_indices_dict.values():
+        chosen_indices.extend(block_indices)
+    chosen_indices = set(chosen_indices)
+    
+    # 获取所有可能的索引
+    all_indices = set(range(len(raw_csfs_descriptors)))
+    
+    # 找出不在chosen_indices中的索引
+    stay_indices = list(all_indices - chosen_indices)
+    
+    # 返回对应的描述符
+    return raw_csfs_descriptors[stay_indices]

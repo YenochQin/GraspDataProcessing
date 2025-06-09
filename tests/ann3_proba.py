@@ -108,7 +108,6 @@ def main(cfg):
                 vmc.save_ci(index, path + file_name + str(step) + ".c", N_ci, cis_ts, head)
                 stay_indexs= np.setdiff1d(indexs_temp, index)#stay_indexs指的是剩余的组态索引
                 # vmc.save_ci(stay_indexs, path + file_name + str(step) + "_stay.c", N_ci, cis_ts, head)#将剩余组态保存以备机器预测与筛选
-                # index,indexs_temp 分别表示选取的组态索引和所有组态索引
             else:
                 logger.info("************************************************")
                 logger.info(f"第{step}次迭代开始")
@@ -119,8 +118,10 @@ def main(cfg):
                 # Feature engineering
                 logger.info("             开始特征提取")
                 index_accumulate, ci = vmc.read_dataset(original_path, step=1)
-                # index_accumulate 表示组态在总组态池中的索引
-
+                # print(index_accumulate)
+                # print(index_accumulate.shape)
+                # print(ci)
+                # print(ci.shape)
                 ci_desc = np.zeros(index_accumulate.shape, dtype=bool)
                 ci_desc[ci**2 >= cutoff_value] = True
                 new_desc = desc_pool.iloc[index_accumulate].copy()
