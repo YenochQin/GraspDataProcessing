@@ -150,3 +150,26 @@ def generate_chosen_csfs_descriptors(config, chosen_csfs_indices_dict: Dict, raw
     return caled_csfs_descriptors
 
 
+
+def get_stay_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_dict: Dict[int, List[int]]) -> np.ndarray:
+    """
+    找出不在chosen_csfs_indices_dict索引中的描述符
+    
+    Args:
+        raw_csfs_descriptors: 原始CSFs描述符数组
+        chosen_csfs_indices_dict: 已选择的CSFs索引字典，格式为{block_index: [indices]}
+        
+    Returns:
+        np.ndarray: 不在chosen_csfs_indices_dict中的描述符数组
+    """
+    # 获取所有已选择的索引
+    chosen_indices = set(chosen_csfs_indices_dict[0])
+    
+    # 获取所有可能的索引
+    all_indices = set(range(len(raw_csfs_descriptors)))
+    
+    # 找出不在chosen_indices中的索引
+    stay_indices = list(all_indices - chosen_indices)
+    
+    # 返回对应的描述符
+    return raw_csfs_descriptors[stay_indices]
