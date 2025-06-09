@@ -10,9 +10,14 @@ import os
 import logging
 from pathlib import Path
 import csv
+import numpy as np
+import pandas as pd
+from typing import Dict, Tuple, List, Optional
 
-from .data_IO import GraspFileLoad, load_csfs_binary, load_descriptors, csfs_index_load
-from ASF_data_collection import LevelsEnergyData
+from .data_IO import GraspFileLoad, load_csfs_binary, load_descriptors, csfs_index_load, save_descriptors
+from .ASF_data_collection import LevelsEnergyData
+from .CSFs_choosing import batch_asfs_mix_square_above_threshold
+from .data_modules import MixCoefficientData
 
 def setup_logging(config):
     """配置日志系统"""
@@ -54,7 +59,7 @@ def initialize_results_file(config, logger):
         logger.error(f"无法创建结果文件 {result_csv_path}: {str(e)}")
         raise
 
-def validate_initial_files(config, logger):
+def validate_initial_files(config, logger) -> None:
     """验证初始文件的存在和有效性"""
     # 验证初始CSFs文件
     target_pool_file_path = config.root_path / config.target_pool_file
@@ -69,11 +74,9 @@ def validate_initial_files(config, logger):
     except Exception as e:
         logger.error(f"加载CSFs文件时发生未知错误: {str(e)}")
         raise
-    
-    return target_pool_file_path
 
 
-def load_data_files(config):
+def load_data_files(config, logger) -> tuple:
     """加载数据文件"""
     # config.yaml文件读取时已经处理好root_path和config.scf_cal_path路径
     
@@ -81,28 +84,34 @@ def load_data_files(config):
     energy_level_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.level'
     energy_level_file_load = LevelsEnergyData.from_filepath(str(energy_level_file_path), 'LEVEL')
     energy_level_data_pd = energy_level_file_load.energy_level_2_pd()
+    logger.info(f"加载能级数据: {energy_level_file_path}")
     
     # 加载rmix文件
     rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.m'
     rmix_file_load = GraspFileLoad.from_filepath(str(rmix_file_path), 'mix')
     rmix_file_data = rmix_file_load.data_file_process()
+    logger.info(f"加载 *.m 文件数据: {rmix_file_path}")
     
-    # 加载原始CSFs文件
+    # 加载初始 CSFs 文件
     target_pool_file_path = config.root_path / f'{config.conf}'
     target_pool_csfs_data = load_csfs_binary(target_pool_file_path)
+    logger.info(f"加载初始 CSFs 文件: {target_pool_file_path}")
     
-    # 加载原始CSFs描述符文件
+    # 加载初始 CSFs 描述符文件
     raw_csfs_descriptors = load_descriptors(target_pool_file_path)
+    logger.info(f"加载初始 CSFs 描述符文件: {target_pool_file_path}")
     
     # 加载本轮计算CSFs文件
     cal_csfs_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.c'
     cal_csfs_file_laod = GraspFileLoad.from_filepath(str(cal_csfs_file_path), 'CSFs')
     cal_csfs_data = cal_csfs_file_laod.data_file_process()
+    logger.info(f"加载本轮计算 CSFs 文件: {cal_csfs_file_path}")
     
     # 加载本轮选择的CSFs的索引文件
     caled_csfs_indices_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}_chosen_indices.pkl'
     caled_csfs_indices_dict = csfs_index_load(caled_csfs_indices_file_path)
-    
+    logger.info(f"加载本轮选择的 CSFs 的索引文件: {caled_csfs_indices_file_path}")
+
     return energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict
 
 def check_configuration_coupling(config, energy_level_data_pd, logger):
@@ -115,5 +124,29 @@ def check_configuration_coupling(config, energy_level_data_pd, logger):
     else:
         logger.error(f"cal_loop {config.cal_loop_num} 组态耦合错误")
         return False
+
+
+def generate_chosen_csfs_descriptors(config, chosen_csfs_indices_dict: Dict, raw_csfs_descriptors: np.ndarray, rmix_file_data: MixCoefficientData, logger) -> np.ndarray:
+    
+    
+    ## 使用chosen_csfs_indices_dict[0]是临时的，后续需要改进一下！TODO
+    selected_indices = chosen_csfs_indices_dict[0]
+    
+    selected_csfs_descriptors = raw_csfs_descriptors[selected_indices]
+    
+    ## 使用rmix_file_data.mix_coefficient_List[0]是临时的，后续需要改进一下！TODO
+    csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0]**2, axis=0) 
+    
+    csf_mix_coeff_descriptors = np.zeros(selected_csfs_descriptors.shape[0], dtype=bool)
+    csf_mix_coeff_descriptors[csf_mix_coeff_squared_sum >= np.float64(config.cutoff_value)] = True
+    
+    caled_csfs_descriptors = np.column_stack([selected_csfs_descriptors, csf_mix_coeff_descriptors])
+    
+    cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}'
+
+    save_descriptors(caled_csfs_descriptors, f'{cal_path}/{config.conf}_{config.cal_loop_num}', 'npy')
+    logger.info(f"保存本轮选择的 CSFs 的描述符文件: {cal_path}/{config.conf}_{config.cal_loop_num}.npy")
+
+    return caled_csfs_descriptors
 
 
