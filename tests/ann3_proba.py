@@ -106,7 +106,7 @@ def main(cfg):
                     sampling_method = "random"
                     index,indexs_temp = vmc.random_initial_configuration(N_ci, sum_num_min, expansion_ratio)#index指的是初始化的组态索引，indexs_temp指的是所有的组态索引
                 vmc.save_ci(index, path + file_name + str(step) + ".c", N_ci, cis_ts, head)
-                stay_indexs= np.setdiff1d(indexs_temp, index)#stay_indexs指的是剩余的组态索引
+                stay_indexs= np.setdiff1d(indexs_temp, index)#stay_indexs指的是剩余的组态索引 indexs_temp是总的组态池的索引， index是选出来的组态索引
                 # vmc.save_ci(stay_indexs, path + file_name + str(step) + "_stay.c", N_ci, cis_ts, head)#将剩余组态保存以备机器预测与筛选
             else:
                 logger.info("************************************************")

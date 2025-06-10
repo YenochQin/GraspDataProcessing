@@ -5,28 +5,28 @@
 @date :2023/03/21 11:36:06
 @author :YenochQin (秦毅)
 '''
-import sys
+
 import re
 import csv 
-import msgpack
+
 from pathlib import Path
 from typing import Dict, Tuple, List, Optional, Union
 from types import SimpleNamespace
-import yaml
 from dataclasses import dataclass
+import gzip
+import pickle
+import tomllib
 
 import numpy as np
 import pandas as pd
 import struct
-import json
 from tqdm import tqdm
 
 from .tool_function import *
 from .CSFs_compress_extract import *
 # from .CSFs_choosing import *
 from .data_modules import *
-import gzip
-import pickle
+
 
 class GraspFileLoad:
     # the initialization function of the class "GraspFileLoad"
@@ -61,19 +61,19 @@ class GraspFileLoad:
         self.atom = data_file_info.get("atom", "")  # 默认空字符串
         
         # 处理文件目录路径
-        self.file_dir = data_file_info.get("file_dir")
-        if not Path(self.file_dir).exists():
+        self.file_dir = data_file_info.get("file_dir", "")
+        if self.file_dir and not Path(self.file_dir).exists():
             raise ValueError("数据目录不存在")  # 严格校验目录有效性
         else:
-            self.data_file_dir = Path(self.file_dir)
+            self.data_file_dir = Path(self.file_dir) if self.file_dir else Path(".")
 
         # 加载文件配置参数
-        self.file_type = data_file_info.get("file_type")    # 文件类型标识
-        self.level_parameter = data_file_info.get("level_parameter")  # 能级参数
-        self.this_as = data_file_info.get("this_as")        # AS过程标识
+        self.file_type = data_file_info.get("file_type", "")    # 文件类型标识，默认空字符串
+        self.level_parameter = data_file_info.get("level_parameter", "")  # 能级参数
+        self.this_as = data_file_info.get("this_as", 0)        # AS过程标识
         
         # 处理文件路径逻辑
-        self.file_name = data_file_info.get("file_name")
+        self.file_name = data_file_info.get("file_name", "")
         if Path(self.file_dir).is_file():
             self.data_file_path = Path(self.file_dir)  # 直接使用完整路径
             print(f"Data file {self.data_file_path} loaded.")
@@ -538,9 +538,9 @@ class GraspFileLoad:
             return 0
 
 #######################################################################
-class EnergyFile2csv():
+class EnergyFile2csv(GraspFileLoad):
     @classmethod
-    def from_filepath(cls, filepath, store_csv_path: str=''):
+    def from_filepath(cls, filepath, file_type=None, *, store_csv_path: str=''):
         """从文件路径直接创建实例的类方法"""
         file_dir = str(Path(filepath).parent)
         file_name = Path(filepath).name
@@ -550,36 +550,15 @@ class EnergyFile2csv():
             "file_name": file_name,
             "level_parameter": "",
             "this_as": 0,
-            "file_type": "ENERGY",
+            "file_type": file_type or "ENERGY",
             "store_csv_path": store_csv_path
         }
         return cls(config)
     def __init__(self, data_file_info: Dict):
-        self.data_file_info = data_file_info
-        self.atom = data_file_info.get("atom")
-        self.file_dir = data_file_info.get("file_dir")
-        if not Path(self.file_dir).exists():
-            # Handle the non-existent directory appropriately
-            raise ValueError("Directory does not exist")
-            
-        else:
-            self.data_file_dir = Path(self.file_dir)
-
-        self.file_name = data_file_info.get("file_name")
-        if Path(self.file_name).is_file():
-            self.data_file_path = Path(self.file_name)
-
-        elif isinstance(self.file_name, str) and self.file_name:
-            self.data_file_path = self.data_file_dir.joinpath(self.file_name)
-        else:
-            self.data_file_path = None
-        self.file_type = data_file_info.get("file_type")
-        self.level_parameter = data_file_info.get("level_parameter")
-        self.this_as = data_file_info.get("this_as")
-        # self.load_file_path = Path(self.raw_data_file_dir, self.file)
-        # self.store_file_path = Path(self.raw_data_file_dir)
-        if data_file_info.get("store_csv_path"):
-            self.store_file_path = Path(data_file_info.get("store_csv_path"))
+        super().__init__(data_file_info)
+        store_csv_path = data_file_info.get("store_csv_path")
+        if store_csv_path:
+            self.store_file_path = Path(store_csv_path)
         else:
             self.store_file_path = Path(self.data_file_dir).joinpath("level_csv_file")
         if not self.store_file_path.exists():
@@ -588,6 +567,8 @@ class EnergyFile2csv():
     def energy_file2csv(self):
         # load the data file
         self.load_level_data = GraspFileLoad.data_file_process(self)
+        if not isinstance(self.load_level_data, list):
+            raise ValueError(f"Expected list data for energy file, got {type(self.load_level_data)}")
         for i, line in enumerate(self.load_level_data):  # 使用enumerate获取行号
             if 'No Pos  J ' in line:
                 self.skip_line = i + 3
@@ -653,8 +634,14 @@ def write_sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data_list: List
                     for line in csf:
                         file.write(line)
                 
-def save_csf_metadata(csf_obj: CSFs, filepath: str):
+def save_csf_metadata(
+                        csf_obj: CSFs, 
+                        filepath: Union[str, Path]
+                        ):
     """保存CSFs元数据（排除CSFs_block_data）到pickle文件"""
+    # 转换为Path对象
+    filepath = Path(filepath)
+    
     metadata = {
         'subshell_info_raw': csf_obj.subshell_info_raw,
         'CSFs_block_j_value': csf_obj.CSFs_block_j_value,
@@ -666,7 +653,12 @@ def save_csf_metadata(csf_obj: CSFs, filepath: str):
     with open(filepath, 'wb') as f:
         pickle.dump(metadata, f)
         
-def load_csf_metadata(filepath: str) -> dict:
+def load_csf_metadata(
+                        filepath: Union[str, Path]
+                        ) -> dict:
+    # 转换为Path对象
+    filepath = Path(filepath)
+    
     with open(filepath, 'rb') as f:
         return pickle.load(f)
 
@@ -711,6 +703,7 @@ def level_data_compare(levels_file_1: List, levels_file_2: List):
     
     level_data_1 = []
     level_data_2 = []
+    skip_line = 0
     for i, line in enumerate(levels_file_1):  # 使用enumerate获取行号
         if 'No Pos  J'in line:
             skip_line = i + 3
@@ -736,8 +729,13 @@ def level_data_compare(levels_file_1: List, levels_file_2: List):
 
 #######################################################################
 
-def continue_calculate(cal_root_path: str, continue_calculate: bool):
-    with open(f'{cal_root_path}/run.input', 'rw') as file:
+def continue_calculate(
+                        save_path: Union[str, Path], 
+                        continue_calculate: bool
+                        ):
+    save_path = Path(save_path)
+    
+    with open(save_path/'run.input', 'rw') as file:
         file.write(continue_calculate)
         
     return f'Continue calculate is set to {continue_calculate}'
@@ -794,118 +792,149 @@ def csfs_index_load(load_csfs_index_file_path):
 
 #######################################################################
 def precompute_large_hash(
-    large_data: List[List[List[str]]], 
-    save_path: str = "large_data_hash.pkl"
-):
+                            large_data: List[List[List[str]]], 
+                            save_path: Union[str, Path] = "large_data_hash.pkl"
+                            ):
     """
     预计算 large_data 的哈希映射（双层字典结构）
     
     返回:
         {block_idx: {csf_str: csf_index}}
     """
-    large_hash = {
-        block_idx: {
+    # 转换为Path对象
+    save_path = Path(save_path)
+    
+    large_hash = {}
+    for block_idx, block_data in tqdm(enumerate(large_data), total=len(large_data), desc="计算哈希映射"):
+        large_hash[block_idx] = {
             ''.join(item for sublist in csf for item in sublist): idx
             for idx, csf in enumerate(block_data)
         }
-        for block_idx, block_data in enumerate(large_data)
-    }
     
     with open(save_path, "wb") as f:
         pickle.dump(large_hash, f)
     
     return f'hash file has written in file {save_path}'
 
-def load_large_hash(file_path) -> Dict[int, Dict[str, int]]:
+def load_large_hash(
+                        file_path: Union[str, Path]
+                        ) -> Dict[int, Dict[str, int]]:
     """从文件加载预计算的哈希映射"""
+    # 转换为Path对象
+    file_path = Path(file_path)
+    
     with open(file_path, "rb") as f:
         return pickle.load(f)
     
 #######################################################################
 
-def save_descriptors(descriptors: np.ndarray, save_path: str, file_format: str = 'npy'):
+def save_descriptors(
+                        descriptors: np.ndarray, 
+                        save_path: Union[str, Path], 
+                        file_format: str = 'npy'
+                        ):
     """
     保存描述符数组
     
     Args:
         descriptors (np.ndarray): 描述符数组
-        save_path (str): 保存路径（不含扩展名）
+        save_path (Union[str, Path]): 保存路径（不含扩展名）
         file_format (str): 保存格式 ('npy', 'csv', 'pkl')
     
     Example:
         >>> descriptors = batch_process_csfs_to_descriptors(csfs_data)
         >>> save_descriptors(descriptors, 'output/csf_descriptors', 'csv')
+        >>> save_descriptors(descriptors, Path('output/csf_descriptors'), 'npy')
     """
     
+    # 转换为Path对象
+    save_path = Path(save_path)
+    
     if file_format.lower() == 'npy':
-        np.save(f"{save_path}.npy", descriptors)
-        print(f"Descriptors saved to: {save_path}.npy")
+        file_path = save_path.parent / f"{save_path.name}_descriptors.npy"
+        np.save(file_path, descriptors)
+        print(f"Descriptors saved to: {file_path}")
         
     elif file_format.lower() == 'csv':
+        file_path = save_path.parent / f"{save_path.name}_descriptors.csv"
         df = pd.DataFrame(descriptors)
-        df.to_csv(f"{save_path}.csv", index=False)
-        print(f"Descriptors saved to: {save_path}.csv")
+        df.to_csv(file_path, index=False)
+        print(f"Descriptors saved to: {file_path}")
         
     elif file_format.lower() == 'pkl':
-        with open(f"{save_path}.pkl", 'wb') as f:
+        file_path = save_path.parent / f"{save_path.name}_descriptors.pkl"
+        with open(file_path, 'wb') as f:
             pickle.dump(descriptors, f)
-        print(f"Descriptors saved to: {save_path}.pkl")
+        print(f"Descriptors saved to: {file_path}")
         
     else:
         raise ValueError("file_format must be 'npy', 'csv', or 'pkl'")
 
 
-def save_descriptors_with_multi_block(descriptors: np.ndarray, 
-                                labels: np.ndarray, 
-                                save_path: str, 
-                                file_format: str = 'csv'):
+def save_descriptors_with_multi_block(
+                                        descriptors: np.ndarray, 
+                                        labels: np.ndarray, 
+                                        save_path: Union[str, Path], 
+                                        file_format: str = 'npy'
+                                        ):
     """
     保存带标签的描述符数组
     
     Args:
         descriptors (np.ndarray): 描述符数组
         labels (np.ndarray): 标签数组
-        save_path (str): 保存路径（不含扩展名）
+        save_path (Union[str, Path]): 保存路径（不含扩展名）
         file_format (str): 保存格式 ('csv', 'npy', 'pkl')
     
     Example:
         >>> X, y = batch_process_csfs_with_multi_block(csfs_data)
         >>> save_descriptors_with_multi_block(X, y, 'ml_data/features', 'csv')
+        >>> save_descriptors_with_multi_block(X, y, Path('ml_data/features'), 'npy')
     """
+    
+    # 转换为Path对象
+    save_path = Path(save_path)
     
     if file_format.lower() == 'csv':
         # CSV格式：将标签作为最后一列
+        file_path = save_path.parent / f"{save_path.name}_descriptors_multi_block.csv"
         df = pd.DataFrame(descriptors)
         df['label'] = labels
-        df.to_csv(f"{save_path}.csv", index=False)
-        print(f"Descriptors with labels saved to: {save_path}.csv")
+        df.to_csv(file_path, index=False)
+        print(f"Descriptors with labels saved to: {file_path}")
         
     elif file_format.lower() == 'npy':
         # NPY格式：分别保存数据和标签
-        np.save(f"{save_path}_data.npy", descriptors)
-        np.save(f"{save_path}_multi_block.npy", labels)
-        print(f"Descriptors saved to: {save_path}_data.npy")
-        print(f"Labels saved to: {save_path}_multi_block.npy")
+        data_path = save_path.parent / f"{save_path.name}_descriptors.npy"
+        labels_path = save_path.parent / f"{save_path.name}_descriptors_multi_block.npy"
+        np.save(data_path, descriptors)
+        np.save(labels_path, labels)
+        print(f"Descriptors saved to: {data_path}")
+        print(f"Labels saved to: {labels_path}")
         
     elif file_format.lower() == 'pkl':
         # PKL格式：保存为字典
+        file_path = save_path.parent / f"{save_path.name}_descriptors_multi_block.pkl"
         data_dict = {
             'descriptors': descriptors,
             'labels': labels
         }
-        with open(f"{save_path}.pkl", 'wb') as f:
+        with open(file_path, 'wb') as f:
             pickle.dump(data_dict, f)
-        print(f"Descriptors and labels saved to: {save_path}.pkl")
+        print(f"Descriptors and labels saved to: {file_path}")
         
     else:
         raise ValueError("file_format must be 'csv', 'npy', or 'pkl'")
 
-def load_descriptors(load_path: str, file_format: Optional[str] = None) -> Optional[np.ndarray]:
+def load_descriptors(
+                        load_path: Union[str, Path], 
+                        file_format: Optional[str] = None
+                        ) -> Optional[np.ndarray]:
     """
     加载描述符数组
     
     Args:
-        load_path (str): 加载路径（可含或不含扩展名）
+        load_path (Union[str, Path]): 加载路径（可含或不含扩展名）
         file_format (Optional[str]): 文件格式，如果为None则从文件扩展名自动推断
     
     Returns:
@@ -913,27 +942,31 @@ def load_descriptors(load_path: str, file_format: Optional[str] = None) -> Optio
     
     Example:
         >>> descriptors = load_descriptors('output/csf_descriptors.npy')
+        >>> descriptors = load_descriptors(Path('output/csf_descriptors.npy'))
         >>> descriptors = load_descriptors('output/csf_descriptors', 'csv')
     """
     
+    # 转换为Path对象
+    load_path = Path(load_path)
+    
     # 自动推断文件格式
     if file_format is None:
-        if load_path.endswith('.npy'):
+        if load_path.suffix == '.npy':
             file_format = 'npy'
-            load_path = load_path[:-4]  # 移除扩展名
-        elif load_path.endswith('.csv'):
+            load_path = load_path.with_suffix('')  # 移除扩展名
+        elif load_path.suffix == '.csv':
             file_format = 'csv'
-            load_path = load_path[:-4]
-        elif load_path.endswith('.pkl'):
+            load_path = load_path.with_suffix('')
+        elif load_path.suffix == '.pkl':
             file_format = 'pkl'
-            load_path = load_path[:-4]
+            load_path = load_path.with_suffix('')
         else:
-            # 尝试自动检测
-            if Path(f"{load_path}.npy").exists():
+            # 尝试自动检测（使用新的文件名格式）
+            if (load_path.parent / f"{load_path.name}_descriptors.npy").exists():
                 file_format = 'npy'
-            elif Path(f"{load_path}.csv").exists():
+            elif (load_path.parent / f"{load_path.name}_descriptors.csv").exists():
                 file_format = 'csv'
-            elif Path(f"{load_path}.pkl").exists():
+            elif (load_path.parent / f"{load_path.name}_descriptors.pkl").exists():
                 file_format = 'pkl'
             else:
                 print(f"Error: Cannot find file with path: {load_path}")
@@ -941,8 +974,8 @@ def load_descriptors(load_path: str, file_format: Optional[str] = None) -> Optio
     
     try:
         if file_format.lower() == 'npy':
-            file_path = f"{load_path}.npy"
-            if not Path(file_path).exists():
+            file_path = load_path.parent / f"{load_path.name}_descriptors.npy"
+            if not file_path.exists():
                 print(f"Error: File not found: {file_path}")
                 return None
             descriptors = np.load(file_path)
@@ -950,8 +983,8 @@ def load_descriptors(load_path: str, file_format: Optional[str] = None) -> Optio
             return descriptors
             
         elif file_format.lower() == 'csv':
-            file_path = f"{load_path}.csv"
-            if not Path(file_path).exists():
+            file_path = load_path.parent / f"{load_path.name}_descriptors.csv"
+            if not file_path.exists():
                 print(f"Error: File not found: {file_path}")
                 return None
             df = pd.read_csv(file_path)
@@ -960,8 +993,8 @@ def load_descriptors(load_path: str, file_format: Optional[str] = None) -> Optio
             return descriptors
             
         elif file_format.lower() == 'pkl':
-            file_path = f"{load_path}.pkl"
-            if not Path(file_path).exists():
+            file_path = load_path.parent / f"{load_path.name}_descriptors.pkl"
+            if not file_path.exists():
                 print(f"Error: File not found: {file_path}")
                 return None
             with open(file_path, 'rb') as f:
@@ -978,13 +1011,15 @@ def load_descriptors(load_path: str, file_format: Optional[str] = None) -> Optio
         return None
 
 
-def load_descriptors_with_multi_block(load_path: str, 
-                                     file_format: Optional[str] = None) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+def load_descriptors_with_multi_block(
+                                        load_path: Union[str, Path], 
+                                        file_format: Optional[str] = None
+                                        ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
     """
     加载带标签的描述符数组
     
     Args:
-        load_path (str): 加载路径（不含扩展名）
+        load_path (Union[str, Path]): 加载路径（不含扩展名）
         file_format (Optional[str]): 文件格式，如果为None则自动推断
     
     Returns:
@@ -992,16 +1027,20 @@ def load_descriptors_with_multi_block(load_path: str,
     
     Example:
         >>> descriptors, labels = load_descriptors_with_multi_block('ml_data/features')
+        >>> descriptors, labels = load_descriptors_with_multi_block(Path('ml_data/features'))
         >>> descriptors, labels = load_descriptors_with_multi_block('ml_data/features', 'csv')
     """
     
+    # 转换为Path对象
+    load_path = Path(load_path)
+    
     # 自动推断文件格式
     if file_format is None:
-        if Path(f"{load_path}.csv").exists():
+        if (load_path.parent / f"{load_path.name}_descriptors_multi_block.csv").exists():
             file_format = 'csv'
-        elif Path(f"{load_path}_data.npy").exists() and Path(f"{load_path}_multi_block.npy").exists():
+        elif (load_path.parent / f"{load_path.name}_descriptors.npy").exists() and (load_path.parent / f"{load_path.name}_descriptors_multi_block.npy").exists():
             file_format = 'npy'
-        elif Path(f"{load_path}.pkl").exists():
+        elif (load_path.parent / f"{load_path.name}_descriptors_multi_block.pkl").exists():
             file_format = 'pkl'
         else:
             print(f"Error: Cannot find files with path: {load_path}")
@@ -1009,8 +1048,8 @@ def load_descriptors_with_multi_block(load_path: str,
     
     try:
         if file_format.lower() == 'csv':
-            file_path = f"{load_path}.csv"
-            if not Path(file_path).exists():
+            file_path = load_path.parent / f"{load_path.name}_descriptors_multi_block.csv"
+            if not file_path.exists():
                 print(f"Error: File not found: {file_path}")
                 return None
                 
@@ -1022,13 +1061,13 @@ def load_descriptors_with_multi_block(load_path: str,
             return descriptors, labels
             
         elif file_format.lower() == 'npy':
-            data_path = f"{load_path}_data.npy"
-            labels_path = f"{load_path}_multi_block.npy"
+            data_path = load_path.parent / f"{load_path.name}_descriptors.npy"
+            labels_path = load_path.parent / f"{load_path.name}_descriptors_multi_block.npy"
             
-            if not Path(data_path).exists():
+            if not data_path.exists():
                 print(f"Error: Data file not found: {data_path}")
                 return None
-            if not Path(labels_path).exists():
+            if not labels_path.exists():
                 print(f"Error: Labels file not found: {labels_path}")
                 return None
                 
@@ -1039,8 +1078,8 @@ def load_descriptors_with_multi_block(load_path: str,
             return descriptors, labels
             
         elif file_format.lower() == 'pkl':
-            file_path = f"{load_path}.pkl"
-            if not Path(file_path).exists():
+            file_path = load_path.parent / f"{load_path.name}_descriptors_multi_block.pkl"
+            if not file_path.exists():
                 print(f"Error: File not found: {file_path}")
                 return None
                 
@@ -1064,10 +1103,16 @@ def load_descriptors_with_multi_block(load_path: str,
         print(f"Error loading descriptors with labels: {str(e)}")
         return None
 
-def load_config(config_path):
-    """加载YAML配置文件并进行类型转换和数据处理"""
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+def load_config(
+                    config_path: Union[str, Path]
+                    ):
+    """加载TOML配置文件并进行类型转换和数据处理"""
+    # 转换为Path对象
+    config_path = Path(config_path)
+    
+    # 使用标准库 tomllib 读取TOML文件
+    with open(config_path, 'rb') as f:
+        config = tomllib.load(f)
     
     # 类型转换和数据处理
     config = _process_config_data(config)
@@ -1140,17 +1185,26 @@ def _validate_config_data(config):
     print(f"配置验证通过: cutoff_value={config.get('cutoff_value')}, initial_ratio={config.get('initial_ratio')}")
     
 def update_config(config_path, updates):
-    """更新YAML配置文件
+    """更新TOML配置文件
     
     Args:
         config_path: 配置文件路径
         updates: 要更新的键值对字典
     """
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    # 使用标准库 tomllib 读取TOML文件
+    with open(config_path, 'rb') as f:
+        config = tomllib.load(f)
     
     # 更新配置值
     config.update(updates)
     
-    with open(config_path, 'w') as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    # 写入配置文件（标准库 tomllib 不支持写入，使用 tomli-w）
+    try:
+        import tomli_w
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(config, f)
+    except ImportError:
+        raise ImportError(
+            "需要安装 tomli-w 库来写入TOML文件。请运行：\n"
+            "pip install tomli-w"
+        )

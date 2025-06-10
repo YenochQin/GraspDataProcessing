@@ -472,8 +472,10 @@ class ANNClassifier:
 
         plt.tight_layout()
         
-        result_file = f"roc_curves/{filename}.png"
-        plt.savefig(result_file)
+        # filename is a Path object representing the full desired path.
+        # Ensure the parent directory exists before saving.
+        Path(filename).parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(filename)
         plt.close()
 
         return roc_auc, pr_auc

@@ -28,11 +28,17 @@ from sklearn.model_selection import train_test_split
 from .CSFs_choosing import batch_asfs_mix_square_above_threshold
 from .ANN import ANNClassifier
 from .data_modules import MixCoefficientData
+from .data_IO import write_sorted_CSFs_to_cfile
 
 
 
 
-def train_model(config, caled_csfs_descriptors: np.ndarray, rmix_file_data: MixCoefficientData,logger):
+def train_model(
+                config, 
+                caled_csfs_descriptors: 
+                np.ndarray, 
+                rmix_file_data: MixCoefficientData, 
+                logger):
     """训练机器学习模型"""
     
     X = caled_csfs_descriptors[:, :-1]
@@ -55,7 +61,18 @@ def train_model(config, caled_csfs_descriptors: np.ndarray, rmix_file_data: MixC
     y_proba_train = model.predict_proba(X_train)[:, 1]
     y_proba_all = model.predict_proba(X)
     print(y_proba_all[:, 1].shape)
-    roc_auc, pr_auc = ANNClassifier.plot_curve(rmix_file_data.mix_coefficient_List[0], y_proba_all, y_test, y_proba, config.cal_path.joinpath('roc_auc.png'))
+    
+    # For plotting, we compare against the mixing coefficients of the first energy level.
+    csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0]**2, axis=0) 
+
+
+    roc_auc, pr_auc = ANNClassifier.plot_curve(
+        csf_mix_coeff_squared_sum, 
+        y_proba_all, 
+        y_test, 
+        y_proba, 
+        config.scf_cal_path.joinpath('roc_auc.png')
+    )
     f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(y_test, y_pred, y_proba)
     logger.info ("测试集预测结果:")
     logger.info (f"AUC:{roc_auc}, pr_auc:{pr_auc}, f1:{f1}, accuracy:{accuracy}, precision:{precision}, recall:{recall}")
@@ -89,7 +106,7 @@ def train_model(config, caled_csfs_descriptors: np.ndarray, rmix_file_data: MixC
     
     return model, X_train, X_test, y_train, y_test, training_time, weight
 
-def evaluate_model(model, X_train, X_test, y_train, y_test, config, logger):
+def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logger):
     """评估模型性能"""
     
     logger.info("开始预测与评估")
@@ -105,13 +122,23 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, config, logger):
     y_proba_train = model.predict_proba(X_train)[:, 1]
     
     # 评估
-    roc_auc, pr_auc = gdp.ANNClassifier.plot_curve(y_test, y_proba, config.file_name)
-    f1, roc_auc, accuracy, precision, recall = gdp.ANNClassifier.model_evaluation(
+    # Generate full dataset probabilities for plotting
+    y_proba_all = model.predict_proba(np.vstack([X_train, X_test]))
+    
+    # 由于没有混合系数数据，创建一个简化的绘图或跳过混合系数相关绘图
+    # 创建一个占位数组用于绘图兼容性
+    dummy_mix_coeff = np.ones(len(y_proba_all))
+    
+    roc_auc, pr_auc = ANNClassifier.plot_curve(
+        dummy_mix_coeff, y_proba_all, y_test, y_proba, 
+        config.scf_cal_path.joinpath(f'{config.file_name}_roc_auc.png')
+    )
+    f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(
         y_test, y_pred, y_proba
     )
     
     # 训练集评估（过拟合监控）
-    f1_train, roc_auc_train, accuracy_train, precision_train, recall_train = gdp.ANNClassifier.model_evaluation(
+    f1_train, roc_auc_train, accuracy_train, precision_train, recall_train = ANNClassifier.model_evaluation(
         y_train, y_pred_train, y_proba_train
     )
     
@@ -148,9 +175,6 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, config, logger):
 
 def select_configurations(config, unique_indices, y_pred_other, raw_csf_data, indices_temp, logger):
     """选择重要组态"""
-    if gdp is None:
-        raise ImportError("graspdataprocessing 模块未正确导入")
-    
     # 计算最小组态数
     sum_num_min = round(math.ceil(raw_csf_data.CSFs_block_length[0] * config.initial_ratio))
     sum_num = len(unique_indices)
@@ -183,7 +207,7 @@ def select_configurations(config, unique_indices, y_pred_other, raw_csf_data, in
         mc_add_csfs = None
         new_add_csfs = ml_add_csfs
     else:
-        stay_index = gdp.pop_other_ci(indices_temp, indexs_import_stay_temp + indexs_import_temp)
+        stay_index = pop_other_ci(indices_temp, indexs_import_stay_temp + indexs_import_temp)
         ml_add_csfs = indexs_import_stay_temp
         mc_add_csfs = np.random.choice(
             stay_index,
@@ -206,8 +230,6 @@ def select_configurations(config, unique_indices, y_pred_other, raw_csf_data, in
 
 def write_configuration_files(chosen_index, raw_csf_data, config, root_path, indices_temp):
     """写入组态文件"""
-    if gdp is None:
-        raise ImportError("graspdataprocessing 模块未正确导入")
     
     # 写入选中的组态
     chosen_csfs_data = [
@@ -215,20 +237,20 @@ def write_configuration_files(chosen_index, raw_csf_data, config, root_path, ind
         for csf in raw_csf_data.CSFs_block_data[0][i]
     ]
     
-    gdp.write_sorted_CSFs_to_cfile(
+    write_sorted_CSFs_to_cfile(
         raw_csf_data.CSFs_file_info,
         chosen_csfs_data,
         root_path / f'{config.conf}_{config.cal_loop_num+1}.c'
     )
     
     # 写入未选中的组态
-    stay_indices = np.array(gdp.pop_other_ci(indices_temp, chosen_index))
+    stay_indices = np.array(pop_other_ci(indices_temp, chosen_index))
     unchosen_csfs_data = [
         csf for i in stay_indices 
         for csf in raw_csf_data.CSFs_block_data[0][i]
     ]
     
-    gdp.write_sorted_CSFs_to_cfile(
+    write_sorted_CSFs_to_cfile(
         raw_csf_data.CSFs_file_info,
         unchosen_csfs_data,
         root_path / f'{config.conf}_{config.cal_loop_num+1}_stay.c'

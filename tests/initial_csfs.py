@@ -5,67 +5,28 @@
 @date :2025/05/25 13:52:19
 @author :YenochQin (秦毅)
 '''
-import yaml
+
 import argparse
 import logging
 from types import SimpleNamespace
 import os
 from pathlib import Path
-import csv
 import sys
 import math
 import numpy as np
 import pandas as pd
-import time
-import joblib
-import json 
-from imblearn.over_sampling import SMOTE
-from imblearn.under_sampling import RandomUnderSampler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-# sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
-sys.path.append('D:\\PythonPrograms\\GraspDataProcessing\\src')
+import tomllib
 
-import graspdataprocessing as gdp
-
-def load_config(config_path):
-    """加载YAML配置文件"""
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
-    return SimpleNamespace(**config)
-
-def update_config(config_path, updates):
-    """更新YAML配置文件
-    
-    Args:
-        config_path: 配置文件路径
-        updates: 要更新的键值对字典
-    """
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
-    
-    # 更新配置值
-    config.update(updates)
-    
-    with open(config_path, 'w', encoding='utf-8') as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-
-def setup_logging(config):
-    """配置日志系统"""
-    os.makedirs("logs", exist_ok=True)
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler("logs/machine_learning_training.log"),
-            logging.StreamHandler()
-        ]
-    )
-    return logging.getLogger(__name__)
+sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
+try:
+    import graspdataprocessing as gdp
+except ImportError:
+    print("错误: 无法导入 graspdataprocessing 模块")
+    sys.exit(1)
 
 def main(config):
     """主程序逻辑"""
-    logger = setup_logging(config)
+    logger = gdp.setup_logging(config)
     logger.info("CSFs选择程序启动")
     logger.info(f'计算循环次数: {config.cal_loop_num}')
 
@@ -172,22 +133,15 @@ def main(config):
 
 if __name__ == "__main__":
     # 解析命令行参数
-    parser = argparse.ArgumentParser(description='组态选择程序')
-    parser.add_argument('--config', type=str, default='config.yaml', help='配置文件路径')
+    parser = argparse.ArgumentParser(description='机器学习训练程序')
+    parser.add_argument('--config', type=str, default='config.toml', help='配置文件路径')
     args = parser.parse_args()
-
+    
     # 加载配置
     try:
-        cfg = load_config(args.config)
+        cfg = gdp.load_config(args.config)
         main(cfg)
-    except FileNotFoundError as e:
-        if args.config in str(e):
-            print(f"错误: 配置文件 {args.config} 不存在")
-        else:
-            print(f"错误: 文件未找到 - {str(e)}")
-    except yaml.YAMLError as e:
-        print(f"错误: 配置文件解析失败 - {str(e)}")
+    except FileNotFoundError:
+        print(f"错误: 配置文件 {args.config} 不存在")
     except Exception as e:
-        print(f"程序执行出错: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"程序执行失败: {str(e)}")

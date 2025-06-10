@@ -5,7 +5,6 @@
 @date :2025/06/09 15:13:58
 @author :YenochQin (秦毅)
 '''
-import os
 
 import logging
 from pathlib import Path
@@ -14,19 +13,20 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, List, Optional
 
-from .data_IO import GraspFileLoad, load_csfs_binary, load_descriptors, csfs_index_load, save_descriptors
+from .data_IO import GraspFileLoad, load_csfs_binary, load_descriptors, csfs_index_load, save_descriptors, load_descriptors_with_multi_block
 from .ASF_data_collection import LevelsEnergyData
 from .CSFs_choosing import batch_asfs_mix_square_above_threshold
 from .data_modules import MixCoefficientData
 
 def setup_logging(config):
     """配置日志系统"""
-    os.makedirs("logs", exist_ok=True)
+    log_dir = config.root_path / "logs"
+    log_dir.mkdir(exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler("logs/machine_learning_training.log"),
+            logging.FileHandler(log_dir / "machine_learning_training.log", encoding='utf-8'),
             logging.StreamHandler()
         ]
     )
@@ -98,7 +98,10 @@ def load_data_files(config, logger) -> tuple:
     logger.info(f"加载初始 CSFs 文件: {target_pool_file_path}")
     
     # 加载初始 CSFs 描述符文件
-    raw_csfs_descriptors = load_descriptors(target_pool_file_path)
+    result = load_descriptors_with_multi_block(target_pool_file_path, 'npy')
+    if result is None:
+        raise FileNotFoundError(f"无法加载初始 CSFs 描述符文件: {target_pool_file_path}")
+    raw_csfs_descriptors, raw_csfs_indices = result
     logger.info(f"加载初始 CSFs 描述符文件: {target_pool_file_path}")
     
     # 加载本轮计算CSFs文件
@@ -130,7 +133,7 @@ def generate_chosen_csfs_descriptors(config, chosen_csfs_indices_dict: Dict, raw
     
     
     ## 使用chosen_csfs_indices_dict[0]是临时的，后续需要改进一下！TODO
-    selected_indices = chosen_csfs_indices_dict[0]
+    selected_indices = np.array(chosen_csfs_indices_dict[0])
     
     selected_csfs_descriptors = raw_csfs_descriptors[selected_indices]
     
