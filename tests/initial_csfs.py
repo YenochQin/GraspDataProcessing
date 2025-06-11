@@ -100,14 +100,16 @@ def process_target_pool_csfs(config):
                 selected_csfs_mix_coefficient_data, 
                 threshold=config.cutoff_value
             )
+            threshold_indices = selected_csfs_mix_coeff_above_threshold_indices[0]  # 获取第0个block的索引数组
             
-            selected_csfs_data.CSFs_block_data = selected_csfs_data.CSFs_block_data[
-                selected_csfs_mix_coeff_above_threshold_indices[0]
+            # 使用列表推导式根据索引筛选CSFs
+            selected_csfs_data = [
+                selected_csfs_data.CSFs_block_data[0][i] for i in threshold_indices
             ]
             
         # 映射CSFs索引
         selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
-            selected_csfs_data.CSFs_block_data, 
+            selected_csfs_data, 
             target_pool_csfs_hash_file
         )
         logger.info(f"已选择CSFs文件{config.selected_csfs_file} CSFs 索引映射成功")

@@ -11,7 +11,7 @@ import argparse
 from pathlib import Path
 import sys
 
-sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
+sys.path.append('/home/workstation3/AppFiles/GraspDataProcessing/src')
 try:
     import graspdataprocessing as gdp
 except ImportError:
@@ -43,11 +43,11 @@ def load_target_pool_data(config):
         
         if selected_indices_path.exists():
             selected_csfs_indices_dict = gdp.csfs_index_load(selected_indices_path)
-            logger.info(f"加载selected indices: {selected_indices_path}")
+            logger.info(f"加载初筛CSFs indices: {selected_indices_path}")
         else:
             # 如果没有selected indices，创建空的
             selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
-            logger.info("未找到selected indices文件，使用空的indices")
+            logger.info("未找到初筛CSFs indices文件，使用空的indices")
             
     else:
         # 需要重新处理原始数据
@@ -143,14 +143,14 @@ def perform_csfs_selection(config):
     
     # 步骤5：保存选择的CSFs到.c文件
     chosen_csfs_list = [value for key, value in chosen_csfs_dict.items()]
-    output_c_file = cal_path / f'{config.conf}_{config.cal_loop_num}.c'
+    chosen_csfs_file_path = cal_path / f'{config.conf}_{config.cal_loop_num}.c'
     
     gdp.write_sorted_CSFs_to_cfile(
         target_pool_csfs_data.subshell_info_raw,
         chosen_csfs_list,
-        output_c_file
+        chosen_csfs_file_path
     )
-    logger.info(f"CSFs选择完成，保存到文件: {output_c_file}")
+    logger.info(f"CSFs选择完成，保存到文件: {chosen_csfs_file_path}")
     
     # 步骤6：保存chosen indices
     chosen_indices_file = cal_path / f'{config.conf}_{config.cal_loop_num}_chosen_indices'
@@ -173,7 +173,7 @@ def perform_csfs_selection(config):
         'chosen_csfs_dict': chosen_csfs_dict,
         'chosen_csfs_indices_dict': chosen_csfs_indices_dict,
         'unselected_indices_dict': unselected_indices_dict,
-        'output_c_file': str(output_c_file),
+        'chosen_csfs_file_path': str(chosen_csfs_file_path),
         'target_pool_csfs_data': target_pool_csfs_data,
         'cal_path': cal_path,
         'logger': logger
@@ -184,7 +184,7 @@ def main(config):
     try:
         result = perform_csfs_selection(config)
 
-        print(f"📁 输出.c文件: {result['output_c_file']}")
+        print(f"📁 输出.c文件: {result['chosen_csfs_file_path']}")
         print(f"📁 输出目录: {result['cal_path']}")
         
         return result
@@ -192,7 +192,6 @@ def main(config):
     except Exception as e:
         print(f"❌ 组态选择失败: {str(e)}")
         raise
-
 
 if __name__ == "__main__":
     # 解析命令行参数

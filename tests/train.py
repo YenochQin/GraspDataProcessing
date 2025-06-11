@@ -8,16 +8,12 @@
 import argparse
 import logging
 from types import SimpleNamespace
-
 from pathlib import Path
-
 import sys
-import math
 import numpy as np
 import pandas as pd
 import time
 from tabulate import tabulate
-
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
@@ -48,18 +44,21 @@ def main(config):
 
     logger.info(f"初始比例: {config.initial_ratio}")
     logger.info(f"光谱项: {config.spetral_term}")
-    
+        
     try:
         # 加载数据文件
         energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict = gdp.load_data_files(config, logger)
+        
+        # 检查组态耦合
+        cal_result = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
+        logger.info("************************************************")
 
     except Exception as e:
-            logger.error(f"数据文件加载失败: {str(e)}")
+            logger.error(f"程序执行过程中发生错误: {str(e)}")
             raise
 
-    # 检查组态耦合
-    cal_result = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
-    logger.info("************************************************")
+    # 初始化迭代结果文件
+    gdp.initialize_iteration_results_csv(config, logger)
 
     if cal_result:
         # 记录能量信息
@@ -77,39 +76,36 @@ def main(config):
 
         # 训练模型
         model, X_train, X_test, y_train, y_test, training_time, weight = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, logger)
-        
-        
+
         # 评估模型
         evaluation_results = gdp.evaluate_model(
             model, X_train, X_test, y_train, y_test, X_stay, config, logger
         )
+
+        # 访问结果
+        test_predictions = evaluation_results['predictions']['y_pred_test']
+        test_probabilities = evaluation_results['probabilities']['y_proba_test']
+        test_f1 = evaluation_results['test_metrics']['f1']
+        train_f1 = evaluation_results['train_metrics']['f1']
+
+        overfitting_check = test_f1 - train_f1  # 如果差异过大说明过拟合
         
-        # 选择组态
-        selection_results = gdp.select_configurations(
-            config, unique_indices, evaluation_results['y_pred_other'], 
-            raw_csf_data, indices_temp, logger
-        )
+        logger.info("             模型推理")
+        start_time = time.time()
+        X_stay = stay_csfs_descriptors.copy()
+        y_stay_pred = model.predict(X_stay)
+        y_stay_proba = model.predict_proba(X_stay)[:, 1]
+        eval_time = time.time() - start_time
+        logger.info(f"             模型推理时间:{eval_time}")
         
-        # 写入组态文件
-        write_configuration_files(
-            selection_results['chosen_index'], raw_csf_data, config, root_path, indices_temp
-        )
+        y_pred = evaluation_results['predictions']['y_pred_test']
+        y_proba = evaluation_results['probabilities']['y_proba_test']
+        result_file_path = config.root_path / 'test_data' / f'{config.conf}_{config.cal_loop_num}.csv'
+        pd.DataFrame({"y_test": y_test, "y_pred": y_pred, "y_proba": y_proba}).to_csv(result_file_path, index=False)
         
-        # 保存结果
-        save_iteration_results(
-            config, training_time, evaluation_results['eval_time'], 
-            execution_time, evaluation_results, selection_results, weight, logger
-        )
-        
-        # 检查收敛
-        converged = check_convergence(config, sum_num_list, logger)
-        if not converged:
-            # 更新循环计数
-            config.cal_loop_num += 1
-            update_config(f'{config.root_path}/config.yaml', {'cal_loop_num': config.cal_loop_num})
     else:
         # 处理计算错误
-        handle_calculation_error(config, indices_temp, raw_csf_data, root_path, logger)
+        gdp.handle_calculation_error(config, indices_temp, raw_csf_data, root_path, logger)
 
 
 if __name__ == "__main__":
