@@ -887,9 +887,9 @@ def save_descriptors_with_multi_block(
         file_format (str): 保存格式 ('csv', 'npy', 'pkl')
     
     Example:
-        >>> X, y = batch_process_csfs_with_multi_block(csfs_data)
-        >>> save_descriptors_with_multi_block(X, y, 'ml_data/features', 'csv')
-        >>> save_descriptors_with_multi_block(X, y, Path('ml_data/features'), 'npy')
+        >>> X, y = batch_process_csfs_with_block_indices(csfs_data)
+        >>> save_descriptors_with_block_indices(X, y, 'ml_data/features', 'csv')
+        >>> save_descriptors_with_block_indices(X, y, Path('ml_data/features'), 'npy')
     """
     
     # 转换为Path对象
@@ -897,7 +897,7 @@ def save_descriptors_with_multi_block(
     
     if file_format.lower() == 'csv':
         # CSV格式：将标签作为最后一列
-        file_path = save_path.parent / f"{save_path.name}_descriptors_multi_block.csv"
+        file_path = save_path.parent / f"{save_path.name}_descriptors_block_indices.csv"
         df = pd.DataFrame(descriptors)
         df['label'] = labels
         df.to_csv(file_path, index=False)
@@ -906,7 +906,7 @@ def save_descriptors_with_multi_block(
     elif file_format.lower() == 'npy':
         # NPY格式：分别保存数据和标签
         data_path = save_path.parent / f"{save_path.name}_descriptors.npy"
-        labels_path = save_path.parent / f"{save_path.name}_descriptors_multi_block.npy"
+        labels_path = save_path.parent / f"{save_path.name}_descriptors_block_indices.npy"
         np.save(data_path, descriptors)
         np.save(labels_path, labels)
         print(f"Descriptors saved to: {data_path}")
@@ -914,7 +914,7 @@ def save_descriptors_with_multi_block(
         
     elif file_format.lower() == 'pkl':
         # PKL格式：保存为字典
-        file_path = save_path.parent / f"{save_path.name}_descriptors_multi_block.pkl"
+        file_path = save_path.parent / f"{save_path.name}_descriptors_block_indices.pkl"
         data_dict = {
             'descriptors': descriptors,
             'labels': labels
@@ -1026,9 +1026,9 @@ def load_descriptors_with_multi_block(
         Optional[Tuple[np.ndarray, np.ndarray]]: (描述符数组, 标签数组)，加载失败返回None
     
     Example:
-        >>> descriptors, labels = load_descriptors_with_multi_block('ml_data/features')
-        >>> descriptors, labels = load_descriptors_with_multi_block(Path('ml_data/features'))
-        >>> descriptors, labels = load_descriptors_with_multi_block('ml_data/features', 'csv')
+        >>> descriptors, labels = load_descriptors_with_block_indices('ml_data/features')
+        >>> descriptors, labels = load_descriptors_with_block_indices(Path('ml_data/features'))
+        >>> descriptors, labels = load_descriptors_with_block_indices('ml_data/features', 'csv')
     """
     
     # 转换为Path对象
@@ -1036,11 +1036,11 @@ def load_descriptors_with_multi_block(
     
     # 自动推断文件格式
     if file_format is None:
-        if (load_path.parent / f"{load_path.name}_descriptors_multi_block.csv").exists():
+        if (load_path.parent / f"{load_path.name}_descriptors_block_indices.csv").exists():
             file_format = 'csv'
-        elif (load_path.parent / f"{load_path.name}_descriptors.npy").exists() and (load_path.parent / f"{load_path.name}_descriptors_multi_block.npy").exists():
+        elif (load_path.parent / f"{load_path.name}_descriptors.npy").exists() and (load_path.parent / f"{load_path.name}_descriptors_block_indices.npy").exists():
             file_format = 'npy'
-        elif (load_path.parent / f"{load_path.name}_descriptors_multi_block.pkl").exists():
+        elif (load_path.parent / f"{load_path.name}_descriptors_block_indices.pkl").exists():
             file_format = 'pkl'
         else:
             print(f"Error: Cannot find files with path: {load_path}")
@@ -1048,7 +1048,7 @@ def load_descriptors_with_multi_block(
     
     try:
         if file_format.lower() == 'csv':
-            file_path = load_path.parent / f"{load_path.name}_descriptors_multi_block.csv"
+            file_path = load_path.parent / f"{load_path.name}_descriptors_block_indices.csv"
             if not file_path.exists():
                 print(f"Error: File not found: {file_path}")
                 return None
@@ -1062,7 +1062,7 @@ def load_descriptors_with_multi_block(
             
         elif file_format.lower() == 'npy':
             data_path = load_path.parent / f"{load_path.name}_descriptors.npy"
-            labels_path = load_path.parent / f"{load_path.name}_descriptors_multi_block.npy"
+            labels_path = load_path.parent / f"{load_path.name}_descriptors_block_indices.npy"
             
             if not data_path.exists():
                 print(f"Error: Data file not found: {data_path}")
@@ -1078,7 +1078,7 @@ def load_descriptors_with_multi_block(
             return descriptors, labels
             
         elif file_format.lower() == 'pkl':
-            file_path = load_path.parent / f"{load_path.name}_descriptors_multi_block.pkl"
+            file_path = load_path.parent / f"{load_path.name}_descriptors_block_indices.pkl"
             if not file_path.exists():
                 print(f"Error: File not found: {file_path}")
                 return None

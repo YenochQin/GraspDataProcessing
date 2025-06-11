@@ -72,7 +72,9 @@ def main(config):
         gdp.save_csfs_binary(target_pool_csfs_data, target_pool_path)
         logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 保存成功")
         
-        if config.selected_csfs_file:
+        if hasattr(config, 'selected_csfs_file') and config.selected_csfs_file:
+
+            # 在if判断里生成总CSFs池的哈希值的原因是如果有selected_csfs_file，则需要将selected_csfs_file的CSFs与总CSFs池的CSFs索引进行映射
             gdp.precompute_large_hash(target_pool_csfs_data.CSFs_block_data, target_pool_path.with_suffix('.pkl'))
             logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 哈希校验文件保存成功")
             
@@ -83,6 +85,14 @@ def main(config):
             selected_csfs_data = selected_csfs_load.data_file_process()
             logger.info(f"已选择CSFs文件{config.target_pool_file} CSFs 读取成功")
             
+            if hasattr(config, 'selected_selected_csfs_mix_filecsfs_file') and config.selected_csfs_mix_file:
+                selected_csfs_mix_coefficient_file = root_path.joinpath(config.selected_csfs_mix_file)
+                selected_csfs_mix_coefficient_load = gdp.GraspFileLoad.from_filepath(selected_csfs_mix_coefficient_file, file_type='mix')
+                selected_csfs_mix_coefficient_data = selected_csfs_mix_coefficient_load.data_file_process()
+                logger.info(f"已选择CSFs文件{config.selected_csfs_file} CSFs 混合系数文件读取成功")
+                selected_csf_mix_coeff_squared_sum = np.sum(selected_csfs_mix_coefficient_data.mix_coefficient_List[0]**2, axis=0)
+                this_loop_selected_csfs_indices = np.where(selected_csf_mix_coeff_squared_sum >= np.float64(config.cutoff_value))[0]
+                selected_csfs_data.CSFs_block_data = selected_csfs_data.CSFs_block_data[this_loop_selected_csfs_indices]
             selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
                 selected_csfs_data.CSFs_block_data, 
                 target_pool_csfs_hash_file

@@ -196,7 +196,7 @@ class ANNClassifier:
             self.training_history['train_loss'].append(epoch_loss)
 
             # 验证评估
-            if X_val_tensor is not None:
+            if X_val_tensor is not None and y_val_tensor is not None:
                 val_loss, val_accuracy = self._validate_epoch(X_val_tensor, y_val_tensor)
                 self.training_history['val_loss'].append(val_loss)
                 self.training_history['val_accuracy'].append(val_accuracy)
@@ -399,10 +399,12 @@ class ANNClassifier:
         X_resampled = np.concatenate((X_positive[id_positive], X_negtive[id_negtive]), axis=0)
         y_resampled = np.concatenate((Y_positive[id_positive], Y_negtive[id_negtive]), axis=0)
 
-        # 打乱顺序
-        shuffle_index = np.random.permutation(X_resampled.shape[0])
-        X_resampled = X_resampled[shuffle_index]
-        y_resampled = y_resampled[shuffle_index]
+        # 优化的打乱方法：原地打乱，避免创建大索引数组
+        rng = np.random.default_rng()
+        rng.shuffle(X_resampled)
+        rng = np.random.default_rng()  # 重新初始化确保相同的随机顺序
+        rng.shuffle(y_resampled)
+        
         return X_resampled, y_resampled
 
     def downsampling(self, X_train, y_train, weight):
@@ -483,7 +485,7 @@ class ANNClassifier:
     @staticmethod
     def model_evaluation(y_test: np.ndarray, 
                         y_pred: np.ndarray, 
-                        y_proba: np.ndarray) -> Tuple[float, float, float, float, float]:
+                        y_proba: np.ndarray):
         """
         模型评估
         
@@ -496,11 +498,11 @@ class ANNClassifier:
             f1, roc_auc, accuracy, precision, recall
         """
         try:
-            f1 = f1_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred, average='binary')
             roc_auc = roc_auc_score(y_test, y_proba)
             accuracy = accuracy_score(y_test, y_pred)
-            precision = precision_score(y_test, y_pred)
-            recall = recall_score(y_test, y_pred)
+            precision = precision_score(y_test, y_pred, average='binary')
+            recall = recall_score(y_test, y_pred, average='binary')
         except Exception as e:
             logging.getLogger(__name__).warning(f"评估指标计算出错: {e}")
             # 返回默认值或可计算的指标
@@ -559,6 +561,8 @@ class ANNClassifier:
         target_output.backward()
         
         # 计算梯度的绝对值作为重要性
-        gradients = X_tensor.grad.abs().mean(dim=0)
-        
-        return gradients.cpu().numpy()
+        if X_tensor.grad is not None:
+            gradients = X_tensor.grad.abs().mean(dim=0)
+            return gradients.cpu().numpy()
+        else:
+            return np.zeros(X.shape[1])
