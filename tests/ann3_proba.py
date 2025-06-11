@@ -180,7 +180,7 @@ def main(cfg):
                 logger.info(f"             模型推理时间:{eval_time}")
                 
                 # Save the result
-                result_file = f"test_data/{file_name}{step-1}.csv"
+                result_file = f"test_data/{file_name}{ -1}.csv"
                 pd.DataFrame({"y_test": y_test, "y_pred": y_pred, "y_proba": y_proba}).to_csv(result_file, index=False)
                 joblib.dump(model, f"models/{file_name}{step-1}.pkl")
                 logger.info(f"             预测结果与模型保存成功")

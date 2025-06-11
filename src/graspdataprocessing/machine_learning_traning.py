@@ -29,7 +29,7 @@ from sklearn.model_selection import train_test_split
 from .CSFs_choosing import batch_asfs_mix_square_above_threshold
 from .ANN import ANNClassifier
 from .data_modules import MixCoefficientData
-from .data_IO import write_sorted_CSFs_to_cfile
+from .data_IO import write_sorted_CSFs_to_cfile, update_config
 
 def train_model(
                 config, 
@@ -201,7 +201,19 @@ def train_model(
     return model, X_train, X_test, y_train, y_test, training_time, [1, 1]  # 简化返回值
 
 def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logger):
-    """评估模型性能"""
+    """
+    评估模型性能，返回所有预测结果和评估指标
+    
+    Args:
+        model: 训练好的模型
+        X_train, X_test, y_train, y_test: 训练和测试数据
+        X_stay: 其他需要预测的数据
+        config: 配置对象
+        logger: 日志记录器
+    
+    Returns:
+        dict: 包含所有预测结果、概率、评估指标和元数据的完整结果字典
+    """
     
     logger.info("开始预测与评估")
     
@@ -211,22 +223,16 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logg
     y_pred_other = model.predict(X_stay)
     eval_time = time.time() - start_time
     
+    # 预测概率
     y_proba = model.predict_proba(X_test)[:, 1]
     y_pred_train = model.predict(X_train)
     y_proba_train = model.predict_proba(X_train)[:, 1]
+    y_proba_other = model.predict_proba(X_stay)[:, 1]
     
-    # 评估
-    # Generate full dataset probabilities for plotting
+    # 生成完整数据集的概率用于分析
     y_proba_all = model.predict_proba(np.vstack([X_train, X_test]))
     
-    # 由于没有混合系数数据，创建一个简化的绘图或跳过混合系数相关绘图
-    # 创建一个占位数组用于绘图兼容性
-    dummy_mix_coeff = np.ones(len(y_proba_all))
-    
-    roc_auc, pr_auc = ANNClassifier.plot_curve(
-        dummy_mix_coeff, y_proba_all, y_test, y_proba, 
-        config.scf_cal_path.joinpath(f'{config.file_name}_roc_auc.png')
-    )
+    # 评估指标计算
     f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(
         y_test, y_pred, y_proba
     )
@@ -236,192 +242,390 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logg
         y_train, y_pred_train, y_proba_train
     )
     
-    # 保存结果
-    test_data_dir = Path("test_data")
-    test_data_dir.mkdir(exist_ok=True)
-    result_file = test_data_dir / f"{config.file_name}.csv"
-    pd.DataFrame({
-        "y_test": y_test, 
-        "y_pred": y_pred, 
-        "y_proba": y_proba
-    }).to_csv(result_file, index=False)
+    logger.info("模型评估完成")
     
-    # 保存模型
-    models_dir = Path("models")
-    models_dir.mkdir(exist_ok=True)
-    model_file = models_dir / f"{config.file_name}.pkl"
-    joblib.dump(model, model_file)
-    logger.info("预测结果与模型保存成功")
-    
+    # 返回完整的结果字典
     return {
-        'y_pred_other': y_pred_other,
-        'eval_time': eval_time,
-        'metrics': {
-            'f1': f1, 'roc_auc': roc_auc, 'accuracy': accuracy,
-            'precision': precision, 'recall': recall,
-            'f1_train': f1_train, 'roc_auc_train': roc_auc_train,
-            'accuracy_train': accuracy_train, 'precision_train': precision_train,
-            'recall_train': recall_train
+        # 预测结果
+        'predictions': {
+            'y_pred_test': y_pred,
+            'y_pred_train': y_pred_train, 
+            'y_pred_other': y_pred_other
+        },
+        
+        # 预测概率
+        'probabilities': {
+            'y_proba_test': y_proba,
+            'y_proba_train': y_proba_train,
+            'y_proba_other': y_proba_other,
+            'y_proba_all': y_proba_all
+        },
+        
+        # 真实标签
+        'true_labels': {
+            'y_test': y_test,
+            'y_train': y_train
+        },
+        
+        # 测试集评估指标
+        'test_metrics': {
+            'f1': f1,
+            'roc_auc': roc_auc, 
+            'accuracy': accuracy,
+            'precision': precision,
+            'recall': recall
+        },
+        
+        # 训练集评估指标（过拟合检测）
+        'train_metrics': {
+            'f1': f1_train,
+            'roc_auc': roc_auc_train,
+            'accuracy': accuracy_train, 
+            'precision': precision_train,
+            'recall': recall_train
+        },
+        
+        # 元数据
+        'metadata': {
+            'eval_time': eval_time,
+            'test_samples': len(y_test),
+            'train_samples': len(y_train),
+            'other_samples': len(X_stay),
+            'config_name': getattr(config, 'file_name', 'unknown')
         }
     }
 
-def pop_other_ci(indexs, indexs_import):
-    stay_indexs = []
-    for i in indexs:
-        if i not in indexs_import:
-            stay_indexs.append(i)
-    return stay_indexs
-
-def select_configurations(config, unique_indices, y_pred_other, raw_csf_data, indices_temp, logger):
-    """选择重要组态"""
-    # 计算最小组态数
-    sum_num_min = round(math.ceil(raw_csf_data.CSFs_block_length[0] * config.initial_ratio))
-    sum_num = len(unique_indices)
+def save_convergence_results(config, convergence_results, logger):
+    """
+    保存收敛结果到独立的CSV文件
     
-    if sum_num <= sum_num_min:
-        sum_num = sum_num_min
+    Args:
+        config: 配置对象
+        convergence_results: check_energy_convergence函数返回的结果
+        logger: 日志记录器
+    """
     
-    # 获取重要组态索引
-    indexs_import = unique_indices.tolist()
-    indexs_import_temp = [indices_temp[i] for i in indexs_import]
-    indexs_import_stay = np.where(y_pred_other == 1)[0].tolist()
+    convergence_file = Path(config.root_path) / 'results' / 'convergence_history.csv'
+    convergence_file.parent.mkdir(parents=True, exist_ok=True)
     
-    # 计算stay索引 (假设所有索引都在stay中)
-    stay_indices_all = list(range(len(y_pred_other)))
-    indexs_import_stay_temp = [stay_indices_all[i] for i in indexs_import_stay]
+    # 创建表头（如果文件不存在）
+    if not convergence_file.exists():
+        headers = [
+            'cal_loop_num', 'is_converged', 'compared_states', 'max_abs_diff', 
+            'mean_abs_diff', 'rms_diff', 'max_rel_diff', 'mean_rel_diff', 
+            'convergence_threshold', 'reason'
+        ]
+        with open(convergence_file, mode="w", newline="", encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(headers)
     
-    # 保存重要组态索引
-    np.save(f"results/indexs_import_ab{config.cal_loop_num}.npy", indexs_import_temp)
-    np.save(f"results/indexs_import_ml{config.cal_loop_num}.npy", indexs_import_stay_temp)
+    # 写入收敛数据
+    with open(convergence_file, mode="a", newline="", encoding='utf-8') as file:
+        writer = csv.writer(file)
+        
+        if convergence_results['energy_diff_stats'] is not None:
+            stats = convergence_results['energy_diff_stats']
+            writer.writerow([
+                config.cal_loop_num,
+                convergence_results['is_converged'],
+                convergence_results['compared_states'],
+                stats['max_abs_diff'],
+                stats['mean_abs_diff'], 
+                stats['rms_diff'],
+                stats['max_rel_diff'],
+                stats['mean_rel_diff'],
+                convergence_results.get('convergence_threshold', 1e-6),
+                convergence_results['reason']
+            ])
+        else:
+            # 当无法进行收敛检查时
+            writer.writerow([
+                config.cal_loop_num,
+                False,
+                0,
+                None, None, None, None, None,
+                convergence_results.get('convergence_threshold', 1e-6),
+                convergence_results['reason']
+            ])
     
-    logger.info(f"开始选择组态，当前重要组态数为：{len(indexs_import_temp)}")
-    
-    # 选择新增组态
-    if len(indexs_import_stay) >= config.expansion_ratio * sum_num:
-        ml_add_csfs = np.random.choice(
-            indexs_import_stay_temp,
-            size=config.expansion_ratio * sum_num,
-            replace=False
-        ).tolist()
-        mc_add_csfs = None
-        new_add_csfs = ml_add_csfs
-    else:
-        stay_index = pop_other_ci(indices_temp, indexs_import_stay_temp + indexs_import_temp)
-        ml_add_csfs = indexs_import_stay_temp
-        mc_add_csfs = np.random.choice(
-            stay_index,
-            size=config.expansion_ratio * sum_num - len(indexs_import_stay_temp),
-            replace=False
-        ).tolist()
-        new_add_csfs = ml_add_csfs + mc_add_csfs
-    
-    chosen_index = np.sort(np.array(indexs_import_temp + new_add_csfs))
-    logger.info(f"下一步计算组态数为：{len(chosen_index)}")
-    
-    return {
-        'chosen_index': chosen_index,
-        'indexs_import_temp': indexs_import_temp,
-        'indexs_import_stay_temp': indexs_import_stay_temp,
-        'sum_num': sum_num,
-        'ml_add_csfs': ml_add_csfs,
-        'new_add_csfs': new_add_csfs
-    }
-
-def write_configuration_files(chosen_index, raw_csf_data, config, root_path, indices_temp):
-    """写入组态文件"""
-    
-    # 写入选中的组态
-    chosen_csfs_data = [
-        csf for i in chosen_index 
-        for csf in raw_csf_data.CSFs_block_data[0][i]
-    ]
-    
-    write_sorted_CSFs_to_cfile(
-        raw_csf_data.CSFs_file_info,
-        chosen_csfs_data,
-        root_path / f'{config.conf}_{config.cal_loop_num+1}.c'
-    )
-    
-    # 写入未选中的组态
-    stay_indices = np.array(pop_other_ci(indices_temp, chosen_index))
-    unchosen_csfs_data = [
-        csf for i in stay_indices 
-        for csf in raw_csf_data.CSFs_block_data[0][i]
-    ]
-    
-    write_sorted_CSFs_to_cfile(
-        raw_csf_data.CSFs_file_info,
-        unchosen_csfs_data,
-        root_path / f'{config.conf}_{config.cal_loop_num+1}_stay.c'
-    )
+    logger.info(f"收敛结果已保存到: {convergence_file}")
 
 def save_iteration_results(config, training_time, eval_time, execution_time, 
-                          evaluation_results, selection_results, weight, logger):
-    """保存迭代结果"""
+                          evaluation_results, selection_results, weight, logger,
+                          convergence_results=None):
+    """
+    保存迭代结果到CSV文件
+    
+    Args:
+        config: 配置对象
+        training_time: 训练时间
+        eval_time: 评估时间  
+        execution_time: 执行时间
+        evaluation_results: evaluate_model函数返回的结果字典
+        selection_results: 选择结果字典
+        weight: 权重值
+        logger: 日志记录器
+        convergence_results: 可选的收敛检查结果
+    """
+    
     all_time = execution_time + training_time + eval_time
-    metrics = evaluation_results['metrics']
+    
+    # 从新的结果结构中提取指标
+    test_metrics = evaluation_results['test_metrics']
+    train_metrics = evaluation_results['train_metrics']
+    metadata = evaluation_results['metadata']
+    
+    # 获取实际的评估时间（如果evaluation_results中有的话）
+    actual_eval_time = metadata.get('eval_time', eval_time)
+    
+    # 从收敛结果中提取能量差异信息
+    max_energy_diff = None
+    if convergence_results and convergence_results['energy_diff_stats']:
+        max_energy_diff = convergence_results['energy_diff_stats']['max_abs_diff']
     
     # 保存到CSV文件
-    with open(f'{config.root_path}/results/iteration_results.csv', mode="a", newline="") as file:
+    results_file = Path(config.root_path) / 'results' / 'iteration_results.csv'
+    results_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # 创建表头（如果文件不存在）
+    if not results_file.exists():
+        headers = [
+            'cal_loop_num', 'training_time', 'eval_time', 'execution_time', 'total_time',
+            'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
+            'max_energy_diff', 'import_count', 'stay_count', 'MLsampling_ratio', 'chosen_count', 'weight',
+            'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall'
+        ]
+        with open(results_file, mode="w", newline="", encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(headers)
+    
+    with open(results_file, mode="a", newline="", encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow([
-            training_time, eval_time, execution_time, all_time,
-            metrics['f1'], metrics['roc_auc'], metrics['accuracy'],
-            metrics['precision'], metrics['recall'],
-            0,  # Es placeholder
-            len(selection_results['indexs_import_temp']),
-            len(selection_results['indexs_import_stay_temp']),
+            config.cal_loop_num,  # 添加循环编号
+            training_time, 
+            actual_eval_time, 
+            execution_time, 
+            all_time,
+            test_metrics['f1'], 
+            test_metrics['roc_auc'], 
+            test_metrics['accuracy'],
+            test_metrics['precision'], 
+            test_metrics['recall'],
+            max_energy_diff,  # 使用实际的能量差异代替Es placeholder
+            len(selection_results.get('indexs_import_temp', [])),
+            len(selection_results.get('indexs_import_stay_temp', [])),
             None,  # MLsampling_ratio placeholder
-            len(selection_results['chosen_index']),
+            len(selection_results.get('chosen_index', [])),
             weight,
-            metrics['f1_train'], metrics['roc_auc_train'], metrics['accuracy_train'],
-            metrics['precision_train'], metrics['recall_train']
+            train_metrics['f1'], 
+            train_metrics['roc_auc'], 
+            train_metrics['accuracy'],
+            train_metrics['precision'], 
+            train_metrics['recall']
         ])
+    
+    logger.info(f"迭代结果已保存到: {results_file}")
+    
+    # 如果有收敛结果，也保存收敛历史
+    if convergence_results:
+        save_convergence_results(config, convergence_results, logger)
+
+def check_energy_convergence(config, current_energy_df, logger, 
+                            convergence_threshold=1e-6, min_states=5):
+    """
+    检查能级数据的收敛性
+    
+    Args:
+        config: 配置对象
+        current_energy_df: 当前循环的能级数据DataFrame
+        logger: 日志记录器
+        convergence_threshold: 收敛阈值（Hartree单位）
+        min_states: 至少需要比较的能级数量
+        
+    Returns:
+        dict: 包含收敛信息的字典
+    """
+    
+    if config.cal_loop_num == 1:
+        logger.info("第一次计算，无法进行收敛检查")
+        return {
+            'is_converged': False,
+            'reason': '第一次计算',
+            'energy_diff_stats': None,
+            'compared_states': 0
+        }
+    
+    # 构造前一次计算的能级文件路径
+    root_path = Path(config.root_path)
+    previous_cal_path = root_path / f'{config.conf}_{config.cal_loop_num-1}'
+    
+    # 寻找前一次的能级文件
+    previous_energy_file = None
+    possible_names = [
+        f'{config.conf}_{config.cal_loop_num-1}.energy',
+        f'{config.conf}.energy',
+        'energy_levels.csv'
+    ]
+    
+    for name in possible_names:
+        potential_file = previous_cal_path / name
+        if potential_file.exists():
+            previous_energy_file = potential_file
+            break
+    
+    if previous_energy_file is None:
+        logger.warning(f"未找到前一次计算的能级文件，路径: {previous_cal_path}")
+        return {
+            'is_converged': False,
+            'reason': '未找到前一次能级文件',
+            'energy_diff_stats': None,
+            'compared_states': 0
+        }
+    
+    try:
+        # 读取前一次的能级数据
+        # 假设是相同格式的文件，这里需要根据实际格式调整
+        if previous_energy_file.suffix == '.csv':
+            previous_energy_df = pd.read_csv(previous_energy_file)
+        else:
+            # 如果是GRASP能级文件，需要使用相应的解析函数
+            # 这里暂时假设已经转换为DataFrame格式
+            logger.warning(f"能级文件格式暂不支持自动解析: {previous_energy_file}")
+            return {
+                'is_converged': False,
+                'reason': '不支持的能级文件格式',
+                'energy_diff_stats': None,
+                'compared_states': 0
+            }
+            
+        logger.info(f"成功读取前一次能级数据: {previous_energy_file}")
+        logger.info(f"前一次数据包含 {len(previous_energy_df)} 个能级")
+        
+    except Exception as e:
+        logger.error(f"读取前一次能级文件失败: {str(e)}")
+        return {
+            'is_converged': False,
+            'reason': f'读取前一次能级文件失败: {str(e)}',
+            'energy_diff_stats': None,
+            'compared_states': 0
+        }
+    
+    # 基于'No', 'Pos', 'J'进行数据匹配
+    try:
+        # 确保两个DataFrame都有必要的列
+        required_columns = ['No', 'Pos', 'J', 'EnergyTotal']
+        for col in required_columns:
+            if col not in current_energy_df.columns:
+                raise ValueError(f"当前能级数据缺少列: {col}")
+            if col not in previous_energy_df.columns:
+                raise ValueError(f"前一次能级数据缺少列: {col}")
+        
+        # 创建合并键
+        current_energy_df = current_energy_df.copy()
+        previous_energy_df = previous_energy_df.copy()
+        
+        current_energy_df['merge_key'] = (
+            current_energy_df['No'].astype(str) + '_' + 
+            current_energy_df['Pos'].astype(str) + '_' + 
+            current_energy_df['J'].astype(str)
+        )
+        
+        previous_energy_df['merge_key'] = (
+            previous_energy_df['No'].astype(str) + '_' + 
+            previous_energy_df['Pos'].astype(str) + '_' + 
+            previous_energy_df['J'].astype(str)
+        )
+        
+        # 进行内连接，只保留两次计算都有的状态
+        merged_df = pd.merge(
+            current_energy_df[['merge_key', 'EnergyTotal']], 
+            previous_energy_df[['merge_key', 'EnergyTotal']], 
+            on='merge_key', 
+            suffixes=('_current', '_previous')
+        )
+        
+        compared_states = len(merged_df)
+        logger.info(f"找到 {compared_states} 个相同的量子态进行比较")
+        
+        if compared_states < min_states:
+            logger.warning(f"可比较的量子态数量过少 ({compared_states} < {min_states})")
+            return {
+                'is_converged': False,
+                'reason': f'可比较的量子态数量过少 ({compared_states} < {min_states})',
+                'energy_diff_stats': None,
+                'compared_states': compared_states
+            }
+        
+        # 计算能量差异
+        energy_diff = merged_df['EnergyTotal_current'] - merged_df['EnergyTotal_previous']
+        
+        # 计算收敛统计量
+        energy_diff_stats = {
+            'max_abs_diff': abs(energy_diff).max(),
+            'mean_abs_diff': abs(energy_diff).mean(),
+            'rms_diff': np.sqrt((energy_diff**2).mean()),
+            'max_rel_diff': abs(energy_diff / merged_df['EnergyTotal_previous']).max(),
+            'mean_rel_diff': abs(energy_diff / merged_df['EnergyTotal_previous']).mean()
+        }
+        
+        # 判断收敛性
+        max_abs_diff = energy_diff_stats['max_abs_diff']
+        is_converged = max_abs_diff < convergence_threshold
+        
+        # 记录详细信息
+        logger.info(f"能级收敛性检查结果:")
+        logger.info(f"  比较的量子态数量: {compared_states}")
+        logger.info(f"  最大绝对差异: {max_abs_diff:.8e} Hartree")
+        logger.info(f"  平均绝对差异: {energy_diff_stats['mean_abs_diff']:.8e} Hartree")
+        logger.info(f"  RMS差异: {energy_diff_stats['rms_diff']:.8e} Hartree")
+        logger.info(f"  最大相对差异: {energy_diff_stats['max_rel_diff']:.8e}")
+        logger.info(f"  收敛阈值: {convergence_threshold:.8e} Hartree")
+        logger.info(f"  是否收敛: {'是' if is_converged else '否'}")
+        
+        if is_converged:
+            logger.info("✅ 能级计算已收敛")
+        else:
+            logger.info("⚠️ 能级计算尚未收敛，需要继续迭代")
+        
+        return {
+            'is_converged': is_converged,
+            'reason': '收敛' if is_converged else f'最大差异 {max_abs_diff:.8e} > 阈值 {convergence_threshold:.8e}',
+            'energy_diff_stats': energy_diff_stats,
+            'compared_states': compared_states,
+            'convergence_threshold': convergence_threshold,
+            'energy_differences': energy_diff.tolist(),  # 保存所有差异供进一步分析
+            'merged_data': merged_df  # 保存合并后的数据供调试
+        }
+        
+    except Exception as e:
+        logger.error(f"能级收敛性检查失败: {str(e)}")
+        return {
+            'is_converged': False,
+            'reason': f'收敛检查失败: {str(e)}',
+            'energy_diff_stats': None,
+            'compared_states': 0
+        }
 
 def check_convergence(config, sum_num_list, logger):
-    """检查收敛性"""
+    """检查收敛性（保留原有接口）"""
     # 这里需要Es_term的历史数据，暂时先跳过收敛检查
     # 在实际使用中，需要维护能量项的历史记录
     logger.info("收敛检查功能需要能量历史数据，当前跳过")
     return False
 
-def handle_calculation_error(config, indices_temp, raw_csf_data, root_path, logger):
+def handle_calculation_error(config, logger):
     """处理计算错误的情况"""
-    if gdp is None:
-        raise ImportError("graspdataprocessing 模块未正确导入")
-    
+   
     cal_error_num = getattr(config, 'cal_error_num', 0) + 1
-    gdp.update_config(f'{config.root_path}/config.yaml', {'cal_error_num': cal_error_num})
+    update_config(f'{config.root_path}/config.yaml', {'cal_error_num': cal_error_num})
     
     if cal_error_num >= 3:
         logger.info("连续三次波函数未改进，迭代收敛，退出筛选程序")
         with open(f'{config.root_path}/run.input', 'w') as file:
             file.write('False')
         return
-    
-    logger.info('组态选择出现问题，正在重选组态')
-    
-    # 加载前一次的重要组态
-    prev_file = f"results/indexs_import_ab{config.cal_loop_num-1}.npy"
-    if os.path.exists(prev_file):
-        indexs_import_temp = np.load(prev_file)
-    else:
-        indexs_import_temp = []
-    
-    stay_indices = gdp.pop_other_ci(indices_temp, indexs_import_temp)
-    
-    # 随机选择组态
-    sum_num_min = round(math.ceil(raw_csf_data.CSFs_block_length[0] * config.initial_ratio))
-    mc_add_csfs = np.random.choice(
-        stay_indices,
-        size=config.expansion_ratio * sum_num_min,
-        replace=False
-    ).tolist()
-    
-    chosen_index = np.sort(np.array(list(indexs_import_temp) + mc_add_csfs))
-    
-    # 写入组态文件
-    write_configuration_files(chosen_index, raw_csf_data, config, root_path, indices_temp)
+
 
 def get_stay_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_dict: Dict[int, List[int]]) -> np.ndarray:
     """
@@ -448,3 +652,168 @@ def get_stay_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_d
     
     # 返回对应的描述符
     return raw_csfs_descriptors[stay_indices]
+
+def save_and_plot_results(evaluation_results, model, config, 
+                         save_model: bool = True,
+                         save_data: bool = True, 
+                         plot_curves: bool = True,
+                         logger=None):
+    """
+    保存模型预测结果、模型文件和绘制性能曲线
+    使用setup_directories创建的标准目录结构
+    
+    Args:
+        evaluation_results: evaluate_model函数返回的结果字典
+        model: 训练好的模型对象
+        config: 配置对象，包含root_path和file_name等信息
+        save_model: 是否保存模型文件
+        save_data: 是否保存预测结果数据
+        plot_curves: 是否绘制ROC/PR曲线
+        logger: 日志记录器
+        
+    Returns:
+        dict: 包含所有保存文件路径的字典
+    """
+    
+    if logger:
+        logger.info("开始保存结果和绘制图表")
+    
+    # 使用config中的root_path，这是setup_directories创建目录的基础路径
+    root_path = getattr(config, 'root_path', Path('.'))
+    
+    # 获取文件名
+    file_name = getattr(config, 'file_name', f'model_{int(time.time())}')
+    
+    saved_files = {}
+    
+    # 1. 保存预测结果数据到test_data目录
+    if save_data:
+        test_data_dir = root_path / "test_data"
+        
+        # 保存测试集结果
+        test_file = test_data_dir / f"{file_name}_test_results.csv"
+        pd.DataFrame({
+            "y_true": evaluation_results['true_labels']['y_test'],
+            "y_pred": evaluation_results['predictions']['y_pred_test'],
+            "y_proba": evaluation_results['probabilities']['y_proba_test']
+        }).to_csv(test_file, index=False)
+        saved_files['test_data'] = str(test_file)
+        
+        # 保存训练集结果到results目录
+        results_dir = root_path / "results"
+        train_file = results_dir / f"{file_name}_train_results.csv"
+        pd.DataFrame({
+            "y_true": evaluation_results['true_labels']['y_train'],
+            "y_pred": evaluation_results['predictions']['y_pred_train'],
+            "y_proba": evaluation_results['probabilities']['y_proba_train']
+        }).to_csv(train_file, index=False)
+        saved_files['train_data'] = str(train_file)
+        
+        # 保存其他数据预测结果到results目录
+        other_file = results_dir / f"{file_name}_other_predictions.csv"
+        pd.DataFrame({
+            "y_pred": evaluation_results['predictions']['y_pred_other'],
+            "y_proba": evaluation_results['probabilities']['y_proba_other']
+        }).to_csv(other_file, index=False)
+        saved_files['other_predictions'] = str(other_file)
+        
+        # 保存评估指标到results目录
+        metrics_file = results_dir / f"{file_name}_metrics.json"
+        metrics_data = {
+            'test_metrics': evaluation_results['test_metrics'],
+            'train_metrics': evaluation_results['train_metrics'],
+            'metadata': evaluation_results['metadata']
+        }
+        with open(metrics_file, 'w', encoding='utf-8') as f:
+            json.dump(metrics_data, f, indent=2, ensure_ascii=False)
+        saved_files['metrics'] = str(metrics_file)
+        
+        if logger:
+            logger.info(f"预测数据已保存到: {test_data_dir} 和 {results_dir}")
+    
+    # 2. 保存模型文件到models目录
+    if save_model:
+        models_dir = root_path / "models"
+        
+        model_file = models_dir / f"{file_name}.pkl"
+        joblib.dump(model, model_file)
+        saved_files['model'] = str(model_file)
+        
+        if logger:
+            logger.info(f"模型已保存到: {model_file}")
+    
+    # 3. 绘制性能曲线到roc_curves目录
+    if plot_curves:
+        roc_curves_dir = root_path / "roc_curves"
+        
+        try:
+            # 创建混合系数的占位数据用于绘图兼容性
+            dummy_mix_coeff = np.ones(len(evaluation_results['probabilities']['y_proba_all']))
+            
+            # 绘制ROC和PR曲线
+            plot_file = roc_curves_dir / f"{file_name}_roc_pr_curves.png"
+            roc_auc, pr_auc = ANNClassifier.plot_curve(
+                dummy_mix_coeff, 
+                evaluation_results['probabilities']['y_proba_all'], 
+                evaluation_results['true_labels']['y_test'], 
+                evaluation_results['probabilities']['y_proba_test'], 
+                str(plot_file)
+            )
+            saved_files['roc_pr_plot'] = str(plot_file)
+            
+            # 额外绘制概率分布直方图
+            prob_hist_file = roc_curves_dir / f"{file_name}_probability_distribution.png"
+            _plot_probability_distribution(
+                evaluation_results['probabilities']['y_proba_test'],
+                evaluation_results['true_labels']['y_test'],
+                str(prob_hist_file)
+            )
+            saved_files['prob_distribution'] = str(prob_hist_file)
+            
+            if logger:
+                logger.info(f"性能图表已保存到: {roc_curves_dir}")
+                
+        except Exception as e:
+            if logger:
+                logger.warning(f"绘图过程出现错误: {e}")
+            else:
+                print(f"绘图错误: {e}")
+    
+    if logger:
+        logger.info("所有结果保存完成")
+    
+    return saved_files
+
+def _plot_probability_distribution(y_proba, y_true, save_path):
+    """
+    绘制预测概率分布直方图
+    
+    Args:
+        y_proba: 预测概率
+        y_true: 真实标签
+        save_path: 保存路径
+    """
+    import matplotlib.pyplot as plt
+    
+    plt.figure(figsize=(10, 6))
+    
+    # 分别绘制正负样本的概率分布
+    pos_proba = y_proba[y_true == 1]
+    neg_proba = y_proba[y_true == 0]
+    
+    plt.hist(neg_proba, bins=50, alpha=0.7, label=f'负样本 (n={len(neg_proba)})', 
+             color='lightcoral', density=True)
+    plt.hist(pos_proba, bins=50, alpha=0.7, label=f'正样本 (n={len(pos_proba)})', 
+             color='lightblue', density=True)
+    
+    plt.axvline(x=0.5, color='red', linestyle='--', alpha=0.8, label='分类阈值 (0.5)')
+    
+    plt.xlabel('预测概率')
+    plt.ylabel('密度')
+    plt.title('预测概率分布')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()

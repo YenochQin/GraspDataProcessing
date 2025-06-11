@@ -1,21 +1,15 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 '''
-@Id :initial_csfs.py
+@Id :initial_csfs.py  
 @date :2025/05/25 13:52:19
 @author :YenochQin (秦毅)
+@description: 处理target_pool_file的数据预处理，包括描述符计算和CSFs数据保存
 '''
 
 import argparse
-import logging
-from types import SimpleNamespace
-import os
 from pathlib import Path
 import sys
-import math
-import numpy as np
-import pandas as pd
-import tomllib
 
 sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
 try:
@@ -24,26 +18,25 @@ except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
 
-def main(config):
-    """主程序逻辑"""
+def process_target_pool_csfs(config):
+    """
+    处理target_pool CSFs数据：计算描述符、保存二进制文件、生成哈希校验
+    
+    Args:
+        config: 配置对象
+        
+    Returns:
+        dict: 包含selected_csfs_indices_dict的结果字典
+    """
     logger = gdp.setup_logging(config)
-    logger.info("CSFs选择程序启动")
-    logger.info(f'计算循环次数: {config.cal_loop_num}')
-
-    # 使用 pathlib 创建目录
+    logger.info("Target Pool CSFs 数据预处理启动")
+    
     root_path = Path(config.root_path)
-    
-    cal_path = root_path.joinpath(f'{config.conf}_{config.cal_loop_num}')
-    
-    # 确保输出目录存在
-    cal_path.mkdir(exist_ok=True)
-
-    logger.info(f"初始比例: {config.initial_ratio}")
-    logger.info(f"光谱项: {config.spetral_term}")
-    
     target_pool_file_path = root_path.joinpath(config.target_pool_file)
+    
+    # 验证target_pool_file
     try:
-        if not target_pool_file_path.is_file():  # 检查是否是有效文件
+        if not target_pool_file_path.is_file():
             logger.error(f"初始CSFs文件无效或不存在: {target_pool_file_path}")
             raise FileNotFoundError(f"初始CSFs文件无效或不存在: {target_pool_file_path}")
         logger.info(f"成功加载初始CSFs文件: {target_pool_file_path}")
@@ -53,97 +46,104 @@ def main(config):
     except Exception as e:
         logger.error(f"加载CSFs文件时发生未知错误: {str(e)}")
         raise
+
+    # 步骤1：加载和处理target_pool CSFs
+    target_pool_csfs_load = gdp.GraspFileLoad.from_filepath(target_pool_file_path, file_type='CSF')
+    target_pool_csfs_data = target_pool_csfs_load.data_file_process()
+    logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 读取成功")
     
-    if config.cal_loop_num == 1:
+    # 步骤2：计算描述符
+    descriptors_array, labels_array = gdp.batch_process_csfs_with_multi_block(
+        target_pool_csfs_data, 
+        label_type='sequential'
+    )
+    logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符计算成功")
 
-        target_pool_csfs_load = gdp.GraspFileLoad.from_filepath(target_pool_file_path, file_type='CSF')
-        target_pool_csfs_data = target_pool_csfs_load.data_file_process()
+    # 步骤3：保存描述符
+    target_pool_path = root_path.joinpath(config.conf)
+    gdp.save_descriptors_with_multi_block(descriptors_array, labels_array, target_pool_path, 'npy')
+    logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符保存成功")
+
+    # 步骤4：保存CSFs二进制文件
+    gdp.save_csfs_binary(target_pool_csfs_data, target_pool_path)
+    logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 保存成功")
+    
+    # 步骤5：处理selected_csfs_file（如果存在）
+    selected_csfs_indices_dict = {}
+    
+    if hasattr(config, 'selected_csfs_file') and config.selected_csfs_file:
+        # 生成哈希校验文件
+        gdp.precompute_large_hash(target_pool_csfs_data.CSFs_block_data, target_pool_path.with_suffix('.pkl'))
+        logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 哈希校验文件保存成功")
         
-        logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 读取成功")
+        target_pool_csfs_hash_file = target_pool_path.with_suffix('.pkl')
         
-        descriptors_array, labels_array = gdp.batch_process_csfs_with_multi_block(target_pool_csfs_data, label_type='sequential')
-        logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符计算成功")
-
-        target_pool_path = root_path.joinpath(config.conf)
-
-        gdp.save_descriptors_with_multi_block(descriptors_array, labels_array, target_pool_path, 'npy')
-        logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符保存成功")
-
-        gdp.save_csfs_binary(target_pool_csfs_data, target_pool_path)
-        logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 保存成功")
+        # 加载selected CSFs
+        selected_csfs_file_path = root_path.joinpath(config.selected_csfs_file)
+        selected_csfs_load = gdp.GraspFileLoad.from_filepath(selected_csfs_file_path, file_type='CSF')
+        selected_csfs_data = selected_csfs_load.data_file_process()
+        logger.info(f"已选择CSFs文件{config.selected_csfs_file} CSFs 读取成功")
         
-        if hasattr(config, 'selected_csfs_file') and config.selected_csfs_file:
-
-            # 在if判断里生成总CSFs池的哈希值的原因是如果有selected_csfs_file，则需要将selected_csfs_file的CSFs与总CSFs池的CSFs索引进行映射
-            gdp.precompute_large_hash(target_pool_csfs_data.CSFs_block_data, target_pool_path.with_suffix('.pkl'))
-            logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 哈希校验文件保存成功")
-            
-            target_pool_csfs_hash_file = target_pool_path.with_suffix('.pkl')
-            
-            selected_csfs_file_path = root_path.joinpath(config.selected_csfs_file)
-            selected_csfs_load = gdp.GraspFileLoad.from_filepath(selected_csfs_file_path, file_type='CSF')
-            selected_csfs_data = selected_csfs_load.data_file_process()
-            logger.info(f"已选择CSFs文件{config.target_pool_file} CSFs 读取成功")
-            
-            if hasattr(config, 'selected_selected_csfs_mix_filecsfs_file') and config.selected_csfs_mix_file:
-                selected_csfs_mix_coefficient_file = root_path.joinpath(config.selected_csfs_mix_file)
-                selected_csfs_mix_coefficient_load = gdp.GraspFileLoad.from_filepath(selected_csfs_mix_coefficient_file, file_type='mix')
-                selected_csfs_mix_coefficient_data = selected_csfs_mix_coefficient_load.data_file_process()
-                logger.info(f"已选择CSFs文件{config.selected_csfs_file} CSFs 混合系数文件读取成功")
-                selected_csf_mix_coeff_squared_sum = np.sum(selected_csfs_mix_coefficient_data.mix_coefficient_List[0]**2, axis=0)
-                this_loop_selected_csfs_indices = np.where(selected_csf_mix_coeff_squared_sum >= np.float64(config.cutoff_value))[0]
-                selected_csfs_data.CSFs_block_data = selected_csfs_data.CSFs_block_data[this_loop_selected_csfs_indices]
-            selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
-                selected_csfs_data.CSFs_block_data, 
-                target_pool_csfs_hash_file
+        # 处理混合系数文件（如果存在）
+        if hasattr(config, 'selected_csfs_mix_file') and config.selected_csfs_mix_file:
+            selected_csfs_mix_coefficient_file = root_path.joinpath(config.selected_csfs_mix_file)
+            selected_csfs_mix_coefficient_load = gdp.GraspFileLoad.from_filepath(
+                selected_csfs_mix_coefficient_file, 
+                file_type='mix'
             )
-            logger.info(f"已选择CSFs文件{config.target_pool_file} CSFs 索引映射成功")
             
-        else:
-            selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
-    else:
-        target_pool_csfs_data = gdp.load_csfs_binary(target_pool_file_path)
-        logger.info(f"初始CSFs文件{target_pool_file_path} CSFs 读取成功")
-        previous_cal_path = root_path.joinpath(f'{config.conf}_{config.cal_loop_num-1}')
-        selected_csfs_indices_dict = gdp.csfs_index_load(previous_cal_path.joinpath(f'{config.conf}_{config.cal_loop_num-1}_chosen_indices'))
-
+            selected_csfs_mix_coefficient_data = selected_csfs_mix_coefficient_load.data_file_process()
+            logger.info(f"已选择CSFs文件{config.selected_csfs_file} CSFs 混合系数文件读取成功")
+            
+            # 根据阈值筛选
+            selected_csfs_mix_coeff_above_threshold_indices = gdp.batch_asfs_mix_square_above_threshold(
+                selected_csfs_mix_coefficient_data, 
+                threshold=config.cutoff_value
+            )
+            
+            selected_csfs_data.CSFs_block_data = selected_csfs_data.CSFs_block_data[
+                selected_csfs_mix_coeff_above_threshold_indices[0]
+            ]
+            
+        # 映射CSFs索引
+        selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
+            selected_csfs_data.CSFs_block_data, 
+            target_pool_csfs_hash_file
+        )
+        logger.info(f"已选择CSFs文件{config.selected_csfs_file} CSFs 索引映射成功")
         
+    else:
+        # 初始化空的indices_dict
+        selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
+    
+    logger.info("Target Pool CSFs 数据预处理完成")
+    
+    return {
+        'selected_csfs_indices_dict': selected_csfs_indices_dict,
+        'target_pool_csfs_data': target_pool_csfs_data,
+        'logger': logger
+    }
 
-    chosen_csfs_indices_dict = {}
-    chosen_csfs_dict = {}
-    unselected_indices_dict = {}
-
-    for block in range(target_pool_csfs_data.block_num):
-        # 计算每个块的初始采样数量
-        chosen_csfs_dict[block], chosen_csfs_indices_dict[block], unselected_indices_dict[block] = gdp.radom_choose_csfs(target_pool_csfs_data.CSFs_block_data[block], config.initial_ratio, selected_csfs_indices_dict[block])
-    
-    chosen_csfs_list = [value for key, value in chosen_csfs_dict.items()] ## 这里是临时的chosen_csfs_dict[0]
-    ## CSFs_file_info: List, sorted_CSFs_data_list: List, output_file: str
-    gdp.write_sorted_CSFs_to_cfile(
-                                    target_pool_csfs_data.subshell_info_raw,
-                                    chosen_csfs_list,
-                                    cal_path.joinpath(f'{config.conf}_{config.cal_loop_num}.c')
-    )
-    logger.info(f"CSFs选择完成，保存到文件{config.conf}_{config.cal_loop_num}.c")
-    
-    gdp.csfs_index_storange(
-                            chosen_csfs_indices_dict,
-                            cal_path.joinpath(f'{config.conf}_{config.cal_loop_num}_chosen_indices')
-    )
-    logger.info(f"已选择CSFs的索引保存到文件{config.conf}_{config.cal_loop_num}_chosen_indices.pkl")
-    
-    gdp.csfs_index_storange(
-                            unselected_indices_dict,
-                            cal_path.joinpath(f'{config.conf}_{config.cal_loop_num}_unselected_indices')
-    )
-    logger.info(f"未选择CSFs的索引保存到文件{config.conf}_{config.cal_loop_num}_unselected_indices.pkl")
-    
-    logger.info("组态筛选完成")
-
+def main(config):
+    """主程序逻辑"""
+    try:
+        result = process_target_pool_csfs(config)
+        print("✅ Target Pool CSFs 数据预处理成功完成")
+        print(f"📊 处理的block数量: {result['target_pool_csfs_data'].block_num}")
+        print(f"📁 输出路径: {Path(config.root_path) / config.conf}")
+        
+        # 保存selected_csfs_indices_dict供后续使用
+        selected_indices_file = Path(config.root_path) / f"{config.conf}_selected_indices.pkl"
+        gdp.csfs_index_storange(result['selected_csfs_indices_dict'], selected_indices_file)
+        print(f"💾 Selected indices已保存: {selected_indices_file}")
+        
+    except Exception as e:
+        print(f"❌ Target Pool CSFs 数据预处理失败: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     # 解析命令行参数
-    parser = argparse.ArgumentParser(description='机器学习训练程序')
+    parser = argparse.ArgumentParser(description='Target Pool CSFs 数据预处理程序')
     parser.add_argument('--config', type=str, default='config.toml', help='配置文件路径')
     args = parser.parse_args()
     

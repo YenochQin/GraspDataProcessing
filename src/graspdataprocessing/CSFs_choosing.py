@@ -87,7 +87,7 @@ def single_asf_mix_square_above_threshold(asf_mix_data_array: np.ndarray, thresh
     # 返回索引元组列表
     return [(idx,) for idx in sorted_indices]
 
-def batch_asfs_mix_square_above_threshold(asfs_mix_data, threshold: float = 0.1) -> Dict[int, np.ndarray]:
+def batch_asfs_mix_square_above_threshold(asfs_mix_data: MixCoefficientData, threshold: float = 0.1) -> Dict[int, np.ndarray]:
     """
     批量处理多个块的混合系数数据，找出每个块中所有层级中超过阈值的系数索引
     

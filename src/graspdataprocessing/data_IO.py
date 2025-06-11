@@ -804,12 +804,33 @@ def precompute_large_hash(
     # 转换为Path对象
     save_path = Path(save_path)
     
+    # 计算总的CSF数量以提供更有意义的进度信息
+    total_csfs = sum(len(block_data) for block_data in large_data)
+    print(f"开始计算哈希映射 - 总计 {total_csfs} 个CSFs, {len(large_data)} 个blocks")
+    
     large_hash = {}
-    for block_idx, block_data in tqdm(enumerate(large_data), total=len(large_data), desc="计算哈希映射"):
-        large_hash[block_idx] = {
-            ''.join(item for sublist in csf for item in sublist): idx
-            for idx, csf in enumerate(block_data)
-        }
+    processed_csfs = 0
+    
+    # 使用tqdm显示CSF级别的进度
+    with tqdm(total=total_csfs, desc="计算哈希映射", unit="CSFs") as pbar:
+        for block_idx, block_data in enumerate(large_data):
+            # 显示当前处理的block信息
+            pbar.set_postfix({
+                'block': f"{block_idx+1}/{len(large_data)}", 
+                'block_size': len(block_data)
+            })
+            
+            # 为当前block构建哈希映射
+            block_hash = {}
+            for idx, csf in enumerate(block_data):
+                csf_str = ''.join(item for sublist in csf for item in sublist)
+                block_hash[csf_str] = idx
+                processed_csfs += 1
+                pbar.update(1)
+            
+            large_hash[block_idx] = block_hash
+    
+    print(f"哈希映射计算完成 - 处理了 {processed_csfs} 个CSFs")
     
     with open(save_path, "wb") as f:
         pickle.dump(large_hash, f)

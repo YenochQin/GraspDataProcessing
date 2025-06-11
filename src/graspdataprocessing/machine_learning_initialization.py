@@ -42,22 +42,39 @@ def setup_directories(config):
     
     return '目录创建成功'
 
-def initialize_results_file(config, logger):
-    """初始化结果CSV文件"""
-    result_csv_path = config.root_path / 'results' / 'results.csv'
-    try:
-        if not result_csv_path.exists():
-            with result_csv_path.open(mode="w", newline="") as file:
-                writer = csv.writer(file)
-                writer.writerow([
-                    'training_time', 'eval_time', 'abinitio_time', 'all_time',
-                    'f1', 'roc_auc', 'accuracy', 'precision', 'recall',
-                    'Es', 'abimport_csfnum', 'MLimport_csfnum', 'MLsampling_ratio', 'next_itr_num',
-                    'weight', 'f1_train', 'roc_auc_train', 'accuracy_train', 'precision_train', 'recall_train'
-                ])
-    except IOError as e:
-        logger.error(f"无法创建结果文件 {result_csv_path}: {str(e)}")
-        raise
+def initialize_iteration_results_csv(config, logger=None):
+    """
+    初始化迭代结果CSV文件的表头
+    
+    Args:
+        config: 配置对象
+        logger: 日志记录器
+    """
+    results_file = Path(config.root_path) / 'results' / 'iteration_results.csv'
+    
+    # 如果文件已存在，不重新创建表头
+    if results_file.exists():
+        if logger:
+            logger.info(f"迭代结果文件已存在: {results_file}")
+        return
+    
+    # 创建目录
+    results_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # 写入表头
+    headers = [
+        'training_time', 'eval_time', 'execution_time', 'total_time',
+        'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
+        'Es_term', 'import_count', 'stay_count', 'MLsampling_ratio', 'chosen_count', 'weight',
+        'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall'
+    ]
+    
+    with open(results_file, mode="w", newline="", encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+    
+    if logger:
+        logger.info(f"初始化迭代结果CSV文件: {results_file}")
 
 def validate_initial_files(config, logger) -> None:
     """验证初始文件的存在和有效性"""
