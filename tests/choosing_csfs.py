@@ -11,7 +11,8 @@ import argparse
 from pathlib import Path
 import sys
 
-sys.path.append('/home/workstation3/AppFiles/GraspDataProcessing/src')
+sys.path.append('/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/src')
+
 try:
     import graspdataprocessing as gdp
 except ImportError:
@@ -20,7 +21,8 @@ except ImportError:
 
 def load_target_pool_data(config):
     """
-    加载target_pool数据，支持从预处理文件或原始文件加载
+    加载target_pool数据，从预处理文件中加载
+    注意：预处理工作已在initial_csfs.py中完成
     
     Args:
         config: 配置对象
@@ -31,36 +33,27 @@ def load_target_pool_data(config):
     logger = gdp.setup_logging(config)
     root_path = Path(config.root_path)
     
-    # 检查是否存在预处理的数据
+    # 加载预处理的数据
     target_pool_binary_path = root_path / f"{config.conf}.pkl"
     selected_indices_path = root_path / f"{config.conf}_selected_indices.pkl"
     
-    if target_pool_binary_path.exists():
-        # 使用预处理的数据
-        logger.info("发现预处理数据，直接加载...")
-        target_pool_csfs_data = gdp.load_csfs_binary(target_pool_binary_path)
-        logger.info(f"从二进制文件加载CSFs数据: {target_pool_binary_path}")
-        
-        if selected_indices_path.exists():
-            selected_csfs_indices_dict = gdp.csfs_index_load(selected_indices_path)
-            logger.info(f"加载初筛CSFs indices: {selected_indices_path}")
-        else:
-            # 如果没有selected indices，创建空的
-            selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
-            logger.info("未找到初筛CSFs indices文件，使用空的indices")
-            
+    if not target_pool_binary_path.exists():
+        logger.error(f"未找到预处理的CSFs数据文件: {target_pool_binary_path}")
+        logger.error("请先运行 initial_csfs.py 进行数据预处理")
+        raise FileNotFoundError(f"预处理文件不存在: {target_pool_binary_path}")
+    
+    # 加载CSFs数据
+    target_pool_csfs_data = gdp.load_csfs_binary(target_pool_binary_path)
+    logger.info(f"从二进制文件加载CSFs数据: {target_pool_binary_path}")
+    
+    # 加载selected indices
+    if selected_indices_path.exists():
+        selected_csfs_indices_dict = gdp.csfs_index_load(selected_indices_path)
+        logger.info(f"加载初筛CSFs indices: {selected_indices_path}")
     else:
-        # 需要重新处理原始数据
-        logger.warning("未找到预处理数据，建议先运行 initial_csfs.py 进行数据预处理")
-        logger.info("正在从原始文件加载...")
-        
-        target_pool_file_path = root_path / config.target_pool_file
-        target_pool_csfs_load = gdp.GraspFileLoad.from_filepath(target_pool_file_path, file_type='CSF')
-        target_pool_csfs_data = target_pool_csfs_load.data_file_process()
-        logger.info(f"从原始文件加载CSFs数据: {target_pool_file_path}")
-        
-        # 创建空的selected indices
+        # 如果没有selected indices，创建空的
         selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
+        logger.info("未找到初筛CSFs indices文件，使用空的indices")
     
     return target_pool_csfs_data, selected_csfs_indices_dict, logger
 
