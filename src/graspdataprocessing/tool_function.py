@@ -8,8 +8,9 @@
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
+from tqdm import tqdm
+from .data_modules import CSFs
 ######################################################################
 
 '''
@@ -84,7 +85,7 @@ def int_nl_2_str_nl(n: int, kappa: int) -> str:
         str_nl = f"{n}{l_list[l]}-"
     elif kappa < 0:
         l = -kappa - 1
-        str_nl = f"{n}{l_list[l]}"
+        str_nl = f"{n}{l_list[l]} "
     else:
         print("error: kappa should not be zero")
     
@@ -98,18 +99,22 @@ def str_subshell_2_kappa(str_subshell: str) -> int:
     '''
     kappa_value = {
         "s ": -1,
-        "p-": 1,
+        "p-":  1,
         "p ": -2,
-        "d-": 2,
+        "d-":  2,
         "d ": -3,
-        "f-": 3,
+        "f-":  3,
         "f ": -4,
-        "g-": 4,
+        "g-":  4,
         "g ": -5,
-        "h-": 5,
+        "h-":  5,
         "h ": -6,
-        "i-": 6,
-        "i ": -7
+        "i-":  6,
+        "i ": -7,
+        "j-":  7,
+        "j ": -8,
+        "k-":  8,
+        "k ": -9
     }
 
     return kappa_value.get(str_subshell, 0)
@@ -205,3 +210,15 @@ def read_fortran_record(file, dtype, count=1):
         raise ValueError(f"Record length mismatch: {record_len_before} != {record_len_after}")
     
     return data
+
+
+######################################################################
+
+def chunk_string(s: str, n: int) -> list[str]:
+    """将字符串分割成固定长度的块"""
+    return [s[i:i+n] for i in range(0, len(s), n)]
+
+######################################################################
+
+
+######################################################################

@@ -1,0 +1,11 @@
+{
+    "block": 1,
+    "difference": 0,
+    "cutoff_value": 1e-7,
+    "initial_ratio": 0.06,
+    "expansion_ratio": 2,
+    "conf": "5d6s2",
+    "target_pool_file": "5d6s2_10.c",
+    "original_path": "/home/workstation1/8thdd/recode_mlsci/mlsciscript_rerun",
+    "spetral_term": ["5s(2).5p(6).4f(14)1S1_1S.6s(2).5d_2D"]
+}

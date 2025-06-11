@@ -1,0 +1,33 @@
+# 原子体系配置
+atom = "GdI"
+conf = "cv4odd1as3_odd4"
+
+# 光谱项配置
+spetral_term = [
+    "5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_9D",
+    "5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D"
+]
+
+# 计算配置
+cal_loop_num = 1
+difference = 0
+cutoff_value = 1e-9
+initial_ratio = 0.09
+expansion_ratio = 2
+target_pool_file = "cv4odd1as3_odd4.c"
+root_path = "D:\\PythonProjects\\as3_odd4"
+# root_path = "D:\\PythonPrograms\\as3_odd4"
+# root_path = "/Users/yiqin/Documents/PythonProjects/as3_odd4"
+
+selected_csfs_file = "mJ-1-90chosenas3_odd4.c"
+## selected_csfs_index_file = "selected_csfs_index.msgpack"
+
+# 模型参数
+[model_params]
+n_estimators = 1000
+random_state = 42
+
+[model_params.class_weight]
+0 = 1
+1 = 3
+
