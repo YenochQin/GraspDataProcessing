@@ -163,6 +163,11 @@ def perform_csfs_selection(config):
     logger.info(f"未选择CSFs的索引保存到: {unselected_indices_file}.pkl")
     
     logger.info("组态筛选完成")
+    total_chosen = sum(len(csfs) for csfs in chosen_csfs_dict.values())
+    total_unselected = sum(len(indices) for indices in unselected_indices_dict.values())
+    logger.info(f"🔄 计算轮次: {config.cal_loop_num}")
+    logger.info(f"📊 选择的CSFs数量: {total_chosen}")
+    logger.info(f"📊 未选择的CSFs数量: {total_unselected}")
     
     return {
         'chosen_csfs_dict': chosen_csfs_dict,
@@ -178,15 +183,7 @@ def main(config):
     """主程序逻辑"""
     try:
         result = perform_csfs_selection(config)
-        
-        # 统计信息
-        total_chosen = sum(len(csfs) for csfs in result['chosen_csfs_dict'].values())
-        total_unselected = sum(len(indices) for indices in result['unselected_indices_dict'].values())
-        
-        print("✅ 组态选择成功完成")
-        print(f"🔄 计算轮次: {config.cal_loop_num}")
-        print(f"📊 选择的CSFs数量: {total_chosen}")
-        print(f"📊 未选择的CSFs数量: {total_unselected}")
+
         print(f"📁 输出.c文件: {result['output_c_file']}")
         print(f"📁 输出目录: {result['cal_path']}")
         
@@ -195,6 +192,7 @@ def main(config):
     except Exception as e:
         print(f"❌ 组态选择失败: {str(e)}")
         raise
+
 
 if __name__ == "__main__":
     # 解析命令行参数
