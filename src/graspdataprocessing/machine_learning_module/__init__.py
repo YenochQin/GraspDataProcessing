@@ -7,5 +7,52 @@
 '''
 
 from .ANN import ANNClassifier
-from .machine_learning_initialization import *
-from .machine_learning_training import *
+from .machine_learning_initialization import (
+    setup_logging,
+    setup_directories,
+    initialize_iteration_results_csv,
+    validate_initial_files,
+    load_data_files,
+    check_configuration_coupling,
+    generate_chosen_csfs_descriptors,
+    get_stay_descriptors
+)
+
+
+from .machine_learning_training import (
+    train_model,
+    evaluate_model,
+    save_convergence_results,
+    save_iteration_results,
+    check_energy_convergence,
+    check_convergence,
+    handle_calculation_error,
+    get_unselected_descriptors,
+    save_and_plot_results
+)
+
+__all__ = [
+    # ANN
+    'ANNClassifier',
+    
+    # machine_learning_initialization
+    'setup_logging',
+    'setup_directories',
+    'initialize_iteration_results_csv',
+    'validate_initial_files',
+    'load_data_files',
+    'check_configuration_coupling',
+    'generate_chosen_csfs_descriptors',
+    'get_stay_descriptors',
+    
+    # machine_learning_training
+    'train_model',
+    'evaluate_model',
+    'save_convergence_results',
+    'save_iteration_results',
+    'check_energy_convergence',
+    'check_convergence',
+    'handle_calculation_error',
+    'get_unselected_descriptors',
+    'save_and_plot_results'
+]

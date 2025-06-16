@@ -627,7 +627,7 @@ def handle_calculation_error(config, logger):
         return
 
 
-def get_stay_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_dict: Dict[int, List[int]]) -> np.ndarray:
+def get_unselected_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_dict: Dict[int, List[int]]) -> np.ndarray:
     """
     找出不在chosen_csfs_indices_dict索引中的描述符
     
@@ -648,10 +648,10 @@ def get_stay_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_d
     all_indices = set(range(len(raw_csfs_descriptors)))
     
     # 找出不在chosen_indices中的索引
-    stay_indices = list(all_indices - chosen_indices)
+    unselected_indices = list(all_indices - chosen_indices)
     
     # 返回对应的描述符
-    return raw_csfs_descriptors[stay_indices]
+    return raw_csfs_descriptors[unselected_indices]
 
 def save_and_plot_results(evaluation_results, model, config, 
                          save_model: bool = True,
