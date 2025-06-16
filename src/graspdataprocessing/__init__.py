@@ -31,11 +31,49 @@ from .data_IO import (
 
 from .utils import (
     MixCoefficientData,
-    CSFs
+    CSFs,
+    level_print_title,
+    level_J_value,
+    level_parity,
+    energy_au_cm,
+    align_2d_list_columns,
+    int_nl_2_str_nl,
+    str_subshell_2_kappa,
+    doubleJ_to_J,
+    lsj_transition_data_level_location,
+    transition_data_level_location,
+    transition_dT_cal,
+    read_fortran_record,
+    chunk_string,
+    level_data_compare
 )
 
 from .CSFs_choosing import (
-    CSF_item_2_dict
+    batch_asfs_mix_square_above_threshold,
+    asf_mix_square_above_threshold_coupling_info,
+    CSFs_block_get_CSF,
+    batch_blocks_csfs_final_coupling_J_collection,
+    single_asf_csfs_final_coupling_J_mix_coefficient_sum,
+    single_block_batch_asfs_CSFs_final_coupling_J_collection,
+    batch_blocks_CSFs_final_coupling_J_mix_coefficient_sum,
+    block_csfs_coupling_J_chosen,
+    union_lists_with_order,
+    merge_multiple_dicts_with_ordered_union,
+    merge_csfs_indices_lists_by_block_key,
+    CSFs_sort_by_mix_coefficient,
+    generate_unique_random_numbers,
+    radom_choose_csfs,
+    process_block,
+    maping_two_csfs_indices,
+    csf_J,
+    J_to_doubleJ,
+    CSF_info_2_dict,
+    CSF_item_2_dict,
+    get_CSFs_file_info,
+    
+    batch_process_csfs_to_descriptors,
+    batch_process_csfs_with_multi_block,
+    create_csf_dataset_for_ml
 )
 
 from .processing import (
@@ -54,7 +92,24 @@ from .processing import (
 )
 
 from .machine_learning_module import (
-    ANNClassifier
+    ANNClassifier,
+    setup_logging,
+    setup_directories,
+    initialize_iteration_results_csv,
+    validate_initial_files,
+    load_data_files,
+    check_configuration_coupling,
+    generate_chosen_csfs_descriptors,
+    get_stay_descriptors,
+    train_model,
+    evaluate_model,
+    save_convergence_results,
+    save_iteration_results,
+    check_energy_convergence,
+    check_convergence,
+    handle_calculation_error,
+    get_unselected_descriptors,
+    save_and_plot_results
 )
 
 __all__ = [
@@ -87,9 +142,50 @@ __all__ = [
     # utils
     'MixCoefficientData',
     'CSFs',
-    
+    # 工具函数
+    'level_print_title',
+    'level_J_value',
+    'level_parity',
+    'energy_au_cm',
+    'align_2d_list_columns',
+    'int_nl_2_str_nl',
+    'str_subshell_2_kappa',
+    'doubleJ_to_J',
+    'lsj_transition_data_level_location',
+    'transition_data_level_location',
+    'transition_dT_cal',
+    'read_fortran_record',
+    'chunk_string',
+    'level_data_compare',
+
     # CSFs_choosing
+    ## CSFs_choosing
+    'batch_asfs_mix_square_above_threshold',
+    'asf_mix_square_above_threshold_coupling_info',
+    'CSFs_block_get_CSF',
+    'batch_blocks_csfs_final_coupling_J_collection',
+    'single_asf_csfs_final_coupling_J_mix_coefficient_sum',
+    'single_block_batch_asfs_CSFs_final_coupling_J_collection',
+    'batch_blocks_CSFs_final_coupling_J_mix_coefficient_sum',
+    'block_csfs_coupling_J_chosen',
+    'union_lists_with_order',
+    'merge_multiple_dicts_with_ordered_union',
+    'merge_csfs_indices_lists_by_block_key',
+    'CSFs_sort_by_mix_coefficient',
+    'generate_unique_random_numbers',
+    'radom_choose_csfs',
+    'process_block',
+    'maping_two_csfs_indices',
+    
+    ## CSFs_compress_extract
+    'csf_J',
+    'J_to_doubleJ',
+    'CSF_info_2_dict',
     'CSF_item_2_dict',
+    'get_CSFs_file_info',
+    'batch_process_csfs_to_descriptors',
+    'batch_process_csfs_with_multi_block',
+    'create_csf_dataset_for_ml',
     
     # processing
     'ConfigurationFormat',
@@ -103,5 +199,28 @@ __all__ = [
     'LSJTransitionDataCollection',
     'LSJTransitionDataBlock',
     'TransitionDataBlock',
-    'data_process'
+    'data_process',
+    
+    # machine_learning_module
+    ## ANN
+    'ANNClassifier',
+    ## machine_learning_initialization
+    'setup_logging',
+    'setup_directories',
+    'initialize_iteration_results_csv',
+    'validate_initial_files',
+    'load_data_files',
+    'check_configuration_coupling',
+    'generate_chosen_csfs_descriptors',
+    'get_stay_descriptors',
+    ## machine_learning_training
+    'train_model',
+    'evaluate_model',
+    'save_convergence_results',
+    'save_iteration_results',
+    'check_energy_convergence',
+    'check_convergence',
+    'handle_calculation_error',
+    'get_unselected_descriptors',
+    'save_and_plot_results'
 ]
