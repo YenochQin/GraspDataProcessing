@@ -8,6 +8,7 @@
 
 import numpy as np
 import pandas as pd
+from typing import Dict, Tuple, List, Optional, Union
 
 from tqdm import tqdm
 from .data_modules import CSFs
@@ -153,8 +154,8 @@ def lsj_transition_data_level_location(transition_data_df : pd.DataFrame, level_
         print(row['Lower_J'], row["Lower_configuration"])
         temp_lower_index = get_level_index(row['Lower_J'], row['Lower_configuration'], level_df)
 
-        transition_data_df.loc[index, 'Upper_level_location'] = temp_upper_index + 1
-        transition_data_df.loc[index, 'Lower_level_location'] = temp_lower_index + 1
+        transition_data_df.at[index, 'Upper_level_location'] = temp_upper_index + 1
+        transition_data_df.at[index, 'Lower_level_location'] = temp_lower_index + 1
     return transition_data_df
 
 
@@ -173,8 +174,8 @@ def transition_data_level_location(transition_data_df : pd.DataFrame, level_df :
         temp_upper_index = level_df[(level_df["Pos"] == row["Upper_loc"]) & (level_df["J"] == row["Upper_J"]) & (level_df["Parity"] == row["Upper_parity"])].index.values[0]
         # print(row["Lower_loc"], row["Lower_J"], row["Lower_parity"])
         temp_lower_index = level_df[(level_df["Pos"] == row["Lower_loc"]) & (level_df["J"] == row["Lower_J"]) & (level_df["Parity"] == row["Lower_parity"])].index.values[0]
-        transition_data_df.loc[index, 'Upper_level_location'] = temp_upper_index + 1
-        transition_data_df.loc[index, 'Lower_level_location'] = temp_lower_index + 1
+        transition_data_df.at[index, 'Upper_level_location'] = temp_upper_index + 1
+        transition_data_df.at[index, 'Lower_level_location'] = temp_lower_index + 1
 
     return transition_data_df
 
@@ -220,5 +221,31 @@ def chunk_string(s: str, n: int) -> list[str]:
 
 ######################################################################
 
+def level_data_compare(levels_file_1: List, levels_file_2: List):
+    
+    level_data_1 = []
+    level_data_2 = []
+    skip_line = 0
+    for i, line in enumerate(levels_file_1):  # 使用enumerate获取行号
+        if 'No Pos  J'in line:
+            skip_line = i + 3
+            break
+    level_data_1 = levels_file_1[skip_line:]
+    for i, line in enumerate(levels_file_2):  # 使用enumerate获取行号
+        if 'No Pos  J'in line:
+            skip_line = i + 3
+            break
+    level_data_2 = levels_file_2[skip_line:]
+    
+    if len(level_data_1)!= len(level_data_2):
+        raise ValueError('The number of levels is not equal!')
+    
+    for i, (line1, line2) in enumerate(zip(level_data_1, level_data_2)):
+        if not line1 or not line2:  # 跳过空行
+            continue
+        if line1.split()[-1] != line2.split()[-1]:
+            raise ValueError(f'Configuration state functions differ at line {i+1}')
+        
+    return True
 
 ######################################################################

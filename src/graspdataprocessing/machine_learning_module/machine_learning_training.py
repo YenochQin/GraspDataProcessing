@@ -26,10 +26,10 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-from .CSFs_choosing import batch_asfs_mix_square_above_threshold
+
 from .ANN import ANNClassifier
-from .data_modules import MixCoefficientData
-from .data_IO import write_sorted_CSFs_to_cfile, update_config
+from ..utils.data_modules import MixCoefficientData
+from ..data_IO.produced_data_write import  update_config
 
 def train_model(
                 config, 

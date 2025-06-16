@@ -8,14 +8,12 @@
 @version 1.0: Object Oriented Programming modified from level_data_collection.py
 '''
 import re
-
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
 from pathlib import Path
-from tqdm import tqdm
 
-from .data_IO import GraspFileLoad, EnergyFile2csv
+from ..data_IO.grasp_raw_data_load import GraspFileLoad, EnergyFile2csv
 
 #######################################################################
 class ConfigurationFormat:
@@ -186,7 +184,7 @@ def mcdhf_energy_data_collection(data_file_info, a_s_list):
     return energy_data
 
 
-def ci_energy_data_collection(energy_data: None, data_file_info: dict):
+def ci_energy_data_collection(energy_data: pd.DataFrame | None, data_file_info: dict):
     """
     This function is used to collect single energy levels data or merge energy levels data from ci calculation.
     """
@@ -211,7 +209,11 @@ class LevelsASFComposition:
         self.min_comp = min_comp
         self.data_file_info["f_type"] = "lsj_lbl"
         self.data_file_load = GraspFileLoad(self.data_file_info)
-        self.lsj_lbl_data, self.level_loc_lbl = self.data_file_load.data_file_process()
+        result = self.data_file_load.data_file_process()
+        if isinstance(result, tuple) and len(result) == 2:
+            self.lsj_lbl_data, self.level_loc_lbl = result
+        else:
+            raise ValueError("Expected tuple of (lsj_lbl_data, level_loc_lbl) from data_file_process")
 
     def level_composition_unit_format(self):
         self.cut_off_subshell = self.data_file_info["cut_off_subshell"]
@@ -278,9 +280,11 @@ def asf_radial_wavefunction_collection(data_file_info: dict) -> pd.DataFrame:
     return the data as a DataFrame.
     '''
     data_file_load = GraspFileLoad(data_file_info)
-    asf_radial_wavefunction_data = data_file_load.data_file_process()
-
-    return asf_radial_wavefunction_data
+    result = data_file_load.data_file_process()
+    if isinstance(result, pd.DataFrame):
+        return result
+    else:
+        raise ValueError("Expected DataFrame from data_file_process")
 
 #######################################################################
 
@@ -290,7 +294,11 @@ class RadialElectrondensityFunction:
     def __init__(self, data_file_info: dict):
         self.data_file_info = data_file_info
         self.data_file_load = GraspFileLoad(self.data_file_info)
-        self.radial_electron_density_data = self.data_file_load.data_file_process()
+        result = self.data_file_load.data_file_process()
+        if isinstance(result, list):
+            self.radial_electron_density_data = result
+        else:
+            raise ValueError("Expected list from data_file_process")
         self.radial_electron_density_data_df = pd.DataFrame(columns=['r', 'D(r)', 'rho(r)'])
         
     def density_data_collection(self):

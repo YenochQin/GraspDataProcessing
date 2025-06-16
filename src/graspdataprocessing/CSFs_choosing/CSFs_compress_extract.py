@@ -8,14 +8,11 @@
 import random
 import re
 from typing import Dict, Tuple, List, Optional
-
 import numpy as np
-import pandas as pd
-
 from tqdm import tqdm
 
-from .tool_function import *
-from .data_modules import CSFs
+from ..utils.tool_function import *
+from ..utils.data_modules import CSFs
 
 #######################################################################
 # CSFs source data compress to a simplified form

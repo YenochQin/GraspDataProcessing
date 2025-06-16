@@ -15,15 +15,19 @@ import pandas as pd
 
 from tqdm import tqdm
 
-from .data_IO import GraspFileLoad
-from .tool_function import transition_dT_cal, doubleJ_to_J
+from ..data_IO.grasp_raw_data_load import GraspFileLoad
+from ..utils.tool_function import transition_dT_cal, doubleJ_to_J
 
 class TransitionDataCollection:
     def __init__(self, data_file_info: dict):
         self.data_file_info = data_file_info
         self.file_type = data_file_info.get('file_type')
 
-        self.transition_data_list = GraspFileLoad(self.data_file_info).data_file_process()
+        result = GraspFileLoad(self.data_file_info).data_file_process()
+        if isinstance(result, list):
+            self.transition_data_list = result
+        else:
+            raise ValueError("Expected list from data_file_process")
 
     def transition_type_check(self, transition_type_line):
         transition_type_match = re.match(r'([A-Za-z]*) 2\*\*\( ([0-9])\)-pole transitions', transition_type_line)
@@ -85,6 +89,7 @@ class TransitionDataCollection:
         self.trans_data_line_location()
         for i in tqdm(range(len(self.transition_data_type_line_index))):
             temp_transition_type = TransitionDataCollection.transition_type_check(self, self.transition_data_list[self.transition_data_type_line_index[i]])
+            trans_data_block_step = 2  # 默认值
             if "E" in temp_transition_type:
                 trans_data_block_step = 2
             elif "M" in temp_transition_type:
@@ -123,7 +128,11 @@ class LSJTransitionDataCollection:
     def __init__(self, data_file_info: dict, debug=False):
         self.data_file_info = data_file_info
         self.file_type = data_file_info.get('file_type')
-        self.transition_data_list = GraspFileLoad(self.data_file_info).data_file_process()
+        result = GraspFileLoad(self.data_file_info).data_file_process()
+        if isinstance(result, list):
+            self.transition_data_list = result
+        else:
+            raise ValueError("Expected list from data_file_process")
         self.debug = debug
 
     def transition_block_index(self):

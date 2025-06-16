@@ -6,17 +6,21 @@
 @author :YenochQin (秦毅)
 '''
 import re
-from typing import Dict, Tuple, List
+import random
+from typing import Dict, Tuple, List, TYPE_CHECKING
+from collections import Counter, defaultdict
 
 import numpy as np
-import pandas as pd
-from collections import Counter, defaultdict
-from dataclasses import dataclass
 import pickle
 from tqdm import tqdm
-from .data_IO import load_large_hash
-from .CSFs_compress_extract import *
-from .data_modules import MixCoefficientData
+
+# if TYPE_CHECKING:
+#     from ..data_IO.processing_data_load import load_large_hash
+#     from ..utils.data_modules import MixCoefficientData
+from ..data_IO.processing_data_load import load_large_hash
+from ..utils.tool_function import *
+from ..utils.data_modules import MixCoefficientData
+from .CSFs_compress_extract import CSF_item_2_dict
 
 '''
     csfs data dictionary:

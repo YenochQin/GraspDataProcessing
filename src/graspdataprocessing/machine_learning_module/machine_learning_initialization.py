@@ -13,10 +13,10 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, List, Optional
 
-from .data_IO import GraspFileLoad, load_csfs_binary, load_descriptors, csfs_index_load, save_descriptors, load_descriptors_with_multi_block
-from .ASF_data_collection import LevelsEnergyData
-from .CSFs_choosing import batch_asfs_mix_square_above_threshold
-from .data_modules import MixCoefficientData
+from ..data_IO import GraspFileLoad, load_csfs_binary, load_descriptors, csfs_index_load, save_descriptors, load_descriptors_with_multi_block
+from ..processing.ASF_data_collection import LevelsEnergyData
+from ..CSFs_choosing import batch_asfs_mix_square_above_threshold
+from ..utils.data_modules import MixCoefficientData
 
 def setup_logging(config):
     """配置日志系统"""
