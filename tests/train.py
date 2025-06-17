@@ -70,8 +70,8 @@ def main(config):
         # 提取特征
         logger.info("             数据预处理")
         caled_csfs_descriptors = gdp.generate_chosen_csfs_descriptors(config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, logger)
-        stay_csfs_descriptors = gdp.get_stay_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
-        X_stay = stay_csfs_descriptors.copy()
+        unselected_csfs_descriptors = gdp.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
+        X_unselected = unselected_csfs_descriptors.copy()
         logger.info("             特征提取完成")
 
         # 训练模型
@@ -79,12 +79,12 @@ def main(config):
 
         # 评估模型
         evaluation_results = gdp.evaluate_model(
-            model, X_train, X_test, y_train, y_test, X_stay, config, logger
+            model, X_train, X_test, y_train, y_test, X_unselected, config, logger
         )
 
         # 访问结果
         test_predictions = evaluation_results['predictions']['y_pred_test']
-        test_probabilities = evaluation_results['probabilities']['y_proba_test']
+        test_probabilities = evaluation_results['probabilities']['y_probability_test']
         test_f1 = evaluation_results['test_metrics']['f1']
         train_f1 = evaluation_results['train_metrics']['f1']
 
@@ -92,16 +92,16 @@ def main(config):
         
         logger.info("             模型推理")
         start_time = time.time()
-        X_stay = stay_csfs_descriptors.copy()
-        y_stay_pred = model.predict(X_stay)
-        y_stay_proba = model.predict_proba(X_stay)[:, 1]
+        X_unselected = unselected_csfs_descriptors.copy()
+        y_unselected_prediction = model.predict(X_unselected)
+        y_unselected_probability = model.predict_probability(X_unselected)[:, 1]
         eval_time = time.time() - start_time
         logger.info(f"             模型推理时间:{eval_time}")
         
-        y_pred = evaluation_results['predictions']['y_pred_test']
-        y_proba = evaluation_results['probabilities']['y_proba_test']
+        y_prediction = evaluation_results['predictions']['y_prediction_test']
+        y_probability = evaluation_results['probabilities']['y_probability_test']
         result_file_path = config.root_path / 'test_data' / f'{config.conf}_{config.cal_loop_num}.csv'
-        pd.DataFrame({"y_test": y_test, "y_pred": y_pred, "y_proba": y_proba}).to_csv(result_file_path, index=False)
+        pd.DataFrame({"y_test": y_test, "y_prediction": y_prediction, "y_probability": y_probability}).to_csv(result_file_path, index=False)
         
     else:
         # 处理计算错误

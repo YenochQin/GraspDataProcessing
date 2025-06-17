@@ -127,20 +127,20 @@ def train_model(
 
     # Model evaluation
     logger.info("             预测与评估")
-    y_pred = model.predict(X_test)
-    y_proba = model.predict_proba(X_test)[:, 1]
-    y_pred_train = model.predict(X_train)
-    y_proba_train = model.predict_proba(X_train)[:, 1]
-    y_proba_all = model.predict_proba(X)
+    y_prediction = model.predict(X_test)
+    y_probability = model.predict_probability(X_test)[:, 1]
+    y_prediction_train = model.predict(X_train)
+    y_probability_train = model.predict_probability(X_train)[:, 1]
+    y_probability_all = model.predict_probability(X)
     
     # 诊断预测概率分布
-    logger.info(f"预测概率统计 - 最小值:{y_proba.min():.4f}, 最大值:{y_proba.max():.4f}, 平均值:{y_proba.mean():.4f}")
-    logger.info(f"预测为正类的样本数: {np.sum(y_pred)}/{len(y_pred)}")
+    logger.info(f"预测概率统计 - 最小值:{y_probability.min():.4f}, 最大值:{y_probability.max():.4f}, 平均值:{y_probability.mean():.4f}")
+    logger.info(f"预测为正类的样本数: {np.sum(y_prediction)}/{len(y_prediction)}")
     logger.info(f"真实正样本数: {np.sum(y_test)}/{len(y_test)}")
     
     # 智能阈值调整
     positive_ratio = np.sum(y_test) / len(y_test)  # 真实正样本比例
-    predicted_positive_ratio = np.sum(y_pred) / len(y_pred)  # 预测正样本比例
+    predicted_positive_ratio = np.sum(y_prediction) / len(y_prediction)  # 预测正样本比例
     
     logger.info(f"真实正样本比例: {positive_ratio:.3f}, 预测正样本比例: {predicted_positive_ratio:.3f}")
     
@@ -154,60 +154,60 @@ def train_model(
         best_diff = float('inf')
         
         for threshold in thresholds:
-            temp_pred = (y_proba >= threshold).astype(int)
-            temp_ratio = np.sum(temp_pred) / len(temp_pred)
+            temp_prediction = (y_probability >= threshold).astype(int)
+            temp_ratio = np.sum(temp_prediction) / len(temp_prediction)
             diff = abs(temp_ratio - target_ratio)
             if diff < best_diff:
                 best_diff = diff
                 best_threshold = threshold
         
-        y_pred_optimized = (y_proba >= best_threshold).astype(int)
-        optimized_ratio = np.sum(y_pred_optimized) / len(y_pred_optimized)
+        y_prediction_optimized = (y_probability >= best_threshold).astype(int)
+        optimized_ratio = np.sum(y_prediction_optimized) / len(y_prediction_optimized)
         logger.info(f"优化阈值: {best_threshold:.3f}, 新预测比例: {optimized_ratio:.3f}")
         
         # 使用优化后的预测
-        y_pred = y_pred_optimized
+        y_prediction = y_prediction_optimized
     
     # 如果没有预测为正类，降低阈值
-    elif np.sum(y_pred) == 0:
+    elif np.sum(y_prediction) == 0:
         logger.warning("模型没有预测任何正样本，尝试使用自适应阈值")
         threshold_percentile = 90  # 前10%概率最高的作为正样本
-        adaptive_threshold = np.percentile(y_proba, threshold_percentile)
-        y_pred_adaptive = (y_proba >= adaptive_threshold).astype(int)
-        logger.info(f"自适应阈值:{adaptive_threshold:.4f}, 预测正样本数:{np.sum(y_pred_adaptive)}")
-        y_pred = y_pred_adaptive
+        adaptive_threshold = np.percentile(y_probability, threshold_percentile)
+        y_prediction_adaptive = (y_probability >= adaptive_threshold).astype(int)
+        logger.info(f"自适应阈值:{adaptive_threshold:.4f}, 预测正样本数:{np.sum(y_prediction_adaptive)}")
+        y_prediction = y_prediction_adaptive
     
-    print(y_proba_all[:, 1].shape)
+    print(y_probability_all[:, 1].shape)
     
     # For plotting, we compare against the mixing coefficients of the first energy level.
     csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0]**2, axis=0) 
 
     roc_auc, pr_auc = ANNClassifier.plot_curve(
         csf_mix_coeff_squared_sum, 
-        y_proba_all, 
+        y_probability_all, 
         y_test, 
-        y_proba, 
+        y_probability, 
         config.scf_cal_path.joinpath('roc_auc.png')
     )
-    f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(y_test, y_pred, y_proba)
+    f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(y_test, y_prediction, y_probability)
     logger.info ("测试集预测结果:")
     logger.info (f"AUC:{roc_auc}, pr_auc:{pr_auc}, f1:{f1}, accuracy:{accuracy}, precision:{precision}, recall:{recall}")
     
     # Overfitting and underfitting monitoring
-    f1_train, roc_auc_train, accuracy_train, precision_train, recall_train = ANNClassifier.model_evaluation(y_train, y_pred_train, y_proba_train)
+    f1_train, roc_auc_train, accuracy_train, precision_train, recall_train = ANNClassifier.model_evaluation(y_train, y_prediction_train, y_probability_train)
     logger.info (f"训练集预测结果:")
     logger.info (f"AUC:{roc_auc_train}, f1:{f1_train}, accuracy:{accuracy_train}, precision:{precision_train}, recall:{recall_train}")
     
     return model, X_train, X_test, y_train, y_test, training_time, [1, 1]  # 简化返回值
 
-def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logger):
+def evaluate_model(model, X_train, X_test, y_train, y_test, X_unselected, config, logger):
     """
     评估模型性能，返回所有预测结果和评估指标
     
     Args:
         model: 训练好的模型
         X_train, X_test, y_train, y_test: 训练和测试数据
-        X_stay: 其他需要预测的数据
+        X_unselected: 其他需要预测的数据
         config: 配置对象
         logger: 日志记录器
     
@@ -219,27 +219,27 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logg
     
     # 预测
     start_time = time.time()
-    y_pred = model.predict(X_test)
-    y_pred_other = model.predict(X_stay)
+    y_prediction = model.predict(X_test)
+    y_prediction_other = model.predict(X_unselected)
     eval_time = time.time() - start_time
     
     # 预测概率
-    y_proba = model.predict_proba(X_test)[:, 1]
-    y_pred_train = model.predict(X_train)
-    y_proba_train = model.predict_proba(X_train)[:, 1]
-    y_proba_other = model.predict_proba(X_stay)[:, 1]
+    y_probability = model.predict_probability(X_test)[:, 1]
+    y_prediction_train = model.predict(X_train)
+    y_probability_train = model.predict_probability(X_train)[:, 1]
+    y_probability_other = model.predict_probability(X_unselected)[:, 1]
     
     # 生成完整数据集的概率用于分析
-    y_proba_all = model.predict_proba(np.vstack([X_train, X_test]))
+    y_probability_all = model.predict_probability(np.vstack([X_train, X_test]))
     
     # 评估指标计算
     f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(
-        y_test, y_pred, y_proba
+        y_test, y_prediction, y_probability
     )
     
     # 训练集评估（过拟合监控）
     f1_train, roc_auc_train, accuracy_train, precision_train, recall_train = ANNClassifier.model_evaluation(
-        y_train, y_pred_train, y_proba_train
+        y_train, y_prediction_train, y_probability_train
     )
     
     logger.info("模型评估完成")
@@ -248,17 +248,17 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logg
     return {
         # 预测结果
         'predictions': {
-            'y_pred_test': y_pred,
-            'y_pred_train': y_pred_train, 
-            'y_pred_other': y_pred_other
+            'y_prediction_test': y_prediction,
+            'y_prediction_train': y_prediction_train, 
+            'y_prediction_other': y_prediction_other
         },
         
         # 预测概率
         'probabilities': {
-            'y_proba_test': y_proba,
-            'y_proba_train': y_proba_train,
-            'y_proba_other': y_proba_other,
-            'y_proba_all': y_proba_all
+            'y_probability_test': y_probability,
+            'y_probability_train': y_probability_train,
+            'y_probability_other': y_probability_other,
+            'y_probability_all': y_probability_all
         },
         
         # 真实标签
@@ -290,7 +290,7 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_stay, config, logg
             'eval_time': eval_time,
             'test_samples': len(y_test),
             'train_samples': len(y_train),
-            'other_samples': len(X_stay),
+            'other_samples': len(X_unselected),
             'config_name': getattr(config, 'file_name', 'unknown')
         }
     }
@@ -392,7 +392,7 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
         headers = [
             'cal_loop_num', 'training_time', 'eval_time', 'execution_time', 'total_time',
             'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
-            'max_energy_diff', 'import_count', 'stay_count', 'MLsampling_ratio', 'chosen_count', 'weight',
+            'max_energy_diff', 'import_count', 'unselected_count', 'MLsampling_ratio', 'chosen_count', 'weight',
             'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall'
         ]
         with open(results_file, mode="w", newline="", encoding='utf-8') as file:
@@ -414,7 +414,7 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
             test_metrics['recall'],
             max_energy_diff,  # 使用实际的能量差异代替Es placeholder
             len(selection_results.get('indexs_import_temp', [])),
-            len(selection_results.get('indexs_import_stay_temp', [])),
+            len(selection_results.get('indexs_import_unselected_temp', [])),
             None,  # MLsampling_ratio placeholder
             len(selection_results.get('chosen_index', [])),
             weight,
@@ -694,8 +694,8 @@ def save_and_plot_results(evaluation_results, model, config,
         test_file = test_data_dir / f"{file_name}_test_results.csv"
         pd.DataFrame({
             "y_true": evaluation_results['true_labels']['y_test'],
-            "y_pred": evaluation_results['predictions']['y_pred_test'],
-            "y_proba": evaluation_results['probabilities']['y_proba_test']
+            "y_prediction": evaluation_results['predictions']['y_prediction_test'],
+            "y_proba": evaluation_results['probabilities']['y_probability_test']
         }).to_csv(test_file, index=False)
         saved_files['test_data'] = str(test_file)
         
@@ -704,18 +704,18 @@ def save_and_plot_results(evaluation_results, model, config,
         train_file = results_dir / f"{file_name}_train_results.csv"
         pd.DataFrame({
             "y_true": evaluation_results['true_labels']['y_train'],
-            "y_pred": evaluation_results['predictions']['y_pred_train'],
-            "y_proba": evaluation_results['probabilities']['y_proba_train']
+            "y_prediction": evaluation_results['predictions']['y_prediction_train'],
+            "y_proba": evaluation_results['probabilities']['y_probability_train']
         }).to_csv(train_file, index=False)
         saved_files['train_data'] = str(train_file)
         
         # 保存其他数据预测结果到results目录
-        other_file = results_dir / f"{file_name}_other_predictions.csv"
+        other_file = results_dir / f"{file_name}_other_predictionictions.csv"
         pd.DataFrame({
-            "y_pred": evaluation_results['predictions']['y_pred_other'],
-            "y_proba": evaluation_results['probabilities']['y_proba_other']
+            "y_prediction": evaluation_results['predictions']['y_prediction_other'],
+            "y_proba": evaluation_results['probabilities']['y_probability_other']
         }).to_csv(other_file, index=False)
-        saved_files['other_predictions'] = str(other_file)
+        saved_files['other_predictionictions'] = str(other_file)
         
         # 保存评估指标到results目录
         metrics_file = results_dir / f"{file_name}_metrics.json"
@@ -748,15 +748,15 @@ def save_and_plot_results(evaluation_results, model, config,
         
         try:
             # 创建混合系数的占位数据用于绘图兼容性
-            dummy_mix_coeff = np.ones(len(evaluation_results['probabilities']['y_proba_all']))
+            dummy_mix_coeff = np.ones(len(evaluation_results['probabilities']['y_probability_all']))
             
             # 绘制ROC和PR曲线
             plot_file = roc_curves_dir / f"{file_name}_roc_pr_curves.png"
             roc_auc, pr_auc = ANNClassifier.plot_curve(
                 dummy_mix_coeff, 
-                evaluation_results['probabilities']['y_proba_all'], 
+                evaluation_results['probabilities']['y_probability_all'], 
                 evaluation_results['true_labels']['y_test'], 
-                evaluation_results['probabilities']['y_proba_test'], 
+                evaluation_results['probabilities']['y_probability_test'], 
                 str(plot_file)
             )
             saved_files['roc_pr_plot'] = str(plot_file)
@@ -764,7 +764,7 @@ def save_and_plot_results(evaluation_results, model, config,
             # 额外绘制概率分布直方图
             prob_hist_file = roc_curves_dir / f"{file_name}_probability_distribution.png"
             _plot_probability_distribution(
-                evaluation_results['probabilities']['y_proba_test'],
+                evaluation_results['probabilities']['y_probability_test'],
                 evaluation_results['true_labels']['y_test'],
                 str(prob_hist_file)
             )
@@ -784,7 +784,7 @@ def save_and_plot_results(evaluation_results, model, config,
     
     return saved_files
 
-def _plot_probability_distribution(y_proba, y_true, save_path):
+def _plot_probability_distribution(y_probability, y_true, save_path):
     """
     绘制预测概率分布直方图
     
@@ -798,12 +798,12 @@ def _plot_probability_distribution(y_proba, y_true, save_path):
     plt.figure(figsize=(10, 6))
     
     # 分别绘制正负样本的概率分布
-    pos_proba = y_proba[y_true == 1]
-    neg_proba = y_proba[y_true == 0]
+    pos_probability = y_probability[y_true == 1]
+    neg_probability = y_probability[y_true == 0]
     
-    plt.hist(neg_proba, bins=50, alpha=0.7, label=f'负样本 (n={len(neg_proba)})', 
+    plt.hist(neg_probability, bins=50, alpha=0.7, label=f'负样本 (n={len(neg_probability)})', 
              color='lightcoral', density=True)
-    plt.hist(pos_proba, bins=50, alpha=0.7, label=f'正样本 (n={len(pos_proba)})', 
+    plt.hist(pos_probability, bins=50, alpha=0.7, label=f'正样本 (n={len(pos_probability)})', 
              color='lightblue', density=True)
     
     plt.axvline(x=0.5, color='red', linestyle='--', alpha=0.8, label='分类阈值 (0.5)')

@@ -83,12 +83,12 @@ class ANNClassifier:
         :param X: Input data (numpy array).
         :return: Predicted labels (numpy array).
         """
-        predictions = self.predict_proba(X)
+        predictions = self.predict_probability(X)
         predictions = predictions[:, 1]>0.5
 
         return predictions
     
-    def predict_proba(self, X):
+    def predict_probability(self, X):
         """
         Predict the labels for the given input data.
         :param X: Input data (numpy array).
@@ -117,14 +117,14 @@ class ANNClassifier:
         with torch.no_grad():
             outputs = self.model(X_tensor)
             y_pred = torch.argmax(outputs, dim=1).cpu().numpy()
-            y_proba = torch.softmax(outputs, dim=1)[:, 1].cpu().numpy()
+            y_probability  = torch.softmax(outputs, dim=1)[:, 1].cpu().numpy()
 
         metrics = {
             "accuracy": accuracy_score(y, y_pred),
             "f1_score": f1_score(y, y_pred),
             "precision": precision_score(y, y_pred),
             "recall": recall_score(y, y_pred),
-            "roc_auc": roc_auc_score(y, y_proba)
+            "roc_auc": roc_auc_score(y, y_probability )
         }
 
         if verbose:
@@ -148,11 +148,11 @@ class ANNClassifier:
 
         with torch.no_grad():
             outputs = self.model(X_tensor)
-            y_proba = torch.softmax(outputs, dim=1)[:, 1].cpu().numpy()
+            y_probability  = torch.softmax(outputs, dim=1)[:, 1].cpu().numpy()
 
-        fpr, tpr, _ = roc_curve(y, y_proba)
+        fpr, tpr, _ = roc_curve(y, y_probability )
         plt.figure()
-        plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {roc_auc_score(y, y_proba):.4f})")
+        plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {roc_auc_score(y, y_probability ):.4f})")
         plt.title("ROC Curve")
         plt.xlabel("False Positive Rate")
         plt.ylabel("True Positive Rate")
@@ -218,10 +218,10 @@ class ANNClassifier:
         y_resampled = y_resampled[shuffle_index]
         return X_resampled, y_resampled
     
-    def plot_curve(y_test, y_proba, filename):
+    def plot_curve(y_test, y_probability , filename):
         # 绘制 ROC 曲线
-        fpr, tpr, _ = roc_curve(y_test, y_proba)
-        roc_auc = roc_auc_score(y_test, y_proba)
+        fpr, tpr, _ = roc_curve(y_test, y_probability )
+        roc_auc = roc_auc_score(y_test, y_probability )
         plt.figure(figsize=(10, 8))
         plt.subplot(2, 2, 1)
         plt.plot(fpr, tpr, label=f"AUC = {roc_auc:.4f}")
@@ -231,7 +231,7 @@ class ANNClassifier:
         plt.legend(loc="lower right")
 
         # 绘制 PR 曲线
-        precision, recall, _ = precision_recall_curve(y_test, y_proba)
+        precision, recall, _ = precision_recall_curve(y_test, y_probability )
         pr_auc = auc(recall, precision)
         plt.subplot(2, 2, 2)
         plt.plot(recall, precision, label=f"PR AUC = {pr_auc:.4f}")
@@ -241,7 +241,7 @@ class ANNClassifier:
         plt.legend(loc="lower left")
 
         # 绘制混淆矩阵
-        y_pred = np.where(y_proba > 0.5, 1, 0)
+        y_pred = np.where(y_probability  > 0.5, 1, 0)
         cm = confusion_matrix(y_test, y_pred)
         plt.subplot(2, 2, 3)
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False)
@@ -250,7 +250,7 @@ class ANNClassifier:
         plt.ylabel('True Label')
 
         # 绘制校准曲线
-        prob_true, prob_pred = calibration_curve(y_test, y_proba, n_bins=10)
+        prob_true, prob_pred = calibration_curve(y_test, y_probability , n_bins=10)
         plt.subplot(2, 2, 4)
         plt.plot(prob_pred, prob_true, 's-')
         plt.plot([0, 1], [0, 1], '--', color='gray')
@@ -266,10 +266,10 @@ class ANNClassifier:
 
         return roc_auc, pr_auc
     
-    def model_evaluation(y_test, y_pred, y_proba):
+    def model_evaluation(y_test, y_pred, y_probability ):
 
         f1 = f1_score(y_test, y_pred)
-        roc_auc = roc_auc_score(y_test, y_proba)
+        roc_auc = roc_auc_score(y_test, y_probability )
         accuracy = accuracy_score(y_test, y_pred)
         precision = precision_score(y_test, y_pred)
         recall = recall_score(y_test, y_pred)

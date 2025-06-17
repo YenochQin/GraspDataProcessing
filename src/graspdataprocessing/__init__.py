@@ -8,6 +8,8 @@
 
 __author__ = "YenochQin (秦毅)"
 
+from .version import __version__
+
 from .data_IO import (
     GraspFileLoad,
     EnergyFile2csv,
@@ -115,6 +117,7 @@ from .machine_learning_module import (
 __all__ = [
     # 版本信息
     '__author__',
+    '__version__',
     
     # data_IO
     ## grasp_raw_data_load
