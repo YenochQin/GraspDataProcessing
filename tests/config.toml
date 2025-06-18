@@ -18,9 +18,9 @@ cutoff_value = 1e-9
 initial_ratio = 0.09
 expansion_ratio = 2
 target_pool_file = "cv4odd1as3_odd4.c"
-root_path = "D:\\PythonProjects\\as3_odd4"
+# root_path = "D:\\PythonProjects\\as3_odd4"
 # root_path = "D:\\PythonPrograms\\as3_odd4"
-# root_path = "/Users/yiqin/Documents/PythonProjects/as3_odd4"
+root_path = "/Users/yiqin/Documents/PythonProjects/as3_odd4"
 
 selected_csfs_file = "mJ-1-90chosenas3_odd4.c"
 ## selected_csfs_index_file = "selected_csfs_index.msgpack"

@@ -492,7 +492,7 @@ def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selec
     # 使用列表推导式获取CSF数据
     chosen_csfs = [block_csfs_list[idx] for idx in chosen_csfs_indices]
     
-    return chosen_csfs, chosen_csfs_indices.tolist(), unselected_indices.tolist()
+    return chosen_csfs, chosen_csfs_indices, unselected_indices
 
 
 
