@@ -42,7 +42,11 @@ def load_csf_metadata(
 def load_csfs_binary(filepath: Union[str, Path]) -> CSFs:
     filepath = Path(filepath)
     
-    with gzip.open(filepath.with_suffix('.pkl.gz'), 'rb') as f:
+    # 检查文件路径是否已经有正确的后缀
+    if not str(filepath).endswith('.pkl.gz'):
+        filepath = filepath.with_suffix('.pkl.gz')
+    
+    with gzip.open(filepath, 'rb') as f:
         data = pickle.load(f)
     
     return CSFs(

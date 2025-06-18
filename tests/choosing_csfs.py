@@ -74,10 +74,33 @@ def load_previous_chosen_indices(config, logger):
     
     if previous_indices_file.with_suffix('.pkl').exists():
         selected_csfs_indices_dict = gdp.csfs_index_load(previous_indices_file)
-        logger.info(f"加载前一轮chosen indices: {previous_indices_file}")
+        logger.info(f"加载前一轮选择的CSFs indices: {previous_indices_file}")
         return selected_csfs_indices_dict
     else:
         logger.warning(f"未找到前一轮indices文件: {previous_indices_file}")
+        return {}
+
+def load_previous_ml_chosen_indices(config, logger):
+    """
+    加载前一轮计算后机器学习选择出的CSFs索引
+    
+    Args:
+        config: 配置对象
+        logger: 日志记录器
+        
+    Returns:
+        dict: 前一轮选择的indices字典
+    """
+    root_path = Path(config.root_path)
+    ml_results_path = root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}'
+    ml_results_indices_file = ml_results_path / f'{config.conf}_{config.cal_loop_num-1}_chosen_indices'
+    
+    if ml_results_indices_file.with_suffix('.pkl').exists():
+        selected_csfs_indices_dict = gdp.csfs_index_load(ml_results_indices_file)
+        logger.info(f"加载机器学习选择的CSFs indices: {ml_results_indices_file}")
+        return selected_csfs_indices_dict
+    else:
+        logger.warning(f"未找机器学习选择的CSFs indices文件: {ml_results_indices_file}")
         return {}
 
 def perform_csfs_selection(config):
@@ -110,8 +133,11 @@ def perform_csfs_selection(config):
         # 第一轮使用base_selected_indices（来自selected_csfs_file或空）
         selected_csfs_indices_dict = base_selected_indices
         logger.info("第一轮选择，使用基础selected indices")
+    elif config.continue_cal:
+        # 后续轮次如果耦合正确，则使用机器学习选择的CSFs indices
+        selected_csfs_indices_dict = load_previous_ml_chosen_indices(config, logger)
     else:
-        # 后续轮次使用前一轮的chosen indices
+        # 后续轮次如果耦合不正确，则使用前一轮的chosen indices
         selected_csfs_indices_dict = load_previous_chosen_indices(config, logger)
         if not selected_csfs_indices_dict:
             # 如果加载失败，使用空的字典

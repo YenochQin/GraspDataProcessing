@@ -104,15 +104,24 @@ def load_data_files(config, logger) -> tuple:
     logger.info(f"加载能级数据: {energy_level_file_path}")
     
     # 加载rmix文件
-    rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.m'
+    cal_method = getattr(config, 'cal_method', 'rmcdhf')  # 默认使用rmcdhf方法
+    
+    if cal_method == 'rci':
+        rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.cm'
+    elif cal_method == 'rmcdhf':
+        rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.m'
+    else:
+        raise ValueError(f"不支持的计算方法: {cal_method}，请在config.toml中设置cal_method为'rci'或'rmcdhf'")
+    
     rmix_file_load = GraspFileLoad.from_filepath(str(rmix_file_path), 'mix')
     rmix_file_data = rmix_file_load.data_file_process()
     logger.info(f"加载 *.m 文件数据: {rmix_file_path}")
     
     # 加载初始 CSFs 文件
     target_pool_file_path = config.root_path / f'{config.conf}'
-    target_pool_csfs_data = load_csfs_binary(target_pool_file_path)
-    logger.info(f"加载初始 CSFs 文件: {target_pool_file_path}")
+    target_pool_binary_file_path = target_pool_file_path.with_suffix('.pkl.gz')
+    target_pool_csfs_data = load_csfs_binary(target_pool_binary_file_path)
+    logger.info(f"加载初始 CSFs 文件: {target_pool_binary_file_path}")
     
     # 加载初始 CSFs 描述符文件
     result = load_descriptors_with_multi_block(target_pool_file_path, 'npy')
@@ -136,17 +145,34 @@ def load_data_files(config, logger) -> tuple:
 
 def check_configuration_coupling(config, energy_level_data_pd, logger):
     """检查组态耦合是否正确"""
-    cal_configuration_set = set(energy_level_data_pd['configuration'])
+    cal_configuration_list = energy_level_data_pd['configuration'].tolist()
     
-    if set(config.spetral_term).issubset(cal_configuration_set):
-        logger.info(f"cal_loop {config.cal_loop_num} 组态耦合正确")
-        return True
+    # 检查每个光谱项是否有且仅有一次出现，并记录位置
+    spectral_term_positions = []
+    all_found_once = True
+    
+    for term in config.spetral_term:
+        count = cal_configuration_list.count(term)
+        if count == 1:
+            position = cal_configuration_list.index(term)
+            spectral_term_positions.append(position)
+            logger.info(f"光谱项 '{term}' 在位置 {position} 找到")
+        elif count == 0:
+            logger.error(f"光谱项 '{term}' 未找到")
+            all_found_once = False
+        else:
+            logger.error(f"光谱项 '{term}' 出现 {count} 次，应该有且仅有一次")
+            all_found_once = False
+    
+    if all_found_once:
+        logger.info(f"cal_loop {config.cal_loop_num} 组态耦合正确，位置索引: {spectral_term_positions}")
+        return True, spectral_term_positions
     else:
         logger.error(f"cal_loop {config.cal_loop_num} 组态耦合错误")
-        return False
+        return False, []
 
 
-def generate_chosen_csfs_descriptors(config, chosen_csfs_indices_dict: Dict, raw_csfs_descriptors: np.ndarray, rmix_file_data: MixCoefficientData, logger) -> np.ndarray:
+def generate_chosen_csfs_descriptors(config, chosen_csfs_indices_dict: Dict, raw_csfs_descriptors: np.ndarray, rmix_file_data: MixCoefficientData, asfs_position: List[int], logger) -> np.ndarray:
     
     
     ## 使用chosen_csfs_indices_dict[0]是临时的，后续需要改进一下！TODO
@@ -155,7 +181,7 @@ def generate_chosen_csfs_descriptors(config, chosen_csfs_indices_dict: Dict, raw
     selected_csfs_descriptors = raw_csfs_descriptors[selected_indices]
     
     ## 使用rmix_file_data.mix_coefficient_List[0]是临时的，后续需要改进一下！TODO
-    csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0]**2, axis=0) 
+    csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0][asfs_position]**2, axis=0) 
     
     csf_mix_coeff_descriptors = np.zeros(selected_csfs_descriptors.shape[0], dtype=bool)
     csf_mix_coeff_descriptors[csf_mix_coeff_squared_sum >= np.float64(config.cutoff_value)] = True

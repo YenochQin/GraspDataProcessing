@@ -202,9 +202,6 @@ def main(cfg):
                     sorted_indices_within_important = np.argsort(y_stay_proba[indexs_import_stay])[::-1]
                     top_k_indices_in_y_stay = indexs_import_stay[sorted_indices_within_important[:expansion_ratio * sum_num]]
                     ml_addcsf = indexs_temp[top_k_indices_in_y_stay]
-                    # ml_addcsf = vmc.random_choice(indexs_import_stay_temp, expansion_ratio*sum_num)
-                    # sorted_indices = np.argsort(y_stay_proba)[::-1]
-                    # ml_addcsf = stay_indexs[sorted_indices[:expansion_ratio * sum_num]]
                 else:
                     ml_addcsf = indexs_import_stay_temp
                 index = np.unique(np.sort(np.concatenate([indexs_import_temp,ml_addcsf])))

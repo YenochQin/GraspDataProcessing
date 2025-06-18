@@ -102,7 +102,6 @@ class GraspFileLoad:
             # load data file
             self.load_file_data = temp_load_file.readlines()
         self.load_file_data = [line.strip() for line in self.load_file_data]
-        print(f"file {self.load_file_path} loaded")
         return self.load_file_data
 
     def files_read(self):
@@ -550,6 +549,7 @@ class EnergyFile2csv(GraspFileLoad):
             "store_csv_path": store_csv_path
         }
         return cls(config)
+
     def __init__(self, data_file_info: Dict):
         super().__init__(data_file_info)
         store_csv_path = data_file_info.get("store_csv_path")
@@ -559,10 +559,11 @@ class EnergyFile2csv(GraspFileLoad):
             self.store_file_path = Path(self.data_file_dir).joinpath("level_csv_file")
         if not self.store_file_path.exists():
             self.store_file_path.mkdir()
+        self.load_level_data = GraspFileLoad.data_file_process(self)
 
     def energy_file2csv(self):
         # load the data file
-        self.load_level_data = GraspFileLoad.data_file_process(self)
+        
         if not isinstance(self.load_level_data, list):
             raise ValueError(f"Expected list data for energy file, got {type(self.load_level_data)}")
         for i, line in enumerate(self.load_level_data):  # 使用enumerate获取行号

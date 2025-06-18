@@ -10,6 +10,7 @@ import logging
 from types import SimpleNamespace
 from pathlib import Path
 import sys
+import joblib
 import numpy as np
 import pandas as pd
 import time
@@ -49,8 +50,9 @@ def main(config):
         # 加载数据文件
         energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict = gdp.load_data_files(config, logger)
         
+        asfs_position = []
         # 检查组态耦合
-        cal_result = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
+        cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
         logger.info("************************************************")
 
     except Exception as e:
@@ -69,7 +71,7 @@ def main(config):
 
         # 提取特征
         logger.info("             数据预处理")
-        caled_csfs_descriptors = gdp.generate_chosen_csfs_descriptors(config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, logger)
+        caled_csfs_descriptors = gdp.generate_chosen_csfs_descriptors(config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, asfs_position, logger)
         unselected_csfs_descriptors = gdp.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
         X_unselected = unselected_csfs_descriptors.copy()
         logger.info("             特征提取完成")
@@ -83,7 +85,7 @@ def main(config):
         )
 
         # 访问结果
-        test_predictions = evaluation_results['predictions']['y_pred_test']
+        test_predictions = evaluation_results['predictions']['y_prediction_test']
         test_probabilities = evaluation_results['probabilities']['y_probability_test']
         test_f1 = evaluation_results['test_metrics']['f1']
         train_f1 = evaluation_results['train_metrics']['f1']
@@ -102,6 +104,19 @@ def main(config):
         y_probability = evaluation_results['probabilities']['y_probability_test']
         result_file_path = config.root_path / 'test_data' / f'{config.conf}_{config.cal_loop_num}.csv'
         pd.DataFrame({"y_test": y_test, "y_prediction": y_prediction, "y_probability": y_probability}).to_csv(result_file_path, index=False)
+        model_file_path = config.root_path / 'models' / f'{config.conf}_{config.cal_loop_num}.pkl'
+        joblib.dump(model, model_file_path)
+        logger.info(f"             预测结果与模型保存成功")
+        
+        csfs_above_threshold_indices = np.where(np.any(rmix_file_data.mix_coefficient_List[0][asfs_position]**2 >= np.float64(config.cutoff_value), axis = 0))[0]
+
+        ml_chosen_from_unselected_indices = np.where(y_unselected_probability == 1)[0]
+        
+        ml_chosen_indices = 
+        
+        
+        
+        
         
     else:
         # 处理计算错误
