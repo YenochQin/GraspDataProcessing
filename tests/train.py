@@ -48,12 +48,15 @@ def main(config):
         
     try:
         # 加载数据文件
-        energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict = gdp.load_data_files(config, logger)
+        energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict, unselected_csfs_indices_dict = gdp.load_data_files(config, logger)
         
         asfs_position = []
         # 检查组态耦合
         cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
         logger.info("************************************************")
+        
+        
+        
 
     except Exception as e:
             logger.error(f"程序执行过程中发生错误: {str(e)}")
@@ -102,26 +105,34 @@ def main(config):
         
         y_prediction = evaluation_results['predictions']['y_prediction_test']
         y_probability = evaluation_results['probabilities']['y_probability_test']
+        y_probability_all = evaluation_results['probabilities']['y_probability_all']
+        y_probability_other = evaluation_results['probabilities']['y_probability_other']
         result_file_path = config.root_path / 'test_data' / f'{config.conf}_{config.cal_loop_num}.csv'
         pd.DataFrame({"y_test": y_test, "y_prediction": y_prediction, "y_probability": y_probability}).to_csv(result_file_path, index=False)
         model_file_path = config.root_path / 'models' / f'{config.conf}_{config.cal_loop_num}.pkl'
         joblib.dump(model, model_file_path)
         logger.info(f"             预测结果与模型保存成功")
-        
+
         csfs_above_threshold_indices = np.where(np.any(rmix_file_data.mix_coefficient_List[0][asfs_position]**2 >= np.float64(config.cutoff_value), axis = 0))[0]
+        high_prob_threshold = np.percentile(y_probability_all[:, 1], 90)  # 取90分位数作为高概率阈值
+        logger.info(f"             高于90分位数作为高概率阈值: {high_prob_threshold}")
+        promising_unselected_CSFs_indices = unselected_csfs_indices_dict[0][y_probability_other > high_prob_threshold]
+        logger.info(f"             ml预测的组态数: {promising_unselected_CSFs_indices.shape}")
+        filtered_chosen_indices = caled_csfs_indices_dict[0][csfs_above_threshold_indices]
+        logger.info(f"             本轮计算重要组态数: {filtered_chosen_indices.shape}")
+        all_chosen_indices = np.union1d(filtered_chosen_indices, promising_unselected_CSFs_indices)
+        logger.info(f"             本轮选择的组态总数: {all_chosen_indices.shape}")
+        ml_chosen_indices_dict = {0 : all_chosen_indices}
+        
+        ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
+        gdp.csfs_index_storange(ml_chosen_indices_dict, ml_chosen_indices_dict_path)
+        logger.info(f"             本轮选择的组态索引保存到: {ml_chosen_indices_dict_path}")
 
-        ml_chosen_from_unselected_indices = np.where(y_unselected_probability == 1)[0]
-        
-        ml_chosen_indices = 
-        
-        
-        
-        
-        
     else:
-        # 处理计算错误
-        gdp.handle_calculation_error(config, indices_temp, raw_csf_data, root_path, logger)
-
+        logger.info("************************************************")
+        logger.info(f"             第{config.cal_loop_num}次迭代开始")
+        
+        
 
 if __name__ == "__main__":
     # 解析命令行参数

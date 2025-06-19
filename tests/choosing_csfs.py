@@ -11,8 +11,8 @@ import argparse
 from pathlib import Path
 import sys
 
-sys.path.append('/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/src')
-
+# sys.path.append('/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/src')
+sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
 try:
     import graspdataprocessing as gdp
 except ImportError:
@@ -93,7 +93,7 @@ def load_previous_ml_chosen_indices(config, logger):
     """
     root_path = Path(config.root_path)
     ml_results_path = root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}'
-    ml_results_indices_file = ml_results_path / f'{config.conf}_{config.cal_loop_num-1}_chosen_indices'
+    ml_results_indices_file = ml_results_path / f'{config.conf}_{config.cal_loop_num-1}_ml_chosen_indices'
     
     if ml_results_indices_file.with_suffix('.pkl').exists():
         selected_csfs_indices_dict = gdp.csfs_index_load(ml_results_indices_file)
