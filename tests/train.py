@@ -10,6 +10,7 @@ import logging
 from types import SimpleNamespace
 from pathlib import Path
 import sys
+import shutil
 import joblib
 import numpy as np
 import pandas as pd
@@ -127,12 +128,33 @@ def main(config):
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
         gdp.csfs_index_storange(ml_chosen_indices_dict, ml_chosen_indices_dict_path)
         logger.info(f"             本轮选择的组态索引保存到: {ml_chosen_indices_dict_path}")
+        gdp.update_config('config.toml', {'continue_cal': True})
+        gdp.update_config('config.toml', {'cal_error_num': 0})
+        gdp.update_config('config.toml', {'cal_loop_num': config.cal_loop_num + 1})
 
     else:
         logger.info("************************************************")
-        logger.info(f"             第{config.cal_loop_num}次迭代开始")
-        
-        
+        if config.cal_error_num < 3:
+            # 更新配置文件
+            gdp.update_config('config.toml', {'cal_error_num': config.cal_error_num + 1})
+            gdp.update_config('config.toml', {'continue_cal': True})
+            
+            # 重命名结果目录
+            original_cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}'
+            new_cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}_err_{config.cal_error_num + 1}'
+            
+            if original_cal_path.exists():
+                try:
+                    shutil.move(str(original_cal_path), str(new_cal_path))
+                    logger.info(f"结果目录已重命名: {original_cal_path} -> {new_cal_path}")
+                except Exception as e:
+                    logger.error(f"重命名目录失败: {e}")
+            
+        else:
+            logger.info("连续三次波函数未改进，迭代收敛，退出筛选程序")
+            gdp.update_config('config.toml', {'continue_cal': False})
+            gdp.continue_calculate(config.root_path, False)
+
 
 if __name__ == "__main__":
     # 解析命令行参数

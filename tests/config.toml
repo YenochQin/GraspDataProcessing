@@ -11,6 +11,7 @@ spetral_term = [
 # 计算配置
 continue_cal = true
 cal_loop_num = 1
+cal_error_num = 0
 # cal_method = 'rci'
 cal_method = 'rmcdhf'
 difference = 0
