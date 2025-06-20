@@ -8,21 +8,24 @@
 import argparse
 import logging
 from types import SimpleNamespace
+import os
 from pathlib import Path
+import csv
 import sys
-import shutil
-import joblib
+import math
 import numpy as np
 import pandas as pd
 import time
-from tabulate import tabulate
+import shutil
+import joblib
+import json 
+from tabulate import tabulate 
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-# sys.path.append('/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/src')
-# sys.path.append('D:\\PythonPrograms\\GraspDataProcessing\\src')
-sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
+sys.path.append('/home/workstation3/AppFiles/GraspDataProcessing/src')
+
 try:
     import graspdataprocessing as gdp
 except ImportError:
@@ -38,8 +41,6 @@ def main(config):
     execution_time = time.time()
 
     gdp.setup_directories(config)
-    # 初始化结果文件
-    gdp.initialize_results_file(config, logger)
 
     # 验证初始文件
     gdp.validate_initial_files(config, logger)
@@ -51,13 +52,9 @@ def main(config):
         # 加载数据文件
         energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict, unselected_csfs_indices_dict = gdp.load_data_files(config, logger)
         
-        asfs_position = []
         # 检查组态耦合
         cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
         logger.info("************************************************")
-        
-        
-        
 
     except Exception as e:
             logger.error(f"程序执行过程中发生错误: {str(e)}")
@@ -95,7 +92,7 @@ def main(config):
         train_f1 = evaluation_results['train_metrics']['f1']
 
         overfitting_check = test_f1 - train_f1  # 如果差异过大说明过拟合
-        
+        logger.info(f'             {overfitting_check:}')
         logger.info("             模型推理")
         start_time = time.time()
         X_unselected = unselected_csfs_descriptors.copy()

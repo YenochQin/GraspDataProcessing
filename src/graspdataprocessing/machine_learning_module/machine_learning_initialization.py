@@ -144,7 +144,7 @@ def load_data_files(config, logger) -> tuple:
     # 加载本轮未选择的CSFs的索引文件
     unselected_csfs_indices_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}_unselected_indices.pkl'
     unselected_csfs_indices_dict = csfs_index_load(unselected_csfs_indices_file_path)
-    logger.info(f"加载本轮选择的 CSFs 的索引文件: {unselected_csfs_indices_dict}")
+    logger.info(f"加载本轮选择的 CSFs 的索引文件: {unselected_csfs_indices_file_path}")
 
     return energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict, unselected_csfs_indices_dict
 
