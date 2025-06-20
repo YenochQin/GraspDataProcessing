@@ -22,9 +22,7 @@ from .machine_learning_initialization import (
 from .machine_learning_training import (
     train_model,
     evaluate_model,
-    save_convergence_results,
     save_iteration_results,
-    check_energy_convergence,
     check_grasp_cal_convergence,
     handle_calculation_error,
     get_unselected_descriptors,
@@ -48,9 +46,7 @@ __all__ = [
     # machine_learning_training
     'train_model',
     'evaluate_model',
-    'save_convergence_results',
     'save_iteration_results',
-    'check_energy_convergence',
     'check_grasp_cal_convergence',
     'handle_calculation_error',
     'get_unselected_descriptors',
