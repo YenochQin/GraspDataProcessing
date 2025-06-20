@@ -111,7 +111,7 @@ def continue_calculate(
                         ):
     save_path = Path(save_path)
     
-    with open(save_path/'run.input', 'rw') as file:
+    with open(save_path / 'run.input', 'rw') as file:
         file.write(continue_calculate)
         
     return f'Continue calculate is set to {continue_calculate}'
