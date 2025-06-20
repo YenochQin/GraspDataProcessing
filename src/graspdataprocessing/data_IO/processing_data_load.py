@@ -133,7 +133,7 @@ def _process_config_data(config):
     
     # 路径转换
     config['root_path'] = Path(config['root_path'])
-    config['scf_cal_path'] = config['root_path'] / f'{config['conf']}_{config['cal_loop_num']}'
+    config['scf_cal_path'] = config['root_path'] / f"{config['conf']}_{config['cal_loop_num']}"
     
     # 模型参数处理
     if 'model_params' in config:

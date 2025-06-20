@@ -16,7 +16,6 @@ import math
 import numpy as np
 import pandas as pd
 import time
-import shutil
 import joblib
 import json 
 from tabulate import tabulate 
@@ -49,7 +48,7 @@ def main(config):
 
     logger.info(f"初始比例: {config.initial_ratio}")
     logger.info(f"光谱项: {config.spetral_term}")
-        
+
     try:
         # 加载数据文件
         energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict, unselected_csfs_indices_dict = gdp.load_data_files(config, logger)
@@ -62,15 +61,25 @@ def main(config):
             logger.error(f"程序执行过程中发生错误: {str(e)}")
             raise
 
-    # 初始化迭代结果文件
-    gdp.initialize_iteration_results_csv(config, logger)
+    should_continue = True
+    if config.cal_loop_num >= 5:
+        # 检查收敛性
+        should_continue = gdp.check_grasp_cal_convergence(config, logger)
 
-    if cal_result:
+    if cal_result and should_continue:
+        # 设置pandas显示选项以保持原始精度
+        pd.set_option('display.float_format', lambda x: '%.6e' if abs(x) < 0.01 or abs(x) >= 10000 else '%.6f')
         # 记录能量信息
         logger.info("能级数据表格：\n%s", 
-           tabulate(energy_level_data_pd, headers='keys', tablefmt='fancy_grid', showindex=False))
+           tabulate(energy_level_data_pd, headers='keys', tablefmt='fancy_grid', showindex=False, floatfmt='.6e'))
         logger.info("耦合正确")
         logger.info("************************************************")
+        # 选择asfs_position索引对应的行
+        selected_energy_data = energy_level_data_pd.iloc[asfs_position]
+        # 保存正确的能级数据为CSV
+        correct_levels_csv_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}_correct_levels.csv'
+        selected_energy_data.to_csv(correct_levels_csv_path, index=False)
+        logger.info(f"选择的能级数据已保存到: {correct_levels_csv_path}")
 
         # 提取特征
         logger.info("             数据预处理")
@@ -107,11 +116,19 @@ def main(config):
         y_probability = evaluation_results['probabilities']['y_probability_test']
         y_probability_all = evaluation_results['probabilities']['y_probability_all']
         y_probability_other = evaluation_results['probabilities']['y_probability_other']
-        result_file_path = config.root_path / 'test_data' / f'{config.conf}_{config.cal_loop_num}.csv'
-        pd.DataFrame({"y_test": y_test, "y_prediction": y_prediction, "y_probability": y_probability}).to_csv(result_file_path, index=False)
-        model_file_path = config.root_path / 'models' / f'{config.conf}_{config.cal_loop_num}.pkl'
-        joblib.dump(model, model_file_path)
+        
+        # 使用标准化的保存和绘图函数
+        saved_files = gdp.save_and_plot_results(
+            evaluation_results=evaluation_results,
+            model=model,
+            config=config,
+            save_model=True,
+            save_data=True,
+            plot_curves=True,
+            logger=logger
+        )
         logger.info(f"             预测结果与模型保存成功")
+        logger.info(f"             保存的文件: {list(saved_files.keys())}")
 
         csfs_above_threshold_indices = np.where(np.any(rmix_file_data.mix_coefficient_List[0][asfs_position]**2 >= np.float64(config.cutoff_value), axis = 0))[0]
         high_prob_threshold = np.percentile(y_probability_all[:, 1], 90)  # 取90分位数作为高概率阈值
@@ -127,6 +144,28 @@ def main(config):
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
         gdp.csfs_index_storange(ml_chosen_indices_dict, ml_chosen_indices_dict_path)
         logger.info(f"             本轮选择的组态索引保存到: {ml_chosen_indices_dict_path}")
+        
+        # 保存迭代结果
+        selection_results = {
+            'indexs_import_temp': [],  # 如果需要可以添加实际值
+            'indexs_import_stay_temp': [],  # 如果需要可以添加实际值
+            'chosen_index': all_chosen_indices.tolist()
+        }
+        
+        # 计算总执行时间
+        total_execution_time = time.time() - execution_time
+        
+        gdp.save_iteration_results(
+            config=config,
+            training_time=training_time,
+            eval_time=eval_time,
+            execution_time=total_execution_time,
+            evaluation_results=evaluation_results,
+            selection_results=selection_results,
+            weight=weight[0],  # 使用第一个权重值
+            logger=logger
+        )
+        
         gdp.update_config(config_file_path, {'continue_cal': True})
         gdp.update_config(config_file_path, {'cal_error_num': 0})
         gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
@@ -135,27 +174,7 @@ def main(config):
 
     else:
         logger.info("************************************************")
-        if config.cal_error_num < 3:
-            # 更新配置文件
-            gdp.update_config(config_file_path, {'cal_error_num': config.cal_error_num + 1})
-            gdp.update_config(config_file_path, {'continue_cal': True})
-            gdp.continue_calculate(config.root_path, True)
-
-            # 重命名结果目录
-            original_cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}'
-            new_cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}_err_{config.cal_error_num + 1}'
-            
-            if original_cal_path.exists():
-                try:
-                    shutil.move(str(original_cal_path), str(new_cal_path))
-                    logger.info(f"结果目录已重命名: {original_cal_path} -> {new_cal_path}")
-                except Exception as e:
-                    logger.error(f"重命名目录失败: {e}")
-            
-        else:
-            logger.info("连续三次波函数未改进，迭代收敛，退出筛选程序")
-            gdp.update_config(config_file_path, {'continue_cal': False})
-            gdp.continue_calculate(config.root_path, False)
+        gdp.handle_calculation_error(config, logger)
 
 
 if __name__ == "__main__":

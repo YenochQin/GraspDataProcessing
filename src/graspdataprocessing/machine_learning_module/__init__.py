@@ -25,7 +25,7 @@ from .machine_learning_training import (
     save_convergence_results,
     save_iteration_results,
     check_energy_convergence,
-    check_convergence,
+    check_grasp_cal_convergence,
     handle_calculation_error,
     get_unselected_descriptors,
     save_and_plot_results
@@ -51,7 +51,7 @@ __all__ = [
     'save_convergence_results',
     'save_iteration_results',
     'check_energy_convergence',
-    'check_convergence',
+    'check_grasp_cal_convergence',
     'handle_calculation_error',
     'get_unselected_descriptors',
     'save_and_plot_results'

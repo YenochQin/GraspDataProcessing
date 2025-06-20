@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 import time
 import joblib
+import shutil
+
 import json 
 from typing import Dict, Tuple, List, Optional
 import torch
@@ -295,64 +297,111 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_unselected, config
         }
     }
 
-def save_convergence_results(config, convergence_results, logger):
+def check_grasp_cal_convergence(config, logger):
     """
-    保存收敛结果到独立的CSV文件
+    检查GRASP计算的收敛性
+    
+    读取前3次计算结果，比较能级值是否收敛
     
     Args:
         config: 配置对象
-        convergence_results: check_energy_convergence函数返回的结果
         logger: 日志记录器
-    """
-    
-    convergence_file = Path(config.root_path) / 'results' / 'convergence_history.csv'
-    convergence_file.parent.mkdir(parents=True, exist_ok=True)
-    
-    # 创建表头（如果文件不存在）
-    if not convergence_file.exists():
-        headers = [
-            'cal_loop_num', 'is_converged', 'compared_states', 'max_abs_diff', 
-            'mean_abs_diff', 'rms_diff', 'max_rel_diff', 'mean_rel_diff', 
-            'convergence_threshold', 'reason'
-        ]
-        with open(convergence_file, mode="w", newline="", encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(headers)
-    
-    # 写入收敛数据
-    with open(convergence_file, mode="a", newline="", encoding='utf-8') as file:
-        writer = csv.writer(file)
         
-        if convergence_results['energy_diff_stats'] is not None:
-            stats = convergence_results['energy_diff_stats']
-            writer.writerow([
-                config.cal_loop_num,
-                convergence_results['is_converged'],
-                convergence_results['compared_states'],
-                stats['max_abs_diff'],
-                stats['mean_abs_diff'], 
-                stats['rms_diff'],
-                stats['max_rel_diff'],
-                stats['mean_rel_diff'],
-                convergence_results.get('convergence_threshold', 1e-6),
-                convergence_results['reason']
-            ])
-        else:
-            # 当无法进行收敛检查时
-            writer.writerow([
-                config.cal_loop_num,
-                False,
-                0,
-                None, None, None, None, None,
-                convergence_results.get('convergence_threshold', 1e-6),
-                convergence_results['reason']
-            ])
+    Returns:
+        bool: True表示未收敛，False表示已收敛
+    """
+    logger.info("开始检查GRASP计算收敛性")
     
-    logger.info(f"收敛结果已保存到: {convergence_file}")
+    # 定义收敛阈值（可以根据需要调整）
+    energy_threshold = getattr(config, 'energy_convergence_threshold', 1e-6)
+    
+    try:
+        # 读取前3次计算的能级数据
+        energy_data_list = []
+        for i in range(3):
+            loop_num = config.cal_loop_num - 2 + i  # 前3次：当前-2, 当前-1, 当前
+            csv_path = config.root_path / f'{config.conf}_{loop_num}_selected_energy_levels.csv'
+            
+            if csv_path.exists():
+                df = pd.read_csv(csv_path)
+                energy_data_list.append(df)
+                logger.info(f"读取第{loop_num}轮能级数据: {csv_path}")
+            else:
+                logger.warning(f"未找到第{loop_num}轮能级数据文件: {csv_path}")
+                return True  # 文件不存在，继续计算
+        
+        if len(energy_data_list) < 3:
+            logger.warning("无法读取完整的3轮数据，继续计算")
+            return True
+        
+        # 检查能级收敛性
+        converged = True
+        
+        # 获取所有configuration
+        configurations = energy_data_list[0]['configuration'].tolist()
+        
+        for config_name in configurations:
+            # 获取该configuration在3轮计算中的能级值
+            energy_values = []
+            for df in energy_data_list:
+                if config_name in df['configuration'].values:
+                    energy = df[df['configuration'] == config_name]['EnergyLevel'].iloc[0]
+                    energy_values.append(energy)
+                else:
+                    logger.warning(f"在第{len(energy_values)+1}轮数据中未找到configuration: {config_name}")
+                    converged = False
+                    break
+            
+            if len(energy_values) == 3:
+                # 计算能级变化
+                energy_diff_1 = abs(energy_values[1] - energy_values[0])
+                energy_diff_2 = abs(energy_values[2] - energy_values[1])
+                energy_diff_total = abs(energy_values[2] - energy_values[0])
+                
+                # 改进的收敛检查：
+                # 1. 检查相邻轮次变化是否递减（收敛趋势）
+                # 2. 检查总体变化是否小于阈值
+                # 3. 检查相对变化率
+                
+                # 计算相对变化率
+                relative_change_1 = energy_diff_1 / abs(energy_values[0]) if abs(energy_values[0]) > 1e-10 else energy_diff_1
+                relative_change_2 = energy_diff_2 / abs(energy_values[1]) if abs(energy_values[1]) > 1e-10 else energy_diff_2
+                
+                # 收敛条件：
+                # 1. 总体变化小于阈值
+                # 2. 相邻变化递减或都小于阈值
+                # 3. 相对变化率合理
+                is_converging = (
+                    energy_diff_total < energy_threshold * 2 and  # 总体变化
+                    (energy_diff_2 <= energy_diff_1 or energy_diff_2 < energy_threshold) and  # 递减趋势或足够小
+                    max(relative_change_1, relative_change_2) < 1e-4  # 相对变化率
+                )
+                
+                if not is_converging:
+                    converged = False
+                    logger.info(f"Configuration {config_name} 未收敛: "
+                              f"变化1={energy_diff_1:.2e}, 变化2={energy_diff_2:.2e}, "
+                              f"总变化={energy_diff_total:.2e}, "
+                              f"相对变化1={relative_change_1:.2e}, 相对变化2={relative_change_2:.2e}")
+                    break
+                else:
+                    logger.debug(f"Configuration {config_name} 收敛: "
+                               f"变化1={energy_diff_1:.2e}, 变化2={energy_diff_2:.2e}, "
+                               f"总变化={energy_diff_total:.2e}")
+        
+        if converged:
+            logger.info("所有能级都已收敛，停止计算")
+            return False
+        else:
+            logger.info("能级未完全收敛，继续计算")
+            return True
+            
+    except Exception as e:
+        logger.error(f"收敛检查过程中出错: {e}")
+        return True  # 出错时继续计算
 
 def save_iteration_results(config, training_time, eval_time, execution_time, 
-                          evaluation_results, selection_results, weight, logger,
-                          convergence_results=None):
+                          evaluation_results, selection_results, weight, logger):
     """
     保存迭代结果到CSV文件
     
@@ -365,7 +414,6 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
         selection_results: 选择结果字典
         weight: 权重值
         logger: 日志记录器
-        convergence_results: 可选的收敛检查结果
     """
     
     all_time = execution_time + training_time + eval_time
@@ -378,11 +426,6 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
     # 获取实际的评估时间（如果evaluation_results中有的话）
     actual_eval_time = metadata.get('eval_time', eval_time)
     
-    # 从收敛结果中提取能量差异信息
-    max_energy_diff = None
-    if convergence_results and convergence_results['energy_diff_stats']:
-        max_energy_diff = convergence_results['energy_diff_stats']['max_abs_diff']
-    
     # 保存到CSV文件
     results_file = Path(config.root_path) / 'results' / 'iteration_results.csv'
     results_file.parent.mkdir(parents=True, exist_ok=True)
@@ -390,9 +433,9 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
     # 创建表头（如果文件不存在）
     if not results_file.exists():
         headers = [
-            'cal_loop_num', 'training_time', 'eval_time', 'execution_time', 'total_time',
+            'training_time', 'eval_time', 'execution_time', 'total_time',
             'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
-            'max_energy_diff', 'import_count', 'unselected_count', 'MLsampling_ratio', 'chosen_count', 'weight',
+            'Es_term', 'import_count', 'stay_count', 'MLsampling_ratio', 'chosen_count', 'weight',
             'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall'
         ]
         with open(results_file, mode="w", newline="", encoding='utf-8') as file:
@@ -402,7 +445,6 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
     with open(results_file, mode="a", newline="", encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow([
-            config.cal_loop_num,  # 添加循环编号
             training_time, 
             actual_eval_time, 
             execution_time, 
@@ -412,9 +454,9 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
             test_metrics['accuracy'],
             test_metrics['precision'], 
             test_metrics['recall'],
-            max_energy_diff,  # 使用实际的能量差异代替Es placeholder
+            0,  # Es_term placeholder
             len(selection_results.get('indexs_import_temp', [])),
-            len(selection_results.get('indexs_import_unselected_temp', [])),
+            len(selection_results.get('indexs_import_stay_temp', [])),
             None,  # MLsampling_ratio placeholder
             len(selection_results.get('chosen_index', [])),
             weight,
@@ -426,205 +468,32 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
         ])
     
     logger.info(f"迭代结果已保存到: {results_file}")
-    
-    # 如果有收敛结果，也保存收敛历史
-    if convergence_results:
-        save_convergence_results(config, convergence_results, logger)
-
-def check_energy_convergence(config, current_energy_df, logger, 
-                            convergence_threshold=1e-6, min_states=5):
-    """
-    检查能级数据的收敛性
-    
-    Args:
-        config: 配置对象
-        current_energy_df: 当前循环的能级数据DataFrame
-        logger: 日志记录器
-        convergence_threshold: 收敛阈值（Hartree单位）
-        min_states: 至少需要比较的能级数量
-        
-    Returns:
-        dict: 包含收敛信息的字典
-    """
-    
-    if config.cal_loop_num == 1:
-        logger.info("第一次计算，无法进行收敛检查")
-        return {
-            'is_converged': False,
-            'reason': '第一次计算',
-            'energy_diff_stats': None,
-            'compared_states': 0
-        }
-    
-    # 构造前一次计算的能级文件路径
-    root_path = Path(config.root_path)
-    previous_cal_path = root_path / f'{config.conf}_{config.cal_loop_num-1}'
-    
-    # 寻找前一次的能级文件
-    previous_energy_file = None
-    possible_names = [
-        f'{config.conf}_{config.cal_loop_num-1}.energy',
-        f'{config.conf}.energy',
-        'energy_levels.csv'
-    ]
-    
-    for name in possible_names:
-        potential_file = previous_cal_path / name
-        if potential_file.exists():
-            previous_energy_file = potential_file
-            break
-    
-    if previous_energy_file is None:
-        logger.warning(f"未找到前一次计算的能级文件，路径: {previous_cal_path}")
-        return {
-            'is_converged': False,
-            'reason': '未找到前一次能级文件',
-            'energy_diff_stats': None,
-            'compared_states': 0
-        }
-    
-    try:
-        # 读取前一次的能级数据
-        # 假设是相同格式的文件，这里需要根据实际格式调整
-        if previous_energy_file.suffix == '.csv':
-            previous_energy_df = pd.read_csv(previous_energy_file)
-        else:
-            # 如果是GRASP能级文件，需要使用相应的解析函数
-            # 这里暂时假设已经转换为DataFrame格式
-            logger.warning(f"能级文件格式暂不支持自动解析: {previous_energy_file}")
-            return {
-                'is_converged': False,
-                'reason': '不支持的能级文件格式',
-                'energy_diff_stats': None,
-                'compared_states': 0
-            }
-            
-        logger.info(f"成功读取前一次能级数据: {previous_energy_file}")
-        logger.info(f"前一次数据包含 {len(previous_energy_df)} 个能级")
-        
-    except Exception as e:
-        logger.error(f"读取前一次能级文件失败: {str(e)}")
-        return {
-            'is_converged': False,
-            'reason': f'读取前一次能级文件失败: {str(e)}',
-            'energy_diff_stats': None,
-            'compared_states': 0
-        }
-    
-    # 基于'No', 'Pos', 'J'进行数据匹配
-    try:
-        # 确保两个DataFrame都有必要的列
-        required_columns = ['No', 'Pos', 'J', 'EnergyTotal']
-        for col in required_columns:
-            if col not in current_energy_df.columns:
-                raise ValueError(f"当前能级数据缺少列: {col}")
-            if col not in previous_energy_df.columns:
-                raise ValueError(f"前一次能级数据缺少列: {col}")
-        
-        # 创建合并键
-        current_energy_df = current_energy_df.copy()
-        previous_energy_df = previous_energy_df.copy()
-        
-        current_energy_df['merge_key'] = (
-            current_energy_df['No'].astype(str) + '_' + 
-            current_energy_df['Pos'].astype(str) + '_' + 
-            current_energy_df['J'].astype(str)
-        )
-        
-        previous_energy_df['merge_key'] = (
-            previous_energy_df['No'].astype(str) + '_' + 
-            previous_energy_df['Pos'].astype(str) + '_' + 
-            previous_energy_df['J'].astype(str)
-        )
-        
-        # 进行内连接，只保留两次计算都有的状态
-        merged_df = pd.merge(
-            current_energy_df[['merge_key', 'EnergyTotal']], 
-            previous_energy_df[['merge_key', 'EnergyTotal']], 
-            on='merge_key', 
-            suffixes=('_current', '_previous')
-        )
-        
-        compared_states = len(merged_df)
-        logger.info(f"找到 {compared_states} 个相同的量子态进行比较")
-        
-        if compared_states < min_states:
-            logger.warning(f"可比较的量子态数量过少 ({compared_states} < {min_states})")
-            return {
-                'is_converged': False,
-                'reason': f'可比较的量子态数量过少 ({compared_states} < {min_states})',
-                'energy_diff_stats': None,
-                'compared_states': compared_states
-            }
-        
-        # 计算能量差异
-        energy_diff = merged_df['EnergyTotal_current'] - merged_df['EnergyTotal_previous']
-        
-        # 计算收敛统计量
-        energy_diff_stats = {
-            'max_abs_diff': abs(energy_diff).max(),
-            'mean_abs_diff': abs(energy_diff).mean(),
-            'rms_diff': np.sqrt((energy_diff**2).mean()),
-            'max_rel_diff': abs(energy_diff / merged_df['EnergyTotal_previous']).max(),
-            'mean_rel_diff': abs(energy_diff / merged_df['EnergyTotal_previous']).mean()
-        }
-        
-        # 判断收敛性
-        max_abs_diff = energy_diff_stats['max_abs_diff']
-        is_converged = max_abs_diff < convergence_threshold
-        
-        # 记录详细信息
-        logger.info(f"能级收敛性检查结果:")
-        logger.info(f"  比较的量子态数量: {compared_states}")
-        logger.info(f"  最大绝对差异: {max_abs_diff:.8e} Hartree")
-        logger.info(f"  平均绝对差异: {energy_diff_stats['mean_abs_diff']:.8e} Hartree")
-        logger.info(f"  RMS差异: {energy_diff_stats['rms_diff']:.8e} Hartree")
-        logger.info(f"  最大相对差异: {energy_diff_stats['max_rel_diff']:.8e}")
-        logger.info(f"  收敛阈值: {convergence_threshold:.8e} Hartree")
-        logger.info(f"  是否收敛: {'是' if is_converged else '否'}")
-        
-        if is_converged:
-            logger.info("✅ 能级计算已收敛")
-        else:
-            logger.info("⚠️ 能级计算尚未收敛，需要继续迭代")
-        
-        return {
-            'is_converged': is_converged,
-            'reason': '收敛' if is_converged else f'最大差异 {max_abs_diff:.8e} > 阈值 {convergence_threshold:.8e}',
-            'energy_diff_stats': energy_diff_stats,
-            'compared_states': compared_states,
-            'convergence_threshold': convergence_threshold,
-            'energy_differences': energy_diff.tolist(),  # 保存所有差异供进一步分析
-            'merged_data': merged_df  # 保存合并后的数据供调试
-        }
-        
-    except Exception as e:
-        logger.error(f"能级收敛性检查失败: {str(e)}")
-        return {
-            'is_converged': False,
-            'reason': f'收敛检查失败: {str(e)}',
-            'energy_diff_stats': None,
-            'compared_states': 0
-        }
-
-def check_convergence(config, sum_num_list, logger):
-    """检查收敛性（保留原有接口）"""
-    # 这里需要Es_term的历史数据，暂时先跳过收敛检查
-    # 在实际使用中，需要维护能量项的历史记录
-    logger.info("收敛检查功能需要能量历史数据，当前跳过")
-    return False
 
 def handle_calculation_error(config, logger):
     """处理计算错误的情况"""
-   
-    cal_error_num = getattr(config, 'cal_error_num', 0) + 1
-    update_config(f'{config.root_path}/config.yaml', {'cal_error_num': cal_error_num})
-    
-    if cal_error_num >= 3:
+    config_file_path = config.root_path / 'config.toml'
+    continue_calculate = config.continue_cal
+    if config.cal_error_num < 3:
+        # 更新配置文件
+        update_config(config_file_path, {'cal_error_num': config.cal_error_num + 1})
+        update_config(config_file_path, {'continue_cal': True})
+        continue_calculate(config.root_path, True)
+
+        # 重命名结果目录
+        original_cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}'
+        new_cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}_err_{config.cal_error_num + 1}'
+        
+        if original_cal_path.exists():
+            try:
+                shutil.move(str(original_cal_path), str(new_cal_path))
+                logger.info(f"结果目录已重命名: {original_cal_path} -> {new_cal_path}")
+            except Exception as e:
+                logger.error(f"重命名目录失败: {e}")
+        
+    else:
         logger.info("连续三次波函数未改进，迭代收敛，退出筛选程序")
-        with open(f'{config.root_path}/run.input', 'w') as file:
-            file.write('False')
-        return
+        update_config(config_file_path, {'continue_cal': False})
+        continue_calculate(config.root_path, False)
 
 
 def get_unselected_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_dict: Dict[int, List[int]]) -> np.ndarray:
