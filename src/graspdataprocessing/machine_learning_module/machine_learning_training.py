@@ -320,7 +320,7 @@ def check_grasp_cal_convergence(config, logger):
         energy_data_list = []
         for i in range(3):
             loop_num = config.cal_loop_num - 2 + i  # 前3次：当前-2, 当前-1, 当前
-            csv_path = config.root_path / f'{config.conf}_{loop_num}_selected_energy_levels.csv'
+            csv_path = config.root_path / f'{config.conf}_{loop_num}' / f'{config.conf}_{loop_num}_correct_levels.csv'
             
             if csv_path.exists():
                 df = pd.read_csv(csv_path)
@@ -345,7 +345,7 @@ def check_grasp_cal_convergence(config, logger):
             energy_values = []
             for df in energy_data_list:
                 if config_name in df['configuration'].values:
-                    energy = df[df['configuration'] == config_name]['EnergyLevel'].iloc[0]
+                    energy = df[df['configuration'] == config_name]['EnergyTotal'].iloc[0]
                     energy_values.append(energy)
                 else:
                     logger.warning(f"在第{len(energy_values)+1}轮数据中未找到configuration: {config_name}")
@@ -477,7 +477,7 @@ def handle_calculation_error(config, logger):
         # 更新配置文件
         update_config(config_file_path, {'cal_error_num': config.cal_error_num + 1})
         update_config(config_file_path, {'continue_cal': True})
-        continue_calculate(config.root_path, True)
+        # continue_calculate(config.root_path, True)
 
         # 重命名结果目录
         original_cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}'
@@ -493,7 +493,7 @@ def handle_calculation_error(config, logger):
     else:
         logger.info("连续三次波函数未改进，迭代收敛，退出筛选程序")
         update_config(config_file_path, {'continue_cal': False})
-        continue_calculate(config.root_path, False)
+        # continue_calculate(config.root_path, False)
 
 
 def get_unselected_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_dict: Dict[int, List[int]]) -> np.ndarray:

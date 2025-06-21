@@ -55,31 +55,32 @@ def main(config):
         
         # 检查组态耦合
         cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
-        logger.info("************************************************")
+        logger.info
+        ("************************************************")
 
     except Exception as e:
             logger.error(f"程序执行过程中发生错误: {str(e)}")
             raise
+    # 选择asfs_position索引对应的行
+    selected_energy_data = energy_level_data_pd.iloc[asfs_position]
+    # 保存正确的能级数据为CSV
+    correct_levels_csv_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}_correct_levels.csv'
+    selected_energy_data.to_csv(correct_levels_csv_path, index=False)
+    logger.info(f"选择的能级数据已保存到: {correct_levels_csv_path}")
 
     should_continue = True
-    if config.cal_loop_num >= 5:
+    if config.cal_loop_num >= 3:
         # 检查收敛性
         should_continue = gdp.check_grasp_cal_convergence(config, logger)
+        logger.info(f"检查收敛性结果: {should_continue}")
 
     if cal_result and should_continue:
-        # 设置pandas显示选项以保持原始精度
-        pd.set_option('display.float_format', lambda x: '%.6e' if abs(x) < 0.01 or abs(x) >= 10000 else '%.6f')
         # 记录能量信息
         logger.info("能级数据表格：\n%s", 
-           tabulate(energy_level_data_pd, headers='keys', tablefmt='fancy_grid', showindex=False, floatfmt='.6e'))
+           tabulate(energy_level_data_pd, headers='keys', tablefmt='fancy_grid', showindex=False, 
+                   floatfmt=('d', 'd', 'd', 's', '.7f', '.2f', '.2f', 's')))
         logger.info("耦合正确")
         logger.info("************************************************")
-        # 选择asfs_position索引对应的行
-        selected_energy_data = energy_level_data_pd.iloc[asfs_position]
-        # 保存正确的能级数据为CSV
-        correct_levels_csv_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}_correct_levels.csv'
-        selected_energy_data.to_csv(correct_levels_csv_path, index=False)
-        logger.info(f"选择的能级数据已保存到: {correct_levels_csv_path}")
 
         # 提取特征
         logger.info("             数据预处理")
@@ -169,7 +170,7 @@ def main(config):
         gdp.update_config(config_file_path, {'continue_cal': True})
         gdp.update_config(config_file_path, {'cal_error_num': 0})
         gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
-        gdp.continue_calculate(config.root_path, True)
+        # gdp.continue_calculate(config.root_path, True)
         
 
     else:

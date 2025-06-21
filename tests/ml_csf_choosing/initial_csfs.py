@@ -11,7 +11,7 @@ import argparse
 from pathlib import Path
 import sys
 
-sys.path.append('/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/src')
+sys.path.append('/home/workstation3/AppFiles/GraspDataProcessing/src')
 try:
     import graspdataprocessing as gdp
 except ImportError:

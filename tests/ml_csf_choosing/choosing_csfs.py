@@ -11,14 +11,12 @@ import argparse
 from pathlib import Path
 import sys
 
-# sys.path.append('/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/src')
-sys.path.append('D:\\PythonProjects\\GraspDataProcessing\\src')
+sys.path.append('/home/workstation3/AppFiles/GraspDataProcessing/src')
 try:
     import graspdataprocessing as gdp
 except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
-
 def load_target_pool_data(config):
     """
     加载target_pool数据，从预处理文件中加载
@@ -92,15 +90,14 @@ def load_previous_ml_chosen_indices(config, logger):
         dict: 前一轮选择的indices字典
     """
     root_path = Path(config.root_path)
-    ml_results_path = root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}'
-    ml_results_indices_file = ml_results_path / f'{config.conf}_{config.cal_loop_num-1}_ml_chosen_indices'
+    ml_results_path = root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}_ml_chosen_indices'
     
-    if ml_results_indices_file.with_suffix('.pkl').exists():
-        selected_csfs_indices_dict = gdp.csfs_index_load(ml_results_indices_file)
-        logger.info(f"加载机器学习选择的CSFs indices: {ml_results_indices_file}")
+    if ml_results_path.with_suffix('.pkl').exists():
+        selected_csfs_indices_dict = gdp.csfs_index_load(ml_results_path)
+        logger.info(f"加载机器学习选择的CSFs indices: {ml_results_path}.pkl")
         return selected_csfs_indices_dict
     else:
-        logger.warning(f"未找机器学习选择的CSFs indices文件: {ml_results_indices_file}")
+        logger.warning(f"未找机器学习选择的CSFs indices文件: {ml_results_path}")
         return {}
 
 def perform_csfs_selection(config):

@@ -1,5 +1,5 @@
 #!/bin/zsh
-#SBATCH -J GdIoddImlcias3_odd4
+#SBATCH -J GdIoddImlcias3_odd1
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=46
 #SBATCH -p work3
@@ -29,42 +29,30 @@ echo "True" > run.input
 ###########################################
 ## configuration
 atom=GdI
-conf="cv4odd1as3_odd4"
+conf="cv4odd1as3_odd1"
 varied="3"
-rwfnestimate_file="mJ-1-90chosenas3_odd4.w"
+rwfnestimate_file="mJ-1-90chosenas3_odd1.w"
 
 ###########################################
 # 检查 Python 路径
 which python
 python --version
 ###########################################
-# 初始化必要csfs文件数据
-# python initial_csfs.py 
-###########################################
-loop=$(toml get cal_loop_num)
 while true
 do
 ###########################################
-# 检查文件是否存在
-if [[ ! -f "run.input" ]]; then
-    echo "================等待输入文件...================"
-    break
+loop=$(csfs_ml_choosing_config_load.py get cal_loop_num)
+if [ $loop -eq 1 ]; then
+    # 初始化必要csfs文件数据
+    echo "================初始化必要csfs文件数据================"
+    # python initial_csfs.py 
 fi
-
-# 读取文件内容
-run_status=$(head -n 1 run.input | tr -d '[:space:]')
-rm -f run.input  # ⚠️ 关键修复：处理完立即删除文件
-
-# 检查退出条件
-if [[ "$run_status" == "False" ]]; then
+###########################################
+cal_status=$(csfs_ml_choosing_config_load.py get continue_cal)
+if [[ "$cal_status" == "False" ]]; then
     echo "================计算终止================"
     break
 fi
-
-# 主程序逻辑
-echo "执行任务..."
-# 控制循环速度
-sleep 1
 ###########################################
 
 ## 组态选择处理
@@ -126,7 +114,7 @@ n
 n
 y
 5
-1-4
+1-2
 EOF
 
 # ### 6. jj2lsj rmcdhf
