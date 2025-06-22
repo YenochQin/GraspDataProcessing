@@ -72,7 +72,7 @@ def main(config):
     if config.cal_loop_num >= 3:
         # 检查收敛性
         should_continue = gdp.check_grasp_cal_convergence(config, logger)
-        logger.info(f"检查收敛性结果: {should_continue}")
+        logger.info(f"检查收敛性结果: {not should_continue}")
 
     if cal_result and should_continue:
         # 记录能量信息
@@ -171,7 +171,11 @@ def main(config):
         gdp.update_config(config_file_path, {'cal_error_num': 0})
         gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
         # gdp.continue_calculate(config.root_path, True)
-        
+
+    elif not should_continue:
+        logger.info("************************************************")
+        logger.info("计算收敛，停止计算")
+        gdp.update_config(config_file_path, {'continue_cal': False})
 
     else:
         logger.info("************************************************")

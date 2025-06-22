@@ -1,8 +1,52 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+'''
+@Id :csfs_ml_choosing_config_load.py
+@date :2025/06/22 13:25:05
+@author :YenochQin (秦毅)
+'''
+
 """
 GRASP数据处理工具包
 提供命令行工具用于处理GRASP项目相关任务
 """
+
+'''
+### 修改本文件为可执行程序
+chmod +x csfs_ml_choosing_config_load.py
+
+### 将本文件添加到PATH环境变量
+export PATH=$PATH:{/path/to/csfs_ml_choosing_config_load.py}
+#### 注意修改路径为实际路径
+
+### 获取配置值
+
+```bash
+# 获取简单键值
+csfs_ml_choosing_config_load get continue_cal
+
+# 获取嵌套键值
+csfs_ml_choosing_config_load get model_params.n_estimators
+
+# 指定配置文件
+csfs_ml_choosing_config_load get continue_cal -f /path/to/config.toml
+```
+
+### 设置配置值
+
+```bash
+# 设置简单键值
+csfs_ml_choosing_config_load set cal_loop_num 2
+
+# 设置嵌套键值
+csfs_ml_choosing_config_load set model_params.random_state 42
+
+# 指定配置文件
+csfs_ml_choosing_config_load set continue_cal false -f /path/to/config.toml
+```
+'''
 
 import sys
 import argparse
