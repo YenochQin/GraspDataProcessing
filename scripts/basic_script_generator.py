@@ -28,7 +28,7 @@ class BasicScriptGenerator:
         conf = config_params.get('conf', '')
         spectral_term = config_params.get('spectral_term', '')
         root_path = config_params.get('root_path', '')
-        initial_ratio = config_params.get('initial_ratio', 0.09)
+        chosen_ratio = config_params.get('chosen_ratio', 0.09)
         cutoff_value = config_params.get('cutoff_value', 1e-09)
         selected_csfs = config_params.get('selected_csfs', '')
         
@@ -45,7 +45,7 @@ cal_error_num = 0
 cal_method = "rci"
 difference = 0
 cutoff_value = {cutoff_value}
-initial_ratio = {initial_ratio}
+chosen_ratio = {chosen_ratio}
 expansion_ratio = 2
 target_pool_file = "{conf}.c"
 root_path = "{root_path}"

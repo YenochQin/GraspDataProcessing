@@ -124,7 +124,7 @@ def _process_config_data(config):
     """处理配置数据，进行类型转换和验证"""
     # 浮点数转换
     config['cutoff_value'] = float(config['cutoff_value'])
-    config['initial_ratio'] = float(config['initial_ratio'])
+    config['chosen_ratio'] = float(config['chosen_ratio'])
     config['expansion_ratio'] = float(config['expansion_ratio'])
     
     # 整数转换
@@ -160,7 +160,7 @@ def _process_config_data(config):
 def _validate_config_data(config):
     """验证配置数据的有效性"""
     # 验证必需字段
-    required_fields = ['atom', 'conf', 'cal_loop_num', 'cutoff_value', 'initial_ratio']
+    required_fields = ['atom', 'conf', 'cal_loop_num', 'cutoff_value', 'chosen_ratio']
     missing_fields = [field for field in required_fields if field not in config]
     if missing_fields:
         raise ValueError(f"配置文件缺少必需字段: {missing_fields}")
@@ -170,9 +170,9 @@ def _validate_config_data(config):
         if config['cutoff_value'] <= 0:
             raise ValueError("cutoff_value 必须大于 0")
     
-    if 'initial_ratio' in config:
-        if not (0 < config['initial_ratio'] <= 1):
-            raise ValueError("initial_ratio 必须在 (0, 1] 范围内")
+    if 'chosen_ratio' in config:
+        if not (0 < config['chosen_ratio'] <= 1):
+            raise ValueError("chosen_ratio 必须在 (0, 1] 范围内")
     
     if 'expansion_ratio' in config:
         if config['expansion_ratio'] < 1:
@@ -183,7 +183,7 @@ def _validate_config_data(config):
         if not isinstance(config['spetral_term'], list) or len(config['spetral_term']) == 0:
             raise ValueError("spetral_term 必须是非空列表")
     
-    print(f"配置验证通过: cutoff_value={config.get('cutoff_value')}, initial_ratio={config.get('initial_ratio')}")
+    print(f"配置验证通过: cutoff_value={config.get('cutoff_value')}, chosen_ratio={config.get('chosen_ratio')}")
 
 
 #######################################################################

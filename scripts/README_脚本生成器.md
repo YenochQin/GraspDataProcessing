@@ -125,7 +125,7 @@ config_params = {
     'atom': 'CustomAtom',
     'conf': 'custom_config',
     'spetral_term': ['custom_spectral_term'],
-    'initial_ratio': 0.15,  # 自定义初始比例
+    'chosen_ratio': 0.15,  # 自定义初始比例
     'cutoff_value': 1e-10,  # 自定义截断值
     'model_params': {
         'n_estimators': 2000,  # 自定义模型参数
@@ -137,7 +137,7 @@ config_params = {
 ## 配置参数详解
 
 ### 计算参数
-- `initial_ratio`: 初始CSFs选择比例 (0.05-0.2)
+- `chosen_ratio`: 初始CSFs选择比例 (0.05-0.2)
 - `cutoff_value`: 混合系数截断值 (1e-6 到 1e-12)
 - `cal_loop_num`: 计算循环次数 (通常10-20)
 - `std_threshold`: 收敛性检查标准差阈值

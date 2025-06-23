@@ -12,39 +12,6 @@ import logging
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Union, List
 
-
-class TensorNet(nn.Module):
-    def __init__(self, input_shape, hidden_dim=128, num_classes=2):
-        super().__init__()
-        seq_length, in_channels = input_shape
-        
-        # 参数初始化
-        self.w1 = nn.Parameter(torch.empty(seq_length, in_channels, hidden_dim))
-        self.b1 = nn.Parameter(torch.empty(hidden_dim, in_channels))
-        self.w2 = nn.Parameter(torch.empty(in_channels))
-        self.b2 = nn.Parameter(torch.empty(1))
-        self.w3 = nn.Parameter(torch.empty(hidden_dim, num_classes))
-        self.b3 = nn.Parameter(torch.empty(num_classes))
-        
-        nn.init.xavier_uniform_(self.w1)
-        nn.init.xavier_uniform_(self.w3)
-        nn.init.zeros_(self.b1)
-        nn.init.zeros_(self.b2)
-        nn.init.zeros_(self.b3)
-        nn.init.normal_(self.w2, mean=0.0, std=0.01)
-        
-        self.input_shape = input_shape
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        batch_size = x.size(0)
-        x = x.view(batch_size, *self.input_shape)
-        
-        a1 = torch.einsum('bjk,jkl->blk', x, self.w1) + self.b1
-        a2 = torch.einsum('blk,k->bl', self.relu(a1), self.w2) + self.b2
-        a3 = torch.matmul(self.relu(a2), self.w3) + self.b3
-        return a3
-
 class ANNClassifier:
     """
     优化的人工神经网络分类器

@@ -28,7 +28,7 @@ class SimpleScriptGenerator:
         conf = config_params.get('conf', 'cv4odd1as3_odd1')
         spectral_term = config_params.get('spectral_term', '5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D')
         root_path = config_params.get('root_path', '/home/workstation3/caldata/GdI/cvodd1/as3_odd1')
-        initial_ratio = config_params.get('initial_ratio', 0.09)
+        chosen_ratio = config_params.get('chosen_ratio', 0.09)
         cutoff_value = config_params.get('cutoff_value', 1e-09)
         cal_loop_num = config_params.get('cal_loop_num', 12)
         
@@ -46,7 +46,7 @@ cal_error_num = 0
 cal_method = "rci"
 difference = 0
 cutoff_value = {cutoff_value}
-initial_ratio = {initial_ratio}
+chosen_ratio = {chosen_ratio}
 expansion_ratio = 2
 target_pool_file = "{conf}.c"
 root_path = "{root_path}"
@@ -368,7 +368,7 @@ bash csfs_choosing_SCF_cal_ml_choosing.sh
 - `conf`: 组态名称
 - `spetral_term`: 光谱项
 - `cal_loop_num`: 计算循环次数
-- `initial_ratio`: 初始选择比例
+- `chosen_ratio`: 初始选择比例
 - `cutoff_value`: 截断值
 
 ### 机器学习参数
@@ -383,7 +383,7 @@ bash csfs_choosing_SCF_cal_ml_choosing.sh
 
 ## 故障排除
 - 如果遇到模块导入错误，检查Python路径设置
-- 如果计算不收敛，调整`cutoff_value`和`initial_ratio`参数
+- 如果计算不收敛，调整`cutoff_value`和`chosen_ratio`参数
 - 如果内存不足，减少`tasks_per_node`数量
 """
     

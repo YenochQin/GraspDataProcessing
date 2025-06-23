@@ -33,7 +33,7 @@ def example_gdI_calculation():
         'target_pool_file': 'cv4odd1as3_odd1.c',
         'selected_csfs_file': 'mJ-1-90chosenas3_odd1.c',
         'selected_csfs_mix_file': 'mJ-1-90chosenas3_odd1.cm',
-        'initial_ratio': 0.09,
+        'chosen_ratio': 0.09,
         'cutoff_value': 1e-09,
         'cal_loop_num': 12,
         'generation_time': '2025-01-27'
@@ -73,7 +73,7 @@ def example_custom_atom():
         'target_pool_file': 'cv4odd1as2_odd1.c',
         'selected_csfs_file': 'mJ-1-90chosenas2_odd1.c',
         'selected_csfs_mix_file': 'mJ-1-90chosenas2_odd1.cm',
-        'initial_ratio': 0.1,
+        'chosen_ratio': 0.1,
         'cutoff_value': 1e-08,
         'cal_loop_num': 10,
         'generation_time': '2025-01-27'
@@ -148,7 +148,7 @@ def example_batch_generation():
             'target_pool_file': f"{atom_config['conf']}.c",
             'selected_csfs_file': f"mJ-1-90chosen{atom_config['conf']}.c",
             'selected_csfs_mix_file': f"mJ-1-90chosen{atom_config['conf']}.cm",
-            'initial_ratio': 0.09,
+            'chosen_ratio': 0.09,
             'cutoff_value': 1e-09,
             'cal_loop_num': 12,
             'generation_time': '2025-01-27'

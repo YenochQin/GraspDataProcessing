@@ -231,6 +231,34 @@
             font-size: 14px;
         }
 
+        /* Placeholder样式 */
+        input::placeholder, textarea::placeholder {
+            color: rgba(136, 136, 136, 0.6);
+            font-style: italic;
+            opacity: 1;
+        }
+        
+        input::-webkit-input-placeholder, textarea::-webkit-input-placeholder {
+            color: rgba(136, 136, 136, 0.6);
+            font-style: italic;
+        }
+        
+        input::-moz-placeholder, textarea::-moz-placeholder {
+            color: rgba(136, 136, 136, 0.6);
+            font-style: italic;
+            opacity: 1;
+        }
+        
+        input:-ms-input-placeholder, textarea:-ms-input-placeholder {
+            color: rgba(136, 136, 136, 0.6);
+            font-style: italic;
+        }
+        
+        input:focus::placeholder, textarea:focus::placeholder {
+            color: rgba(136, 136, 136, 0.3);
+            transition: color 0.3s ease;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -258,30 +286,27 @@
                 <h2>⚙️ 配置参数</h2>
                 
                 <div class="preset-buttons">
-                    <button class="preset-btn" onclick="loadPreset('gdI')">GdI原子</button>
-                    <button class="preset-btn" onclick="loadPreset('ce')">Ce原子</button>
-                    <button class="preset-btn" onclick="loadPreset('pr')">Pr原子</button>
                     <button class="preset-btn" onclick="loadPreset('custom')">自定义</button>
+                    <button class="preset-btn" onclick="loadPreset('gdI')">example</button>
                 </div>
 
                 <div class="section">
                     <h3>📋 基本信息</h3>
                     <div class="form-group">
                         <label for="atom">原子符号 *</label>
-                        <input type="text" id="atom" placeholder="例如: GdI, Ce, Pr" value="GdI">
-                        <div class="help-text">输入原子符号，如GdI表示钆离子</div>
+                        <input type="text" id="atom" placeholder="e.g., Fe_I or Mg_Li-like or Z=59_II or 198Hg_I" value="">
                     </div>
                     
                     <div class="form-group">
                         <label for="conf">组态名称 *</label>
-                        <input type="text" id="conf" placeholder="例如: cv4odd1as3_odd1" value="cv4odd1as3_odd1">
-                        <div class="help-text">组态配置名称，用于文件命名</div>
+                        <input type="text" id="conf" placeholder="例如: odd1level1" value="">
+                        <div class="help-text">CSFs文件(*.c)名称，用于文件命名</div>
                     </div>
                     
                     <div class="form-group">
                         <label for="spectral_term">光谱项 *</label>
-                        <textarea id="spectral_term" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D">5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D</textarea>
-                        <div class="help-text">原子的光谱项描述</div>
+                        <textarea id="spectral_term" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D"></textarea>
+                        <div class="help-text">GRASP rlevels 输出的结果</div>
                     </div>
                 </div>
 
@@ -289,14 +314,14 @@
                     <h3>📁 路径设置</h3>
                     <div class="form-group">
                         <label for="root_path">根路径 *</label>
-                        <input type="text" id="root_path" placeholder="/home/workstation3/caldata/GdI/cvodd1/as3_odd1" value="/home/workstation3/caldata/GdI/cvodd1/as3_odd1">
+                        <input type="text" id="root_path" placeholder="在初始CSFs文件所在目录输入命令 'pwd' 获取当前路径" value="">
                         <div class="help-text">计算数据的根目录路径</div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="selected_csfs">选定CSFs文件名</label>
-                        <input type="text" id="selected_csfs" placeholder="mJ-1-90chosenas3_odd1" value="mJ-1-90chosenas3_odd1">
-                        <div class="help-text">已选定的CSFs文件名（不含扩展名）</div>
+                        <label for="selected_csfs">初选CSFs文件名</label>
+                        <input type="text" id="selected_csfs" placeholder="初选的CSFs文件名 test_odd1" value="">
+                        <div class="help-text">初选的CSFs文件名（不含扩展名）</div>
                     </div>
                 </div>
 
@@ -304,32 +329,27 @@
                     <h3>🔧 计算参数</h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="initial_ratio">初始选择比例</label>
-                            <input type="number" id="initial_ratio" step="0.01" min="0.01" max="1.0" value="0.09">
+                            <label for="chosen_ratio">CSFs选择比例</label>
+                            <input type="number" id="chosen_ratio" step="0.01" min="0.01" max="1.0" placeholder="0.09" value="">
                             <div class="help-text">初始CSFs选择比例 (0.01-1.0)</div>
                         </div>
                         
                         <div class="form-group">
                             <label for="cutoff_value">截断值</label>
-                            <input type="number" id="cutoff_value" step="1e-12" min="1e-12" max="1e-6" value="1e-09">
+                            <input type="number" id="cutoff_value" step="1e-12" min="1e-12" max="1e-6" placeholder="1e-09" value="">
                             <div class="help-text">混合系数截断值</div>
                         </div>
                     </div>
                     
                     <div class="form-row">
-                        <div class="form-group">
-                            <label for="cal_loop_num">计算循环次数</label>
-                            <input type="number" id="cal_loop_num" min="1" max="50" value="12">
-                            <div class="help-text">最大计算循环次数</div>
-                        </div>
                         
                         <div class="form-group">
                             <label for="cal_method">计算方法</label>
                             <select id="cal_method">
-                                <option value="rci">RCI</option>
                                 <option value="rmcdhf">RMCDHF</option>
+                                <option value="rci">RCI</option>
                             </select>
-                            <div class="help-text">GRASP计算方法</div>
+                            <div class="help-text">训练时使用的GRASP计算方法</div>
                         </div>
                     </div>
                 </div>
@@ -423,7 +443,7 @@ cal_error_num = 0
 cal_method = "rci"
 difference = 0
 cutoff_value = 1e-09
-initial_ratio = 0.09
+chosen_ratio = 0.09
 expansion_ratio = 2
 target_pool_file = "cv4odd1as3_odd1.c"
 root_path = "/home/workstation3/caldata/GdI/cvodd1/as3_odd1"
@@ -524,7 +544,7 @@ node_count = 1
                 spectral_term: document.getElementById('spectral_term').value,
                 root_path: document.getElementById('root_path').value,
                 selected_csfs: document.getElementById('selected_csfs').value,
-                initial_ratio: document.getElementById('initial_ratio').value,
+                chosen_ratio: document.getElementById('chosen_ratio').value,
                 cutoff_value: document.getElementById('cutoff_value').value,
                 cal_loop_num: document.getElementById('cal_loop_num').value,
                 cal_method: document.getElementById('cal_method').value,
@@ -552,7 +572,7 @@ cal_error_num = 0
 cal_method = "${config.cal_method}"
 difference = 0
 cutoff_value = ${config.cutoff_value}
-initial_ratio = ${config.initial_ratio}
+chosen_ratio = ${config.chosen_ratio}
 expansion_ratio = 2
 target_pool_file = "${config.conf}.c"
 root_path = "${config.root_path}"
@@ -590,7 +610,7 @@ node_count = ${config.node_count}
             document.getElementById('spectral_term').value = '5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D';
             document.getElementById('root_path').value = '/home/workstation3/caldata/GdI/cvodd1/as3_odd1';
             document.getElementById('selected_csfs').value = 'mJ-1-90chosenas3_odd1';
-            document.getElementById('initial_ratio').value = '0.09';
+            document.getElementById('chosen_ratio').value = '0.09';
             document.getElementById('cutoff_value').value = '1e-09';
             document.getElementById('cal_loop_num').value = '12';
             document.getElementById('cal_method').value = 'rci';

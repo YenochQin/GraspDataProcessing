@@ -46,7 +46,7 @@ def main(config):
     # 验证初始文件
     gdp.validate_initial_files(config, logger)
 
-    logger.info(f"初始比例: {config.initial_ratio}")
+    logger.info(f"初始比例: {config.chosen_ratio}")
     logger.info(f"光谱项: {config.spetral_term}")
 
     try:

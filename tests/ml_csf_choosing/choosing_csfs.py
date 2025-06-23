@@ -116,7 +116,7 @@ def perform_csfs_selection(config):
     
     logger.info("CSFs选择程序启动")
     logger.info(f'计算循环次数: {config.cal_loop_num}')
-    logger.info(f"初始比例: {config.initial_ratio}")
+    logger.info(f"初始比例: {config.chosen_ratio}")
     logger.info(f"光谱项: {config.spetral_term}")
     
     # 步骤2：创建输出目录
@@ -150,7 +150,7 @@ def perform_csfs_selection(config):
         chosen_csfs_dict[block], chosen_csfs_indices_dict[block], unselected_indices_dict[block] = (
             gdp.radom_choose_csfs(
                 target_pool_csfs_data.CSFs_block_data[block], 
-                config.initial_ratio, 
+                config.chosen_ratio, 
                 selected_csfs_indices_dict.get(block, [])
             )
         )
