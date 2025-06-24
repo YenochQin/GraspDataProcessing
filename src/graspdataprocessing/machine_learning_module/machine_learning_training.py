@@ -680,3 +680,113 @@ def _plot_probability_distribution(y_probability, y_true, save_path):
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
+
+def calculate_dynamic_chosen_ratio(
+                                                        config,
+                                                        all_chosen_indices,
+                                                        target_pool_csfs_data,
+                                                        y_probability_other,
+                                                        evaluation_results,
+                                                        energy_level_data_pd,
+                                                        logger):
+    """
+    带精度反馈的动态选择率计算
+    
+    根据机器学习模型性能、计算精度、能级稳定性等多个因子，
+    动态调整CSF选择率，既能收缩也能扩张，确保计算质量。
+    
+    Args:
+        config: 配置对象，包含当前选择率和迭代轮次等信息
+        all_chosen_indices: 当前轮次选择的所有CSF索引数组
+        target_pool_csfs_data: 目标CSF池数据对象
+        y_probability_other: 未选择CSF的预测概率数组
+        evaluation_results: evaluate_model函数返回的完整评估结果字典
+        energy_level_data_pd: 当前轮次的能级数据DataFrame
+        logger: 日志记录器
+        
+    Returns:
+        float: 动态调整后的选择率，范围在[0.03, 0.25]之间
+        
+    Examples:
+        >>> dynamic_ratio = calculate_dynamic_chosen_ratio(
+        ...     config, all_chosen_indices, target_pool_csfs_data, 
+        ...     y_probability_other, evaluation_results, energy_level_data_pd, logger
+        ... )
+        >>> config.chosen_ratio = dynamic_ratio
+    """
+    total_available_csfs = len(target_pool_csfs_data.CSFs_block_data[0])
+    current_selected_count = len(all_chosen_indices)
+    current_actual_ratio = current_selected_count / total_available_csfs
+    base_ratio = config.chosen_ratio
+    
+    # 获取模型性能指标
+    test_f1 = evaluation_results['test_metrics']['f1']
+    train_f1 = evaluation_results['train_metrics']['f1']
+    test_accuracy = evaluation_results['test_metrics']['accuracy']
+    
+    # === 精度反馈机制 ===
+    accuracy_adjustment = 1.0
+    
+    # 1. 模型性能检查
+    if test_f1 < 0.8 or test_accuracy < 0.85:
+        # 模型性能不佳，可能需要更多组态
+        accuracy_adjustment *= 1.2
+        logger.info(f"             模型性能较低(F1:{test_f1:.3f}, Acc:{test_accuracy:.3f})，增加选择率")
+    
+    # 2. 过拟合检查
+    overfitting_gap = train_f1 - test_f1
+    if overfitting_gap > 0.1:
+        # 过拟合严重，可能组态数量不足导致泛化能力差
+        accuracy_adjustment *= 1.15
+        logger.info(f"             检测到过拟合(差距:{overfitting_gap:.3f})，增加选择率")
+    
+    # 3. 能级数据质量检查（如果有历史数据）
+    if config.cal_loop_num >= 3:
+        # 检查能级变化是否过大（可能表示计算不稳定）
+        energy_std = energy_level_data_pd['Energy(cm-1)'].std()
+        if energy_std > 1000:  # 能级标准差过大
+            accuracy_adjustment *= 1.1
+            logger.info(f"             能级数据波动较大(std:{energy_std:.1f})，适度增加选择率")
+    
+    # 4. 高置信度预测不足检查
+    high_confidence_ratio = np.sum(y_probability_other > 0.9) / len(y_probability_other)
+    if high_confidence_ratio < 0.05:  # 高置信度预测太少
+        accuracy_adjustment *= 1.1
+        logger.info(f"             高置信度预测不足({high_confidence_ratio:.3f})，增加选择率")
+    
+    # 5. 选择率过低保护机制
+    if current_actual_ratio < 0.03:
+        accuracy_adjustment *= 1.3
+        logger.info(f"             选择率过低({current_actual_ratio:.4f})，强制增加")
+    
+    # 6. 模型预测质量检查
+    prediction_entropy = -np.mean(y_probability_other * np.log(y_probability_other + 1e-8) + 
+                                 (1 - y_probability_other) * np.log(1 - y_probability_other + 1e-8))
+    if prediction_entropy > 0.6:  # 预测不确定性过高
+        accuracy_adjustment *= 1.05
+        logger.info(f"             预测不确定性过高(entropy:{prediction_entropy:.3f})，轻微增加选择率")
+    
+    # === 原有计算逻辑（加入精度反馈） ===
+    # 基于模型置信度
+    confidence_factor = np.sum(y_probability_other > 0.8) / len(y_probability_other)
+    
+    # 基于迭代轮次（考虑精度反馈的修正）
+    # 如果精度有问题，减缓衰减速度
+    decay_rate = 0.05 if accuracy_adjustment <= 1.1 else 0.03
+    iteration_factor = max(0.5, 1.0 - decay_rate * max(0, config.cal_loop_num - 3))
+    
+    # 综合计算（加入精度调整）
+    dynamic_ratio = current_actual_ratio * 0.6 + base_ratio * confidence_factor * 0.4
+    dynamic_ratio *= iteration_factor
+    dynamic_ratio *= accuracy_adjustment  # 应用精度反馈
+    
+    # 更严格的范围限制（考虑向上调整的需要）
+    dynamic_ratio = np.clip(dynamic_ratio, 0.03, 0.25)
+    
+    logger.info(f"             实际选择率: {current_actual_ratio:.4f}")
+    logger.info(f"             置信度因子: {confidence_factor:.4f}")
+    logger.info(f"             迭代衰减因子: {iteration_factor:.4f}")
+    logger.info(f"             精度调整因子: {accuracy_adjustment:.4f}")
+    logger.info(f"             动态选择率: {dynamic_ratio:.4f}")
+    
+    return dynamic_ratio

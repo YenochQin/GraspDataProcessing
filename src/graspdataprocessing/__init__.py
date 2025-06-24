@@ -110,7 +110,8 @@ from .machine_learning_module import (
     check_grasp_cal_convergence,
     handle_calculation_error,
     get_unselected_descriptors,
-    save_and_plot_results
+    save_and_plot_results,
+    calculate_dynamic_chosen_ratio
 )
 
 __all__ = [
@@ -224,5 +225,6 @@ __all__ = [
     'check_grasp_cal_convergence',
     'handle_calculation_error',
     'get_unselected_descriptors',
-    'save_and_plot_results'
+    'save_and_plot_results',
+    'calculate_dynamic_chosen_ratio'
 ]

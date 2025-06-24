@@ -172,6 +172,19 @@ def main(config):
         gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
         # gdp.continue_calculate(config.root_path, True)
 
+        # 计算动态选择率
+        dynamic_ratio = gdp.calculate_dynamic_chosen_ratio(
+            config, 
+            all_chosen_indices, 
+            target_pool_csfs_data, 
+            y_probability_other, 
+            evaluation_results, 
+            energy_level_data_pd, 
+            logger
+        )
+        config.chosen_ratio = dynamic_ratio
+        gdp.update_config(config_file_path, {'chosen_ratio': dynamic_ratio})
+
     elif not should_continue:
         logger.info("************************************************")
         logger.info("计算收敛，停止计算")
