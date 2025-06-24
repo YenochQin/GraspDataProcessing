@@ -31,7 +31,8 @@ from .CSFs_compress_extract import (
     CSF_info_2_dict,
     CSF_item_2_dict,
     get_CSFs_file_info,
-    
+    parse_csf_2_descriptor,
+    parse_csf_2_descriptor_with_subshell,
     batch_process_csfs_to_descriptors,
     batch_process_csfs_with_multi_block,
     create_csf_dataset_for_ml
@@ -62,7 +63,8 @@ __all__ = [
     'CSF_info_2_dict',
     'CSF_item_2_dict',
     'get_CSFs_file_info',
-    
+    'parse_csf_2_descriptor',
+    'parse_csf_2_descriptor_with_subshell',
     'batch_process_csfs_to_descriptors',
     'batch_process_csfs_with_multi_block',
     'create_csf_dataset_for_ml'

@@ -112,7 +112,7 @@ def perform_csfs_selection(config):
     """
     
     # 步骤1：加载目标池数据
-    target_pool_csfs_data, base_selected_indices, logger = load_target_pool_data(config)
+    target_pool_csfs_data, initial_selected_indices, logger = load_target_pool_data(config)
     
     logger.info("CSFs选择程序启动")
     logger.info(f'计算循环次数: {config.cal_loop_num}')
@@ -127,8 +127,8 @@ def perform_csfs_selection(config):
     
     # 步骤3：确定已选择的CSFs索引
     if config.cal_loop_num == 1:
-        # 第一轮使用base_selected_indices（来自selected_csfs_file或空）
-        selected_csfs_indices_dict = base_selected_indices
+        # 第一轮使用initial_selected_indices（来自selected_csfs_file或空）
+        selected_csfs_indices_dict = initial_selected_indices
         logger.info("第一轮选择，使用基础selected indices")
     elif config.continue_cal:
         # 后续轮次如果耦合正确，则使用机器学习选择的CSFs indices
