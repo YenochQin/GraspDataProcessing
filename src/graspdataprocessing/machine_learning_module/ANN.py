@@ -25,13 +25,14 @@ class ANNClassifier:
     6. 改进代码结构和可读性
     """
     
-    def __init__(self, 
-                 input_size: int, 
-                 hidden_size: int = 150, 
-                 output_size: int = 2, 
-                 learning_rate: float = 0.001,
-                 class_weights: Optional[List[float]] = None,
-                 device: Optional[str] = None):
+    def __init__(
+                self, 
+                input_size: int, 
+                hidden_size: int = 150, 
+                output_size: int = 2, 
+                learning_rate: float = 0.001,
+                class_weights: Optional[List[float]] = None,
+                device: Optional[str] = None):
         """
         初始化ANN分类器
         

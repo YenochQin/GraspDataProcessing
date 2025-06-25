@@ -98,26 +98,22 @@ def main(config):
             model, X_train, X_test, y_train, y_test, X_unselected, config, logger
         )
 
-        # 访问结果
-        test_predictions = evaluation_results['predictions']['y_prediction_test']
-        test_probabilities = evaluation_results['probabilities']['y_probability_test']
+        # 访问结果用于过拟合检查
         test_f1 = evaluation_results['test_metrics']['f1']
         train_f1 = evaluation_results['train_metrics']['f1']
 
         overfitting_check = test_f1 - train_f1  # 如果差异过大说明过拟合
-        logger.info(f'             {overfitting_check:}')
-        logger.info("             模型推理")
-        start_time = time.time()
-        X_unselected = unselected_csfs_descriptors.copy()
-        y_unselected_prediction = model.predict(X_unselected)
-        y_unselected_probability = model.predict_probability(X_unselected)[:, 1]
-        eval_time = time.time() - start_time
-        logger.info(f"             模型推理时间:{eval_time}")
+        logger.info(f'             过拟合检查差异: {overfitting_check:.4f}')
         
-        y_prediction = evaluation_results['predictions']['y_prediction_test']
-        y_probability = evaluation_results['probabilities']['y_probability_test']
-        y_probability_all = evaluation_results['probabilities']['y_probability_all']
-        y_probability_other = evaluation_results['probabilities']['y_probability_other']
+        # 对所有原始CSF描述符进行模型推理
+        logger.info("             对所有CSF描述符进行模型推理")
+        start_time = time.time()
+        # 直接使用所有原始CSF描述符（已经是纯特征数据）
+        y_all_prediction = model.predict(raw_csfs_descriptors)
+        y_all_probability = model.predict_probability(raw_csfs_descriptors)[:, 1]
+        eval_time = time.time() - start_time
+        logger.info(f"             模型推理时间: {eval_time:.4f}秒")
+        logger.info(f"             推理了 {len(y_all_probability)} 个CSF组态")
         
         # 使用标准化的保存和绘图函数
         saved_files = gdp.save_and_plot_results(
@@ -132,19 +128,34 @@ def main(config):
         logger.info(f"             预测结果与模型保存成功")
         logger.info(f"             保存的文件: {list(saved_files.keys())}")
 
+        # 基于混合系数选择重要组态
         csfs_above_threshold_indices = np.where(np.any(rmix_file_data.mix_coefficient_List[0][asfs_position]**2 >= np.float64(config.cutoff_value), axis = 0))[0]
-        high_prob_threshold = np.percentile(y_probability_all[:, 1], 90)  # 取90分位数作为高概率阈值
-        logger.info(f"             高于90分位数作为高概率阈值: {high_prob_threshold}")
-        promising_unselected_CSFs_indices = unselected_csfs_indices_dict[0][y_probability_other > high_prob_threshold]
-        logger.info(f"             ml预测的组态数: {promising_unselected_CSFs_indices.shape}")
         filtered_chosen_indices = caled_csfs_indices_dict[0][csfs_above_threshold_indices]
-        logger.info(f"             本轮计算重要组态数: {filtered_chosen_indices.shape}")
-        all_chosen_indices = np.union1d(filtered_chosen_indices, promising_unselected_CSFs_indices)
-        logger.info(f"             本轮选择的组态总数: {all_chosen_indices.shape}")
-        important_config_count = all_chosen_indices.shape[0]
+        logger.info(f"             基于混合系数的重要组态数: {len(filtered_chosen_indices)}")
+        
+        # 基于机器学习模型选择高概率CSF组态
+        # 使用全部CSF的预测概率来设置阈值
+        high_prob_threshold = np.percentile(y_all_probability, 95)  # 取95分位数作为高概率阈值
+        logger.info(f"             ML预测高概率阈值(95分位数): {high_prob_threshold:.4f}")
+        
+        # 找出高概率的CSF索引
+        high_prob_indices = np.where(y_all_probability > high_prob_threshold)[0]
+        logger.info(f"             ML预测的高概率组态数: {len(high_prob_indices)}")
+        
+        # 排除已经在本轮计算中使用的组态
+        already_calculated_indices = caled_csfs_indices_dict[0]
+        promising_ml_indices = np.setdiff1d(high_prob_indices, already_calculated_indices)
+        logger.info(f"             ML预测的新增高概率组态数: {len(promising_ml_indices)}")
+        
+        # 合并选择的组态索引
+        all_chosen_indices = np.union1d(filtered_chosen_indices, promising_ml_indices)
+        logger.info(f"             本轮总选择组态数: {len(all_chosen_indices)}")
+        important_config_count = len(all_chosen_indices)
         important_config_count_history.append(important_config_count)
         logger.info(f"             本轮重要组态数量: {important_config_count}")
         logger.info(f"             迭代重要组态数量历史: {important_config_count_history}")
+        
+        # 保存选择的组态索引
         ml_chosen_indices_dict = {0 : all_chosen_indices}
         
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
@@ -153,9 +164,12 @@ def main(config):
 
         # 保存迭代结果
         selection_results = {
-            'indexs_import_temp': [],  # 如果需要可以添加实际值
-            'indexs_import_stay_temp': [],  # 如果需要可以添加实际值
-            'chosen_index': all_chosen_indices.tolist()
+            'chosen_index': all_chosen_indices.tolist(),
+            'mix_coeff_chosen_count': len(filtered_chosen_indices),
+            'ml_predicted_count': len(high_prob_indices), 
+            'ml_new_count': len(promising_ml_indices),
+            'total_chosen_count': len(all_chosen_indices),
+            'total_csfs_count': len(raw_csfs_descriptors)
         }
         
         # 计算总执行时间
@@ -181,7 +195,7 @@ def main(config):
             config, 
             all_chosen_indices, 
             target_pool_csfs_data, 
-            y_probability_other, 
+            y_all_probability, 
             evaluation_results, 
             energy_level_data_pd, 
             logger

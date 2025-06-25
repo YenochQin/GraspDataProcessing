@@ -402,15 +402,12 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
     Args:
         config: 配置对象
         training_time: 训练时间
-        eval_time: 评估时间  
-        execution_time: 执行时间
+        eval_time: 评估时间（模型推理时间）
+        execution_time: 总执行时间
         evaluation_results: evaluate_model函数返回的结果字典
-        selection_results: 选择结果字典
-
+        selection_results: 选择结果字典，包含实际的组态选择信息
         logger: 日志记录器
     """
-    
-    all_time = execution_time + training_time + eval_time
     
     # 从新的结果结构中提取指标
     test_metrics = evaluation_results['test_metrics']
@@ -427,40 +424,57 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
     # 创建表头（如果文件不存在）
     if not results_file.exists():
         headers = [
-            'training_time', 'eval_time', 'execution_time', 'total_time',
+            'iteration', 'training_time', 'inference_time', 'execution_time', 'total_time',
             'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
-            'Es_term', 'import_count', 'stay_count', 'MLsampling_ratio', 'chosen_count',
-            'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall'
+            'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall',
+            'mix_coeff_chosen_count', 'ml_predicted_count', 'ml_new_count', 'total_chosen_count',
+            'chosen_ratio', 'overfitting_gap'
         ]
         with open(results_file, mode="w", newline="", encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow(headers)
     
+    # 计算过拟合差距
+    overfitting_gap = train_metrics['f1'] - test_metrics['f1']
+    
+    # 提取选择结果的实际数据
+    mix_coeff_chosen = selection_results.get('mix_coeff_chosen_count', 0)
+    ml_predicted = selection_results.get('ml_predicted_count', 0) 
+    ml_new = selection_results.get('ml_new_count', 0)
+    total_chosen = len(selection_results.get('chosen_index', []))
+    
+    # 计算选择率
+    total_csfs = selection_results.get('total_csfs_count', 1)  # 避免除零
+    chosen_ratio = total_chosen / total_csfs if total_csfs > 0 else 0
+    
     with open(results_file, mode="a", newline="", encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow([
+            config.cal_loop_num,  # 迭代轮次
             training_time, 
-            actual_eval_time, 
+            actual_eval_time,  # 推理时间
             execution_time, 
-            all_time,
+            execution_time,  # 总时间（现在与执行时间相同）
             test_metrics['f1'], 
             test_metrics['roc_auc'], 
             test_metrics['accuracy'],
             test_metrics['precision'], 
             test_metrics['recall'],
-            0,  # Es_term placeholder
-            len(selection_results.get('indexs_import_temp', [])),
-            len(selection_results.get('indexs_import_stay_temp', [])),
-            None,  # MLsampling_ratio placeholder
-            len(selection_results.get('chosen_index', [])),
             train_metrics['f1'], 
             train_metrics['roc_auc'], 
             train_metrics['accuracy'],
             train_metrics['precision'], 
-            train_metrics['recall']
+            train_metrics['recall'],
+            mix_coeff_chosen,  # 基于混合系数选择的组态数
+            ml_predicted,      # ML预测的高概率组态数
+            ml_new,           # ML新增的组态数
+            total_chosen,     # 总选择组态数
+            chosen_ratio,     # 选择率
+            overfitting_gap   # 过拟合差距
         ])
     
     logger.info(f"迭代结果已保存到: {results_file}")
+    logger.info(f"第{config.cal_loop_num}轮 - 选择{total_chosen}个组态，选择率{chosen_ratio:.4f}")
 
 def handle_calculation_error(config, logger):
     """处理计算错误的情况"""
