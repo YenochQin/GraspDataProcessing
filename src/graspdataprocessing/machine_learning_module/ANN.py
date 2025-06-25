@@ -107,8 +107,7 @@ class ANNClassifier:
             batch_size: int = 2048, 
             max_epochs: int = 150,
             early_stopping_patience: int = 20,
-            min_delta: float = 1e-4,
-            weight: Optional[List[float]] = None) -> Dict[str, List[float]]:
+            min_delta: float = 1e-4) -> Dict[str, List[float]]:
         """
         训练ANN模型
         
@@ -121,7 +120,6 @@ class ANNClassifier:
             max_epochs: 最大训练轮数
             early_stopping_patience: 早停耐心值
             min_delta: 最小改进阈值
-            weight: 重采样权重（如果提供）
             
         Returns:
             训练历史记录字典
@@ -129,10 +127,6 @@ class ANNClassifier:
         # 数据验证
         self._validate_input_data(X_train, y_train)
         
-        # 重采样处理
-        if weight is not None:
-            X_train, y_train = self.resampling(X_train, y_train, weight)
-            
         # 数据转换
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(self.device)
         y_train_tensor = torch.tensor(y_train, dtype=torch.long).to(self.device)
@@ -252,22 +246,29 @@ class ANNClassifier:
         if len(np.unique(y)) > self.output_size:
             raise ValueError(f"标签类别数 {len(np.unique(y))} 超过模型输出维度 {self.output_size}")
 
-    def predict(self, X):
+    def predict(self, X: np.ndarray) -> np.ndarray:
         """
-        Predict the labels for the given input data.
-        :param X: Input data (numpy array).
-        :return: Predicted labels (numpy array).
+        预测标签
+        
+        Args:
+            X: 输入数据
+            
+        Returns:
+            预测标签
         """
         predictions = self.predict_probability(X)
-        predictions = predictions[:, 1]>0.5
-
+        predictions = predictions[:, 1] > 0.5
         return predictions
     
-    def predict_probability(self, X):
+    def predict_probability(self, X: np.ndarray) -> np.ndarray:
         """
-        Predict the labels for the given input data.
-        :param X: Input data (numpy array).
-        :return: Predicted labels (numpy array).
+        预测概率
+        
+        Args:
+            X: 输入数据
+            
+        Returns:
+            预测概率
         """
         self.model.eval()
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
@@ -277,13 +278,17 @@ class ANNClassifier:
 
         return outputs.cpu().numpy()
 
-    def evaluate(self, X, y, verbose=True):
+    def evaluate(self, X: np.ndarray, y: np.ndarray, verbose: bool = True) -> Dict[str, float]:
         """
-        Evaluate the model on the given data and labels.
-        :param X: Input data (numpy array).
-        :param y: True labels (numpy array).
-        :param verbose: If True, print the evaluation metrics.
-        :return: A dictionary containing evaluation metrics.
+        评估模型性能
+        
+        Args:
+            X: 输入数据
+            y: 真实标签
+            verbose: 是否打印评估结果
+            
+        Returns:
+            评估指标字典
         """
         self.model.eval()
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
@@ -311,11 +316,13 @@ class ANNClassifier:
 
         return metrics
 
-    def plot_roc_curve(self, X, y):
+    def plot_roc_curve(self, X: np.ndarray, y: np.ndarray):
         """
-        Plot the ROC curve for the model.
-        :param X: Input data (numpy array).
-        :param y: True labels (numpy array).
+        绘制ROC曲线
+        
+        Args:
+            X: 输入数据
+            y: 真实标签
         """
         self.model.eval()
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
@@ -334,69 +341,46 @@ class ANNClassifier:
         plt.legend(loc="lower right")
         plt.show()
 
-    def save_model(self, path):
+    def save_model(self, path: str):
         """
-        Save the model parameters to a file.
-        :param path: File path to save the model.
+        保存模型
+        
+        Args:
+            path: 保存路径
         """
         torch.save(self.model.state_dict(), path)
         joblib.dump(self, path + '_ann.pkl')
 
-    def load_model(self, path):
+    def load_model(self, path: str):
         """
-        Load the model parameters from a file.
-        :param path: File path to load the model.
+        加载模型
+        
+        Args:
+            path: 模型路径
         """
         self.model.load_state_dict(torch.load(path))
         self.model.to(self.device)
         return joblib.load(path + '_ann.pkl')
     
-    def resampling(self, X_train, y_train, weight):
-        X_positive = X_train[y_train==1]
-        X_negtive = X_train[y_train==0]
-        Y_positive = y_train[y_train==1]
-        Y_negtive = y_train[y_train==0]
-
-        Num_min = max(X_positive.shape[0], X_negtive.shape[0])
-
-        N_sample_positive, N_sample_negtive = int(weight[0]*Num_min), int(weight[1]*Num_min)
-        id_positive = np.random.randint(0, X_positive.shape[0], N_sample_positive)
-        id_negtive = np.random.randint(0, X_negtive.shape[0], N_sample_negtive)
-
-        X_resampled = np.concatenate((X_positive[id_positive], X_negtive[id_negtive]), axis=0)
-        y_resampled = np.concatenate((Y_positive[id_positive], Y_negtive[id_negtive]), axis=0)
-
-        # 优化的打乱方法：原地打乱，避免创建大索引数组
-        rng = np.random.default_rng()
-        rng.shuffle(X_resampled)
-        rng = np.random.default_rng()  # 重新初始化确保相同的随机顺序
-        rng.shuffle(y_resampled)
-        
-        return X_resampled, y_resampled
-
-    def downsampling(self, X_train, y_train, weight):
-        X_positive = X_train[y_train==1]
-        X_negative = X_train[y_train==0]
-        Y_positive = y_train[y_train==1]
-        Y_negative = y_train[y_train==0]
-
-        Num_max = min(X_positive.shape[0], X_negative.shape[0])
-
-        N_sample_positive, N_sample_negative = int(weight[0]*Num_max), int(weight[1]*Num_max)
-        id_positive = np.random.choice(X_positive.shape[0], N_sample_positive, replace=False)
-        id_negative = np.random.choice(X_negative.shape[0], N_sample_negative, replace=False)
-
-        X_resampled = np.concatenate((X_positive[id_positive], X_negative[id_negative]), axis=0)
-        y_resampled = np.concatenate((Y_positive[id_positive], Y_negative[id_negative]), axis=0)
-
-        # 打乱顺序
-        shuffle_index = np.random.permutation(X_resampled.shape[0])
-        X_resampled = X_resampled[shuffle_index]
-        y_resampled = y_resampled[shuffle_index]
-        return X_resampled, y_resampled
-    
     @staticmethod
-    def plot_curve(cal_mix_coeff_List, y_probability_all, y_test, y_probability, filename):
+    def plot_curve(cal_mix_coeff_List: np.ndarray, 
+                   y_probability_all: np.ndarray, 
+                   y_test: np.ndarray, 
+                   y_probability: np.ndarray, 
+                   filename: str) -> Tuple[float, float]:
+        """
+        绘制评估曲线
+        
+        Args:
+            cal_mix_coeff_List: 混合系数列表
+            y_probability_all: 所有概率预测
+            y_test: 测试标签
+            y_probability: 测试概率
+            filename: 保存文件名
+            
+        Returns:
+            ROC AUC和PR AUC
+        """
         # 绘制 ROC 曲线
         fpr, tpr, _ = roc_curve(y_test, y_probability)
         roc_auc = roc_auc_score(y_test, y_probability)
@@ -441,8 +425,7 @@ class ANNClassifier:
 
         plt.tight_layout()
         
-        # filename is a Path object representing the full desired path.
-        # Ensure the parent directory exists before saving.
+        # 确保父目录存在
         Path(filename).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(filename)
         plt.close()
@@ -452,7 +435,7 @@ class ANNClassifier:
     @staticmethod
     def model_evaluation(y_test: np.ndarray, 
                         y_pred: np.ndarray, 
-                        y_probability: np.ndarray):
+                        y_probability: np.ndarray) -> Tuple[float, float, float, float, float]:
         """
         模型评估
         

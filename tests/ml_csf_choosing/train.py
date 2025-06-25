@@ -31,6 +31,7 @@ except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
 
+important_config_count_history = []
 
 def main(config):
     """主程序逻辑"""
@@ -90,7 +91,7 @@ def main(config):
         logger.info("             特征提取完成")
 
         # 训练模型
-        model, X_train, X_test, y_train, y_test, training_time, weight = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, logger)
+        model, X_train, X_test, y_train, y_test, training_time = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, logger)
 
         # 评估模型
         evaluation_results = gdp.evaluate_model(
@@ -140,12 +141,16 @@ def main(config):
         logger.info(f"             本轮计算重要组态数: {filtered_chosen_indices.shape}")
         all_chosen_indices = np.union1d(filtered_chosen_indices, promising_unselected_CSFs_indices)
         logger.info(f"             本轮选择的组态总数: {all_chosen_indices.shape}")
+        important_config_count = all_chosen_indices.shape[0]
+        important_config_count_history.append(important_config_count)
+        logger.info(f"             本轮重要组态数量: {important_config_count}")
+        logger.info(f"             迭代重要组态数量历史: {important_config_count_history}")
         ml_chosen_indices_dict = {0 : all_chosen_indices}
         
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
         gdp.csfs_index_storange(ml_chosen_indices_dict, ml_chosen_indices_dict_path)
         logger.info(f"             本轮选择的组态索引保存到: {ml_chosen_indices_dict_path}")
-        
+
         # 保存迭代结果
         selection_results = {
             'indexs_import_temp': [],  # 如果需要可以添加实际值
@@ -163,7 +168,6 @@ def main(config):
             execution_time=total_execution_time,
             evaluation_results=evaluation_results,
             selection_results=selection_results,
-            weight=weight[0],  # 使用第一个权重值
             logger=logger
         )
         

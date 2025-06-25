@@ -113,7 +113,7 @@ def train_model(
         logger.warning("max_epochs=150, batch_size=4096, hidden_size=96")
     
     logger.info(f"开始训练 - 数据量:{len(X_resampled):,}, 特征维度:{X_resampled.shape[1]}")
-    model.fit(X_resampled, y_resampled, max_epochs=150, batch_size=2048)
+    model.fit(X_resampled, y_resampled, batch_size=2048, max_epochs=150)
     training_time = time.time() - start_time
     
     # 收敛性检查 - 更新阈值以反映当前良好性能
@@ -200,7 +200,7 @@ def train_model(
     logger.info (f"训练集预测结果:")
     logger.info (f"AUC:{roc_auc_train}, f1:{f1_train}, accuracy:{accuracy_train}, precision:{precision_train}, recall:{recall_train}")
     
-    return model, X_train, X_test, y_train, y_test, training_time, [1, 1]  # 简化返回值
+    return model, X_train, X_test, y_train, y_test, training_time
 
 def evaluate_model(model, X_train, X_test, y_train, y_test, X_unselected, config, logger):
     """
@@ -395,7 +395,7 @@ def check_grasp_cal_convergence(config, logger):
         return True  # 出错时继续计算
 
 def save_iteration_results(config, training_time, eval_time, execution_time, 
-                          evaluation_results, selection_results, weight, logger):
+                          evaluation_results, selection_results, logger):
     """
     保存迭代结果到CSV文件
     
@@ -406,7 +406,7 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
         execution_time: 执行时间
         evaluation_results: evaluate_model函数返回的结果字典
         selection_results: 选择结果字典
-        weight: 权重值
+
         logger: 日志记录器
     """
     
@@ -429,7 +429,7 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
         headers = [
             'training_time', 'eval_time', 'execution_time', 'total_time',
             'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
-            'Es_term', 'import_count', 'stay_count', 'MLsampling_ratio', 'chosen_count', 'weight',
+            'Es_term', 'import_count', 'stay_count', 'MLsampling_ratio', 'chosen_count',
             'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall'
         ]
         with open(results_file, mode="w", newline="", encoding='utf-8') as file:
@@ -453,7 +453,6 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
             len(selection_results.get('indexs_import_stay_temp', [])),
             None,  # MLsampling_ratio placeholder
             len(selection_results.get('chosen_index', [])),
-            weight,
             train_metrics['f1'], 
             train_metrics['roc_auc'], 
             train_metrics['accuracy'],
