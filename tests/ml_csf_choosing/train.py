@@ -147,29 +147,76 @@ def main(config):
         promising_ml_indices = np.setdiff1d(high_prob_indices, already_calculated_indices)
         logger.info(f"             ML预测的新增高概率组态数: {len(promising_ml_indices)}")
         
-        # 合并选择的组态索引
-        all_chosen_indices = np.union1d(filtered_chosen_indices, promising_ml_indices)
-        logger.info(f"             本轮总选择组态数: {len(all_chosen_indices)}")
-        important_config_count = len(all_chosen_indices)
-        important_config_count_history.append(important_config_count)
-        logger.info(f"             本轮重要组态数量: {important_config_count}")
-        logger.info(f"             迭代重要组态数量历史: {important_config_count_history}")
+        # 计算数据留存率
+        total_original_csfs = len(raw_csfs_descriptors)
+        total_important_csfs = len(filtered_chosen_indices)
+        total_ml_predicted_csfs = len(promising_ml_indices)
+        current_calculation_csfs = len(caled_csfs_indices_dict[0])  # 本轮计算的组态数目
         
-        # 保存选择的组态索引
-        ml_chosen_indices_dict = {0 : all_chosen_indices}
+        # 加载上一轮的重要组态索引来计算留存率
+        if config.cal_loop_num > 1:
+            previous_important_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}_important_indices.pkl'
+            if previous_important_indices_path.exists():
+                try:
+                    previous_important_indices_dict = gdp.csfs_index_load(previous_important_indices_path)
+                    previous_important_indices = previous_important_indices_dict[0]
+                    
+                    # 计算本次与上次重要组态的交集
+                    important_intersection = np.intersect1d(filtered_chosen_indices, previous_important_indices)
+                    data_retention_rate = len(important_intersection) / current_calculation_csfs
+                    
+                    logger.info(f"             数据留存率计算:")
+                    logger.info(f"             - 本次重要组态数: {len(filtered_chosen_indices)}")
+                    logger.info(f"             - 上次重要组态数: {len(previous_important_indices)}")
+                    logger.info(f"             - 交集组态数: {len(important_intersection)}")
+                    logger.info(f"             - 本轮计算组态数: {current_calculation_csfs}")
+                    logger.info(f"             - 数据留存率: {data_retention_rate:.4%}")
+                except Exception as e:
+                    logger.warning(f"加载上一轮重要组态索引失败: {e}")
+                    data_retention_rate = 0.0
+            else:
+                logger.warning(f"未找到上一轮重要组态索引文件: {previous_important_indices_path}")
+                data_retention_rate = 0.0
+        else:
+            # 第一轮没有上一轮数据，留存率设为0
+            data_retention_rate = 0.0
+            logger.info(f"             第一轮计算，无法计算数据留存率")
         
+        important_retention_rate = total_important_csfs / total_original_csfs
+        ml_retention_rate = total_ml_predicted_csfs / total_original_csfs
+        
+        logger.info(f"             统计信息:")
+        logger.info(f"             - 原始CSFs总数: {total_original_csfs}")
+        logger.info(f"             - 重要CSFs数量: {total_important_csfs} (占原始: {important_retention_rate:.4%})")
+        logger.info(f"             - ML预测CSFs数量: {total_ml_predicted_csfs} (占原始: {ml_retention_rate:.4%})")
+        
+        # 分别保存重要组态索引和ML预测组态索引
+        important_csfs_indices_dict = {0: filtered_chosen_indices}
+        ml_predicted_csfs_indices_dict = {0: promising_ml_indices}
+        
+        # 保存重要组态索引
+        important_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_important_indices.pkl'
+        gdp.csfs_index_storange(important_csfs_indices_dict, important_indices_path)
+        logger.info(f"             重要组态索引保存到: {important_indices_path}")
+        
+        # 保存ML预测组态索引（用于下次计算）
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
-        gdp.csfs_index_storange(ml_chosen_indices_dict, ml_chosen_indices_dict_path)
-        logger.info(f"             本轮选择的组态索引保存到: {ml_chosen_indices_dict_path}")
+        gdp.csfs_index_storange(ml_predicted_csfs_indices_dict, ml_chosen_indices_dict_path)
+        logger.info(f"             ML预测组态索引保存到: {ml_chosen_indices_dict_path}")
 
         # 保存迭代结果
         selection_results = {
-            'chosen_index': all_chosen_indices.tolist(),
-            'mix_coeff_chosen_count': len(filtered_chosen_indices),
+            'important_csfs_indices': filtered_chosen_indices.tolist(),
+            'ml_predicted_csfs_indices': promising_ml_indices.tolist(),
+            'important_count': len(filtered_chosen_indices),
             'ml_predicted_count': len(high_prob_indices), 
             'ml_new_count': len(promising_ml_indices),
-            'total_chosen_count': len(all_chosen_indices),
-            'total_csfs_count': len(raw_csfs_descriptors)
+            'total_original_count': total_original_csfs,
+            'current_calculation_count': current_calculation_csfs,
+            'data_retention_rate': data_retention_rate,
+            'important_retention_rate': important_retention_rate,
+            'ml_retention_rate': ml_retention_rate,
+            'chosen_index': promising_ml_indices.tolist()  # 下次计算将使用的索引
         }
         
         # 计算总执行时间
@@ -193,7 +240,7 @@ def main(config):
         # 计算动态选择率
         dynamic_ratio = gdp.calculate_dynamic_chosen_ratio(
             config, 
-            all_chosen_indices, 
+            promising_ml_indices, 
             target_pool_csfs_data, 
             y_all_probability, 
             evaluation_results, 

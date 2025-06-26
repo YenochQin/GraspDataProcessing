@@ -427,8 +427,9 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
             'iteration', 'training_time', 'inference_time', 'execution_time', 'total_time',
             'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
             'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall',
-            'mix_coeff_chosen_count', 'ml_predicted_count', 'ml_new_count', 'total_chosen_count',
-            'chosen_ratio', 'overfitting_gap'
+            'important_count', 'ml_predicted_count', 'ml_new_count', 
+            'total_original_count', 'current_calculation_count',
+            'data_retention_rate', 'important_retention_rate', 'ml_retention_rate', 'overfitting_gap'
         ]
         with open(results_file, mode="w", newline="", encoding='utf-8') as file:
             writer = csv.writer(file)
@@ -438,14 +439,14 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
     overfitting_gap = train_metrics['f1'] - test_metrics['f1']
     
     # 提取选择结果的实际数据
-    mix_coeff_chosen = selection_results.get('mix_coeff_chosen_count', 0)
-    ml_predicted = selection_results.get('ml_predicted_count', 0) 
-    ml_new = selection_results.get('ml_new_count', 0)
-    total_chosen = len(selection_results.get('chosen_index', []))
-    
-    # 计算选择率
-    total_csfs = selection_results.get('total_csfs_count', 1)  # 避免除零
-    chosen_ratio = total_chosen / total_csfs if total_csfs > 0 else 0
+    important_count = selection_results.get('important_count', 0)
+    ml_predicted_count = selection_results.get('ml_predicted_count', 0) 
+    ml_new_count = selection_results.get('ml_new_count', 0)
+    total_original_count = selection_results.get('total_original_count', 1)
+    current_calculation_count = selection_results.get('current_calculation_count', 1)
+    data_retention_rate = selection_results.get('data_retention_rate', 0.0)
+    important_retention_rate = selection_results.get('important_retention_rate', 0.0)
+    ml_retention_rate = selection_results.get('ml_retention_rate', 0.0)
     
     with open(results_file, mode="a", newline="", encoding='utf-8') as file:
         writer = csv.writer(file)
@@ -465,16 +466,21 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
             train_metrics['accuracy'],
             train_metrics['precision'], 
             train_metrics['recall'],
-            mix_coeff_chosen,  # 基于混合系数选择的组态数
-            ml_predicted,      # ML预测的高概率组态数
-            ml_new,           # ML新增的组态数
-            total_chosen,     # 总选择组态数
-            chosen_ratio,     # 选择率
-            overfitting_gap   # 过拟合差距
+            important_count,          # 重要组态数量
+            ml_predicted_count,       # ML预测的高概率组态总数
+            ml_new_count,            # ML新增的组态数（下次计算用）
+            total_original_count,     # 原始CSFs总数
+            current_calculation_count,  # 本轮计算的组态数
+            data_retention_rate,      # 数据留存率（交集/本轮计算）
+            important_retention_rate, # 重要组态占原始比例
+            ml_retention_rate,       # ML预测组态占原始比例
+            overfitting_gap          # 过拟合差距
         ])
     
     logger.info(f"迭代结果已保存到: {results_file}")
-    logger.info(f"第{config.cal_loop_num}轮 - 选择{total_chosen}个组态，选择率{chosen_ratio:.4f}")
+    logger.info(f"第{config.cal_loop_num}轮 - 重要组态: {important_count} (占原始: {important_retention_rate:.4%})")
+    logger.info(f"第{config.cal_loop_num}轮 - ML预测组态: {ml_new_count} (占原始: {ml_retention_rate:.4%})")
+    logger.info(f"第{config.cal_loop_num}轮 - 数据留存率: {data_retention_rate:.4%}")
 
 def handle_calculation_error(config, logger):
     """处理计算错误的情况"""
