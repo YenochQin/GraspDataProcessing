@@ -301,8 +301,10 @@ def check_grasp_cal_convergence(config, logger):
     """
     检查GRASP计算的收敛性
     
-    使用最近三次计算结果的能级数据，通过计算每个能级的标准差和相对标准差，
-    然后求所有能级的标准差、相对标准差的平均值来判定收敛。
+    使用最近三次计算结果的能级数据和组态数量数据，通过计算：
+    1. 每个能级的标准差
+    2. 组态数量的相对标准差
+    来判定收敛。
     
     Args:
         config: 配置对象
@@ -314,6 +316,7 @@ def check_grasp_cal_convergence(config, logger):
     try:
         # 读取最近3次计算的能级数据
         energy_data_list = []
+        
         for i in range(3):
             loop_num = config.cal_loop_num - 2 + i  # 前3次：当前-2, 当前-1, 当前
             csv_path = config.root_path / f'{config.conf}_{loop_num}' / f'{config.conf}_{loop_num}_correct_levels.csv'
@@ -327,15 +330,46 @@ def check_grasp_cal_convergence(config, logger):
                 return True  # 文件不存在，继续计算
         
         if len(energy_data_list) < 3:
-            logger.warning("无法读取完整的3轮数据，继续计算")
+            logger.warning("无法读取完整的3轮能级数据，继续计算")
             return True
         
+        # 读取组态数量数据从iteration_results.csv
+        iteration_results_path = config.root_path / 'results' / 'iteration_results.csv'
+        csfs_num = []  # 存储每轮的组态数量
+        
+        if iteration_results_path.exists():
+            try:
+                iteration_df = pd.read_csv(iteration_results_path)
+                # 获取最近3轮的组态数量
+                for i in range(3):
+                    loop_num = config.cal_loop_num - 2 + i
+                    # 查找对应轮次的数据
+                    loop_data = iteration_df[iteration_df['iteration'] == loop_num]
+                    if not loop_data.empty:
+                        current_count = loop_data['current_calculation_count'].iloc[0]
+                        csfs_num.append(current_count)
+                        logger.info(f"读取第{loop_num}轮组态数量: {current_count}")
+                    else:
+                        logger.warning(f"在iteration_results.csv中未找到第{loop_num}轮的数据")
+                        return True  # 数据不完整，继续计算
+                
+                if len(csfs_num) < 3:
+                    logger.warning("无法读取完整的3轮组态数量数据，继续计算")
+                    return True
+                    
+            except Exception as e:
+                logger.warning(f"读取iteration_results.csv文件出错: {e}")
+                return True
+        else:
+            logger.warning(f"未找到iteration_results.csv文件: {iteration_results_path}")
+            return True
+        
+        # === 1. 能级标准差计算 ===
         # 获取所有configuration
         configurations = energy_data_list[0]['configuration'].tolist()
         
-        # 存储每个能级的统计信息
-        std_deviations = []  # 标准差
-        relative_std_deviations = []  # 相对标准差
+        # 存储每个能级的标准差
+        std_deviations = []
         
         for config_name in configurations:
             # 获取该configuration在3轮计算中的能级值
@@ -353,41 +387,49 @@ def check_grasp_cal_convergence(config, logger):
                 energy_std = np.std(energy_values)
                 std_deviations.append(energy_std)
                 
-                # 计算相对标准差（标准差/平均值的绝对值）
-                energy_mean = np.mean(energy_values)
-                if abs(energy_mean) > 1e-10:  # 避免除零
-                    relative_std = energy_std / abs(energy_mean)
-                else:
-                    relative_std = energy_std  # 如果平均值接近零，直接使用标准差
-                relative_std_deviations.append(relative_std)
-                
                 logger.debug(f"Configuration {config_name}: "
                            f"能级值={energy_values}, "
-                           f"标准差={energy_std:.2e}, "
-                           f"相对标准差={relative_std:.2e}")
+                           f"标准差={energy_std:.5e}")
         
-        # 计算所有能级的平均标准差和平均相对标准差
-        avg_std = np.mean(std_deviations)
-        avg_relative_std = np.mean(relative_std_deviations)
+        # 计算所有能级的平均标准差
+        avg_energy_std = np.mean(std_deviations)
+        
+        # === 2. 组态数量相对标准差计算 ===
+        # 计算组态数量的标准差和相对标准差
+        csfs_num_std = np.std(csfs_num)
+        csfs_num_mean = np.mean(csfs_num)
+        
+        if csfs_num_mean > 0:
+            csfs_num_relative_std = csfs_num_std / csfs_num_mean
+        else:
+            csfs_num_relative_std = csfs_num_std  # 如果平均值为零，直接使用标准差
         
         # 从配置文件读取收敛阈值（如果没有设置则使用默认值）
-        std_threshold = getattr(config, 'std_threshold', 1e-5)  # 标准差阈值
-        relative_std_threshold = getattr(config, 'relative_std_threshold', 1e-3)  # 相对标准差阈值
+        energy_std_threshold = getattr(config, 'energy_std_threshold', 1e-5)  # 能级标准差阈值
+        csfs_num_relative_std_threshold = getattr(config, 'csfs_num_relative_std_threshold', 0.05)  # 组态数量相对标准差阈值（5%）
         
         logger.info(f"收敛性统计:")
-        logger.info(f"  平均标准差: {avg_std:.5e} (阈值: {std_threshold:.5e})")
-        logger.info(f"  平均相对标准差: {avg_relative_std:.3e} (阈值: {relative_std_threshold:.3e})")
-        logger.info(f"  标准差收敛: {avg_std < std_threshold}")
-        logger.info(f"  相对标准差收敛: {avg_relative_std < relative_std_threshold}")
+        logger.info(f"  最近3轮组态数量: {csfs_num}")
+        logger.info(f"  组态数量平均值: {csfs_num_mean:.1f}")
+        logger.info(f"  组态数量标准差: {csfs_num_std:.2f}")
+        logger.info(f"  组态数量相对标准差: {csfs_num_relative_std:.4f} (阈值: {csfs_num_relative_std_threshold:.4f})")
+        logger.info(f"  能级平均标准差: {avg_energy_std:.5e} (阈值: {energy_std_threshold:.5e})")
+        logger.info(f"  能级标准差收敛: {avg_energy_std < energy_std_threshold}")
+        logger.info(f"  组态数量相对标准差收敛: {csfs_num_relative_std < csfs_num_relative_std_threshold}")
         
         # 判断收敛性：两个条件都满足才算收敛
-        is_converged = (avg_std < std_threshold) and (avg_relative_std < relative_std_threshold)
+        energy_converged = avg_energy_std < energy_std_threshold
+        csfs_num_converged = csfs_num_relative_std < csfs_num_relative_std_threshold
+        is_converged = energy_converged and csfs_num_converged
         
         if is_converged:
-            logger.info("所有能级都已收敛，停止计算")
+            logger.info("能级和组态数量都已收敛，停止计算")
             return False
         else:
-            logger.info("能级未完全收敛，继续计算")
+            if not energy_converged:
+                logger.info("能级未完全收敛，继续计算")
+            if not csfs_num_converged:
+                logger.info("组态数量未稳定收敛，继续计算")
             return True
             
     except Exception as e:
@@ -424,12 +466,14 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
     # 创建表头（如果文件不存在）
     if not results_file.exists():
         headers = [
-            'iteration', 'training_time', 'inference_time', 'execution_time', 'total_time',
-            'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
-            'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall',
+            'iteration', 
             'important_count', 'ml_predicted_count', 'ml_new_count', 
             'total_original_count', 'current_calculation_count',
-            'data_retention_rate', 'important_retention_rate', 'ml_retention_rate', 'overfitting_gap'
+            'data_retention_rate', 'important_retention_rate', 'ml_retention_rate',
+            'training_time', 'inference_time', 'execution_time', 'total_time',
+            'test_f1', 'test_roc_auc', 'test_accuracy', 'test_precision', 'test_recall',
+            'train_f1', 'train_roc_auc', 'train_accuracy', 'train_precision', 'train_recall',
+            'overfitting_gap'
         ]
         with open(results_file, mode="w", newline="", encoding='utf-8') as file:
             writer = csv.writer(file)
@@ -451,11 +495,19 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
     with open(results_file, mode="a", newline="", encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow([
-            config.cal_loop_num,  # 迭代轮次
+            config.cal_loop_num,      # 迭代轮次
+            important_count,          # 重要组态数量
+            ml_predicted_count,       # ML预测的高概率组态总数
+            ml_new_count,            # ML新增的组态数（下次计算用）
+            total_original_count,     # 原始CSFs总数
+            current_calculation_count,  # 本轮计算的组态数
+            data_retention_rate,      # 数据留存率（交集/本轮计算）
+            important_retention_rate, # 重要组态占原始比例
+            ml_retention_rate,       # ML预测组态占原始比例
             training_time, 
-            actual_eval_time,  # 推理时间
+            actual_eval_time,         # 推理时间
             execution_time, 
-            execution_time,  # 总时间（现在与执行时间相同）
+            execution_time,           # 总时间（现在与执行时间相同）
             test_metrics['f1'], 
             test_metrics['roc_auc'], 
             test_metrics['accuracy'],
@@ -466,14 +518,6 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
             train_metrics['accuracy'],
             train_metrics['precision'], 
             train_metrics['recall'],
-            important_count,          # 重要组态数量
-            ml_predicted_count,       # ML预测的高概率组态总数
-            ml_new_count,            # ML新增的组态数（下次计算用）
-            total_original_count,     # 原始CSFs总数
-            current_calculation_count,  # 本轮计算的组态数
-            data_retention_rate,      # 数据留存率（交集/本轮计算）
-            important_retention_rate, # 重要组态占原始比例
-            ml_retention_rate,       # ML预测组态占原始比例
             overfitting_gap          # 过拟合差距
         ])
     
@@ -485,7 +529,6 @@ def save_iteration_results(config, training_time, eval_time, execution_time,
 def handle_calculation_error(config, logger):
     """处理计算错误的情况"""
     config_file_path = config.root_path / 'config.toml'
-    continue_calculate = config.continue_cal
     if config.cal_error_num < 3:
         # 更新配置文件
         update_config(config_file_path, {'cal_error_num': config.cal_error_num + 1})
@@ -535,11 +578,12 @@ def get_unselected_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_ind
     # 返回对应的描述符
     return raw_csfs_descriptors[unselected_indices]
 
-def save_and_plot_results(evaluation_results, model, config, 
-                         save_model: bool = True,
-                         save_data: bool = True, 
-                         plot_curves: bool = True,
-                         logger=None):
+def save_and_plot_results(
+                            evaluation_results, model, config, 
+                            save_model: bool = True,
+                            save_data: bool = True, 
+                            plot_curves: bool = True,
+                            logger=None):
     """
     保存模型预测结果、模型文件和绘制性能曲线
     使用setup_directories创建的标准目录结构
@@ -701,13 +745,13 @@ def _plot_probability_distribution(y_probability, y_true, save_path):
     plt.close()
 
 def calculate_dynamic_chosen_ratio(
-                                                        config,
-                                                        all_chosen_indices,
-                                                        target_pool_csfs_data,
-                                                        y_all_probability,
-                                                        evaluation_results,
-                                                        energy_level_data_pd,
-                                                        logger):
+                                    config,
+                                    all_chosen_indices,
+                                    target_pool_csfs_data,
+                                    y_all_probability,
+                                    evaluation_results,
+                                    energy_level_data_pd,
+                                    logger):
     """
     基于组态分析的动态选择率计算
     

@@ -9,7 +9,7 @@ import re
 import random
 from typing import Dict, Tuple, List, TYPE_CHECKING
 from collections import Counter, defaultdict
-
+import math
 import numpy as np
 import pickle
 from tqdm import tqdm
@@ -462,7 +462,7 @@ def radom_choose_csfs(block_csfs_list: List, ratio_CSFs_select_num: float, selec
     selected_csfs_num = len(selected_csfs_indices)
     
     # 计算需要选择的总数
-    total_needed = int(block_csfs_num * ratio_CSFs_select_num)
+    total_needed = math.ceil(block_csfs_num * ratio_CSFs_select_num)
     
     # 计算还需要补充的数量
     choose_csfs_num = max(0, total_needed - selected_csfs_num)
