@@ -240,7 +240,7 @@ def main(config):
         # 计算动态选择率
         dynamic_ratio = gdp.calculate_dynamic_chosen_ratio(
             config, 
-            promising_ml_indices, 
+            caled_csfs_indices_dict[0], 
             target_pool_csfs_data, 
             y_all_probability, 
             evaluation_results, 
