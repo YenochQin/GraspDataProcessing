@@ -34,6 +34,7 @@ from .ANN import ANNClassifier
 from ..data_IO.produced_data_write import update_config
 from ..utils.data_modules import MixCoefficientData
 
+
 def train_model(
                 config, 
                 caled_csfs_descriptors: 
@@ -740,22 +741,24 @@ def _plot_probability_distribution(y_probability, y_true, save_path):
     """
     import matplotlib.pyplot as plt
     
+    # matplotlib样式已通过fig_settings模块自动配置
+    
     plt.figure(figsize=(10, 6))
     
     # 分别绘制正负样本的概率分布
     pos_probability = y_probability[y_true == 1]
     neg_probability = y_probability[y_true == 0]
     
-    plt.hist(neg_probability, bins=50, alpha=0.7, label=f'负样本 (n={len(neg_probability)})', 
+    plt.hist(neg_probability, bins=50, alpha=0.7, label=f'Negative samples (n={len(neg_probability)})', 
              color='lightcoral', density=True)
-    plt.hist(pos_probability, bins=50, alpha=0.7, label=f'正样本 (n={len(pos_probability)})', 
+    plt.hist(pos_probability, bins=50, alpha=0.7, label=f'Positive samples (n={len(pos_probability)})', 
              color='lightblue', density=True)
     
-    plt.axvline(x=0.5, color='red', linestyle='--', alpha=0.8, label='分类阈值 (0.5)')
+    plt.axvline(x=0.5, color='red', linestyle='--', alpha=0.8, label='Classification threshold (0.5)')
     
-    plt.xlabel('预测概率')
-    plt.ylabel('密度')
-    plt.title('预测概率分布')
+    plt.xlabel('Predicted Probability')
+    plt.ylabel('Density')
+    plt.title('Probability Distribution')
     plt.legend()
     plt.grid(True, alpha=0.3)
     

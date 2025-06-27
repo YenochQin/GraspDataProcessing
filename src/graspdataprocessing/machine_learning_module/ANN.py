@@ -382,6 +382,7 @@ class ANNClassifier:
         Returns:
             ROC AUC和PR AUC
         """
+        # matplotlib样式已通过fig_settings模块自动配置
         # 绘制 ROC 曲线
         fpr, tpr, _ = roc_curve(y_test, y_probability)
         roc_auc = roc_auc_score(y_test, y_probability)
