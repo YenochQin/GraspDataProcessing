@@ -415,9 +415,24 @@ class ANNClassifier:
         # 绘制可解释性曲线
         plt.subplot(2, 2, 4)
         # 确保两个数组大小一致
-        min_len = min(len(y_probability_all[:, 1]), len(cal_mix_coeff_List))
+        min_len = min(len(y_probability_all), len(cal_mix_coeff_List))
         if min_len > 0:
-            plt.scatter(y_probability_all[:min_len, 1], np.log(abs(cal_mix_coeff_List[:min_len])))
+            # 检查y_probability_all的维度
+            if y_probability_all.ndim == 2 and y_probability_all.shape[1] >= 2:
+                # 二维数组，使用第二列（正类概率）
+                prob_values = y_probability_all[:min_len, 1]
+            elif y_probability_all.ndim == 1:
+                # 一维数组，直接使用
+                prob_values = y_probability_all[:min_len]
+            else:
+                # 其他情况，使用展平后的数组
+                prob_values = y_probability_all.flatten()[:min_len]
+            
+            # 确保混合系数不为零，避免log(0)
+            mix_coeff_values = cal_mix_coeff_List[:min_len]
+            mix_coeff_values = np.where(mix_coeff_values == 0, 1e-10, mix_coeff_values)
+            
+            plt.scatter(prob_values, np.log(abs(mix_coeff_values)), alpha=0.6)
             plt.xlabel('Predicted Probability')
             plt.ylabel('Log|Ci Values|')
             plt.title('Ci Values vs Predicted Probability')

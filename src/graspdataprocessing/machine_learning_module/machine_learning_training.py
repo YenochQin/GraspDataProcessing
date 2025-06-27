@@ -205,10 +205,13 @@ def train_model(
         logger.info(f"自适应阈值:{adaptive_threshold:.4f}, 预测正样本数:{np.sum(y_prediction_adaptive)}")
         y_prediction = y_prediction_adaptive
     
-    print(y_probability_all[:, 1].shape)
-    
     # For plotting, we compare against the mixing coefficients of the first energy level.
     csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0]**2, axis=0) 
+    
+    # 诊断混合系数的信息
+    logger.info(f"混合系数统计 - 最小值:{csf_mix_coeff_squared_sum.min():.6f}, 最大值:{csf_mix_coeff_squared_sum.max():.6f}")
+    logger.info(f"混合系数平均值:{csf_mix_coeff_squared_sum.mean():.6f}, 零值数量:{np.sum(csf_mix_coeff_squared_sum == 0)}")
+    logger.info(f"y_probability_all形状: {y_probability_all.shape}")
 
     roc_auc, pr_auc = ANNClassifier.plot_curve(
         csf_mix_coeff_squared_sum, 
@@ -689,13 +692,14 @@ def save_and_plot_results(
         
         try:
             # 创建混合系数的占位数据用于绘图兼容性
-            dummy_mix_coeff = np.ones(len(evaluation_results['probabilities']['y_probability_all']))
+            y_prob_all = evaluation_results['probabilities']['y_probability_all']
+            dummy_mix_coeff = np.ones(len(y_prob_all))
             
             # 绘制ROC和PR曲线
             plot_file = roc_curves_dir / f"{file_name}_roc_pr_curves.png"
             roc_auc, pr_auc = ANNClassifier.plot_curve(
                 dummy_mix_coeff, 
-                evaluation_results['probabilities']['y_probability_all'], 
+                y_prob_all, 
                 evaluation_results['true_labels']['y_test'], 
                 evaluation_results['probabilities']['y_probability_test'], 
                 str(plot_file)
