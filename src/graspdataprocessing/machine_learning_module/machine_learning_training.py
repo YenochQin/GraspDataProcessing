@@ -114,7 +114,7 @@ def train_model(
     if not torch.cuda.is_available():
         # 获取系统CPU核心数
         cpu_count = os.cpu_count() or 4  # 如果无法获取则默认使用4核
-        optimal_threads = min(8, cpu_count)  # 最多使用8线程，不超过系统核心数
+        optimal_threads = min(32, cpu_count)  # 最多使用8线程，不超过系统核心数
         
         # 设置PyTorch线程数
         torch.set_num_threads(optimal_threads)
