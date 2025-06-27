@@ -610,6 +610,7 @@ def get_unselected_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_ind
 
 def save_and_plot_results(
                             evaluation_results, model, config, 
+                            rmix_file_data,
                             save_model: bool = True,
                             save_data: bool = True, 
                             plot_curves: bool = True,
@@ -622,6 +623,7 @@ def save_and_plot_results(
         evaluation_results: evaluate_model函数返回的结果字典
         model: 训练好的模型对象
         config: 配置对象，包含root_path和file_name等信息
+        rmix_file_data: 混合系数数据对象，包含真实的Ci值用于绘图
         save_model: 是否保存模型文件
         save_data: 是否保存预测结果数据
         plot_curves: 是否绘制ROC/PR曲线
@@ -692,14 +694,21 @@ def save_and_plot_results(
         roc_curves_dir = root_path / "roc_curves"
         
         try:
-            # 创建混合系数的占位数据用于绘图兼容性
+            # 获取真实的混合系数数据或使用占位数据
             y_prob_all = evaluation_results['probabilities']['y_probability_all']
-            dummy_mix_coeff = np.ones(len(y_prob_all))
+            
+            # 使用真实的混合系数数据
+            mix_coeff = rmix_file_data.mix_coefficient_List[0]
+            if len(mix_coeff.shape) > 1:
+                # 如果是多维数组，计算每个CSF的混合系数幅值
+                cal_mix_coeff_list = np.sqrt(np.sum(mix_coeff**2, axis=0))
+            else:
+                cal_mix_coeff_list = np.abs(mix_coeff)
             
             # 绘制ROC和PR曲线
             plot_file = roc_curves_dir / f"{file_name}_roc_pr_curves.png"
             roc_auc, pr_auc = ANNClassifier.plot_curve(
-                dummy_mix_coeff, 
+                cal_mix_coeff_list, 
                 y_prob_all, 
                 evaluation_results['true_labels']['y_test'], 
                 evaluation_results['probabilities']['y_probability_test'], 

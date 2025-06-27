@@ -120,6 +120,7 @@ def main(config):
             evaluation_results=evaluation_results,
             model=model,
             config=config,
+            rmix_file_data=rmix_file_data,
             save_model=True,
             save_data=True,
             plot_curves=True,
