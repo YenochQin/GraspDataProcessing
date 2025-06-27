@@ -17,8 +17,8 @@ selected_csfs_file = "mJ-1-90chosenas3_odd1.c"
 selected_csfs_mix_file = "mJ-1-90chosenas3_odd1.cm"
 
 # 收敛性检查参数
-std_threshold = 1e-6  # 标准差阈值
-relative_std_threshold = 1e-4  # 相对标准差阈值
+std_threshold = 1e-5  # 标准差阈值
+csfs_num_relative_std_threshold = 1e-3  # 相对标准差阈值
 
 [model_params]
 n_estimators = 1000

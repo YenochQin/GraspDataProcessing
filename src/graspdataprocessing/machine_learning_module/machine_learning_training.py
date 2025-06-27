@@ -5,33 +5,34 @@
 @date :2025/06/09 15:58:42
 @author :YenochQin (秦毅)
 '''
+
+# 标准库导入
 import argparse
-import logging
-from types import SimpleNamespace
-import os
-from pathlib import Path
 import csv
-import sys
+import logging
 import math
+import os
+import shutil
+import sys
+import time
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Dict, Tuple, List, Optional
+
+# 第三方库导入
+import joblib
 import numpy as np
 import pandas as pd
-import time
-import joblib
-import shutil
-
-import json 
-from typing import Dict, Tuple, List, Optional
 import torch
-
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-
+# 本地模块导入
 from .ANN import ANNClassifier
+from ..data_IO.produced_data_write import update_config
 from ..utils.data_modules import MixCoefficientData
-from ..data_IO.produced_data_write import  update_config
 
 def train_model(
                 config, 
@@ -61,13 +62,17 @@ def train_model(
         pos_weight = negative_count / positive_count  # 约为13
         class_weights = [1.0, pos_weight]  # [负样本权重, 正样本权重]
         
+        # CPU优化：减少hidden_size以降低计算量
+        hidden_size = 96 if not torch.cuda.is_available() else 128
+        
         model = ANNClassifier(
             input_size=X_train.shape[1], 
-            hidden_size=128,
+            hidden_size=hidden_size,
             learning_rate=0.001,
             class_weights=class_weights
         )
         logger.info(f"创建新模型，设置类别权重: 负样本=1.0, 正样本={pos_weight:.1f}")
+        logger.info(f"模型hidden_size: {hidden_size} ({'CPU优化' if not torch.cuda.is_available() else 'GPU模式'})")
     else:
         # 后续轮次：尝试加载之前的模型
         model_path = models_dir / f"{config.conf}_{config.cal_loop_num-1}.pkl"
@@ -80,14 +85,18 @@ def train_model(
             pos_weight = negative_count / positive_count  # 约为13
             class_weights = [1.0, pos_weight]  # [负样本权重, 正样本权重]
             
+            # CPU优化：减少hidden_size以降低计算量
+            hidden_size = 96 if not torch.cuda.is_available() else 128
+            
             model = ANNClassifier(
                 input_size=X_train.shape[1], 
-                hidden_size=128,
+                hidden_size=hidden_size,
                 learning_rate=0.001,
                 class_weights=class_weights  # 传入类别权重
             )
             
             logger.info(f"创建新模型，设置类别权重: 负样本=1.0, 正样本={pos_weight:.1f}")
+            logger.info(f"模型hidden_size: {hidden_size} ({'CPU优化' if not torch.cuda.is_available() else 'GPU模式'})")
     
     # 直接使用原始数据，不进行重采样
     # 原因：重采样导致数据分布过于极端，影响模型泛化能力
@@ -100,20 +109,37 @@ def train_model(
     # Model training (只训练一次)
     logger.info("             训练模型")
     start_time = time.time()
-    # 使用经过验证的稳定训练配置
-    # CPU训练优化建议:
-    # - 减少max_epochs到100-150 (降低总时间)
-    # - 增大batch_size到4096+ (提高CPU利用率)  
-    # - 减少hidden_size到64-96 (降低计算量)
-    # - 启用多线程: torch.set_num_threads(8)
     
-    # 检测设备并调整配置
+    # CPU训练优化配置
     if not torch.cuda.is_available():
-        logger.warning("检测到CPU训练模式，建议使用以下优化配置:")
-        logger.warning("max_epochs=150, batch_size=4096, hidden_size=96")
+        # 获取系统CPU核心数
+        cpu_count = os.cpu_count() or 4  # 如果无法获取则默认使用4核
+        optimal_threads = min(8, cpu_count)  # 最多使用8线程，不超过系统核心数
+        
+        # 设置PyTorch线程数
+        torch.set_num_threads(optimal_threads)
+        
+        # 设置额外的并行配置
+        os.environ['OMP_NUM_THREADS'] = str(optimal_threads)
+        os.environ['MKL_NUM_THREADS'] = str(optimal_threads)
+        os.environ['NUMEXPR_NUM_THREADS'] = str(optimal_threads)
+        
+        logger.info(f"启用CPU多线程优化:")
+        logger.info(f"- 系统CPU核心数: {cpu_count}")
+        logger.info(f"- PyTorch线程数: {optimal_threads}")
+        logger.info(f"- 建议配置: max_epochs=150, batch_size=4096, hidden_size=96")
+        
+        # 调整训练参数用于CPU优化
+        batch_size_optimized = 4096
+        max_epochs_optimized = 150
+        
+    else:
+        logger.info("检测到GPU模式，使用标准配置")
+        batch_size_optimized = 2048
+        max_epochs_optimized = 150
     
     logger.info(f"开始训练 - 数据量:{len(X_resampled):,}, 特征维度:{X_resampled.shape[1]}")
-    model.fit(X_resampled, y_resampled, batch_size=2048, max_epochs=150)
+    model.fit(X_resampled, y_resampled, batch_size=batch_size_optimized, max_epochs=max_epochs_optimized)
     training_time = time.time() - start_time
     
     # 收敛性检查 - 更新阈值以反映当前良好性能
@@ -406,7 +432,7 @@ def check_grasp_cal_convergence(config, logger):
         
         # 从配置文件读取收敛阈值（如果没有设置则使用默认值）
         energy_std_threshold = getattr(config, 'energy_std_threshold', 1e-5)  # 能级标准差阈值
-        csfs_num_relative_std_threshold = getattr(config, 'csfs_num_relative_std_threshold', 0.05)  # 组态数量相对标准差阈值（5%）
+        csfs_num_relative_std_threshold = getattr(config, 'csfs_num_relative_std_threshold', 1e-3)  # 组态数量相对标准差阈值（5%）
         
         logger.info(f"收敛性统计:")
         logger.info(f"  最近3轮组态数量: {csfs_num}")
@@ -642,17 +668,6 @@ def save_and_plot_results(
             "y_proba": evaluation_results['probabilities']['y_probability_other']
         }).to_csv(other_file, index=False)
         saved_files['other_predictionictions'] = str(other_file)
-        
-        # 保存评估指标到results目录
-        metrics_file = results_dir / f"{file_name}_metrics.json"
-        metrics_data = {
-            'test_metrics': evaluation_results['test_metrics'],
-            'train_metrics': evaluation_results['train_metrics'],
-            'metadata': evaluation_results['metadata']
-        }
-        with open(metrics_file, 'w', encoding='utf-8') as f:
-            json.dump(metrics_data, f, indent=2, ensure_ascii=False)
-        saved_files['metrics'] = str(metrics_file)
         
         if logger:
             logger.info(f"预测数据已保存到: {test_data_dir} 和 {results_dir}")
