@@ -126,9 +126,9 @@ def main(config):
         # 过拟合监控
         overfitting_check = train_f1 - test_f1
         logger.info(f'             过拟合检查差异(训练-测试): {overfitting_check:.4f}')
-        if overfitting_check > config.ml_config.overfitting_threshold:
+        if overfitting_check > config.ml_config['overfitting_threshold']:
             logger.warning("             检测到可能的过拟合现象")
-        elif overfitting_check < config.ml_config.underfitting_threshold:
+        elif overfitting_check < config.ml_config['underfitting_threshold']:
             logger.warning("             检测到可能的欠拟合现象")
         
         # 对所有原始CSF描述符进行模型推理
@@ -141,12 +141,20 @@ def main(config):
         logger.info(f"             模型推理时间: {eval_time:.4f}秒")
         logger.info(f"             推理了 {len(y_all_probability)} 个CSF组态")
         
+        # 为绘图准备当前计算CSF的预测概率 - 与ann3_proba.py保持一致
+        current_calc_indices = caled_csfs_indices_dict[0]
+        y_current_calc_probability = y_all_probability[current_calc_indices]
+        logger.info(f"             当前计算CSF数量: {len(current_calc_indices)}")
+        logger.info(f"             当前计算CSF预测概率维度: {y_current_calc_probability.shape}")
+        
         # 使用标准化的保存和绘图函数
         saved_files = gdp.save_and_plot_results(
             evaluation_results=evaluation_results,
             model=model,
             config=config,
             rmix_file_data=rmix_file_data,
+            caled_csfs_indices_dict=caled_csfs_indices_dict,  # 传入当前计算的CSF索引
+            y_current_calc_probability=y_current_calc_probability,  # 传入当前计算CSF的预测概率
             save_model=True,
             save_data=True,
             plot_curves=True,
@@ -163,11 +171,11 @@ def main(config):
         # 基于机器学习模型的智能组态选择策略
         # 步骤1：分析ML预测结果
         true_prediction_indices = np.where(y_all_prediction == 1)[0]
-        high_prob_threshold = np.percentile(y_all_probability, config.ml_config.high_prob_percentile)
+        high_prob_threshold = np.percentile(y_all_probability, config.ml_config['high_prob_percentile'])
         high_prob_indices = np.where(y_all_probability > high_prob_threshold)[0]
         
         logger.info(f"             ML预测为重要的组态总数: {len(true_prediction_indices)}")
-        logger.info(f"             ML高概率阈值({config.ml_config.high_prob_percentile}分位数): {high_prob_threshold:.4f}")
+        logger.info(f"             ML高概率阈值({config.ml_config['high_prob_percentile']}分位数): {high_prob_threshold:.4f}")
         logger.info(f"             高概率组态数: {len(high_prob_indices)}")
         
         # 数据一致性检查：确保CSFs数量的两个来源一致
@@ -183,7 +191,7 @@ def main(config):
         
         # 步骤2：智能选择策略 - 借鉴ann3_proba.py的策略
         # 扩展因子：下次计算的目标组态数
-        expansion_ratio = config.ml_config.expansion_ratio
+        expansion_ratio = config.ml_config['expansion_ratio']
         n_target = expansion_ratio * len(filtered_chosen_indices)  # 基于重要组态数量确定目标
         
         # 优先使用分类结果，如果数量过多则按概率排序选择

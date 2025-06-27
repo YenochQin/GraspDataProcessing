@@ -364,11 +364,12 @@ class ANNClassifier:
         return joblib.load(path + '_ann.pkl')
     
     @staticmethod
-    def plot_curve(cal_mix_coeff_List: np.ndarray, 
-                   y_probability_all: np.ndarray, 
-                   y_test: np.ndarray, 
-                   y_probability: np.ndarray, 
-                   filename: str) -> Tuple[float, float]:
+    def plot_curve(
+                cal_mix_coeff_List: np.ndarray, 
+                y_probability_all: np.ndarray, 
+                y_test: np.ndarray, 
+                y_probability: np.ndarray, 
+                filename: str) -> Tuple[float, float]:
         """
         绘制评估曲线
         
@@ -413,32 +414,58 @@ class ANNClassifier:
         plt.xlabel('Predicted Label')
         plt.ylabel('True Label')
 
-        # 绘制可解释性曲线
+        # 绘制可解释性曲线 - Ci值与预测概率的关系
         plt.subplot(2, 2, 4)
-        # 确保两个数组大小一致
-        min_len = min(len(y_probability_all), len(cal_mix_coeff_List))
-        if min_len > 0:
+        
+        # 数据维度检查和处理
+        if len(cal_mix_coeff_List) == 0 or len(y_probability_all) == 0:
+            plt.text(0.5, 0.5, 'No data to plot', ha='center', va='center', transform=plt.gca().transAxes)
+            plt.title('Ci Values vs Predicted Probability')
+        elif len(cal_mix_coeff_List) != len(y_probability_all):
+            # 数据长度不匹配的情况
+            plt.text(0.5, 0.5, f'Data length mismatch:\nMix coeff: {len(cal_mix_coeff_List)}\nProbability: {len(y_probability_all)}', 
+                    ha='center', va='center', transform=plt.gca().transAxes, fontsize=10)
+            plt.title('Ci Values vs Predicted Probability (Data Mismatch)')
+        else:
+            # 数据长度匹配，正常绘图
             # 检查y_probability_all的维度
             if y_probability_all.ndim == 2 and y_probability_all.shape[1] >= 2:
                 # 二维数组，使用第二列（正类概率）
-                prob_values = y_probability_all[:min_len, 1]
+                prob_values = y_probability_all[:, 1]
             elif y_probability_all.ndim == 1:
                 # 一维数组，直接使用
-                prob_values = y_probability_all[:min_len]
+                prob_values = y_probability_all
             else:
                 # 其他情况，使用展平后的数组
-                prob_values = y_probability_all.flatten()[:min_len]
+                prob_values = y_probability_all.flatten()
             
             # 确保混合系数不为零，避免log(0)
-            mix_coeff_values = cal_mix_coeff_List[:min_len]
-            mix_coeff_values = np.where(mix_coeff_values == 0, 1e-10, mix_coeff_values)
+            mix_coeff_values = cal_mix_coeff_List.copy()
+            zero_mask = mix_coeff_values == 0
+            mix_coeff_values = np.where(zero_mask, 1e-10, mix_coeff_values)
             
-            plt.scatter(prob_values, np.log(abs(mix_coeff_values)), alpha=0.6)
-            plt.xlabel('Predicted Probability')
-            plt.ylabel('Log|Ci Values|')
-            plt.title('Ci Values vs Predicted Probability')
-        else:
-            plt.text(0.5, 0.5, 'No data to plot', ha='center', va='center', transform=plt.gca().transAxes)
+            # 过滤掉无效值
+            valid_mask = (prob_values >= 0) & (prob_values <= 1) & (~np.isnan(prob_values)) & (~np.isnan(mix_coeff_values))
+            
+            if np.sum(valid_mask) > 0:
+                prob_valid = prob_values[valid_mask]
+                mix_coeff_valid = mix_coeff_values[valid_mask]
+                
+                plt.scatter(prob_valid, np.log(np.abs(mix_coeff_valid)), alpha=0.6, s=20)
+                
+                # 添加统计信息
+                zero_count = np.sum(zero_mask)
+                total_count = len(cal_mix_coeff_List)
+                
+                plt.xlabel('Predicted Probability')
+                plt.ylabel('Log|Ci Values|')
+                plt.title(f'Ci Values vs Predicted Probability\n(n={total_count}, zeros={zero_count})')
+                
+                # 添加网格线便于观察
+                plt.grid(True, alpha=0.3)
+            else:
+                plt.text(0.5, 0.5, 'No valid data points', ha='center', va='center', transform=plt.gca().transAxes)
+                plt.title('Ci Values vs Predicted Probability (No Valid Data)')
 
         plt.tight_layout()
         

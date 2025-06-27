@@ -611,6 +611,8 @@ def get_unselected_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_ind
 def save_and_plot_results(
                             evaluation_results, model, config, 
                             rmix_file_data,
+                            caled_csfs_indices_dict=None,
+                            y_current_calc_probability=None,
                             save_model: bool = True,
                             save_data: bool = True, 
                             plot_curves: bool = True,
@@ -624,6 +626,8 @@ def save_and_plot_results(
         model: 训练好的模型对象
         config: 配置对象，包含root_path和file_name等信息
         rmix_file_data: 混合系数数据对象，包含真实的Ci值用于绘图
+        caled_csfs_indices_dict: 当前计算的CSF索引字典（用于数据对应检查）
+        y_current_calc_probability: 当前计算CSF的预测概率，与混合系数维度匹配
         save_model: 是否保存模型文件
         save_data: 是否保存预测结果数据
         plot_curves: 是否绘制ROC/PR曲线
@@ -705,11 +709,42 @@ def save_and_plot_results(
             else:
                 cal_mix_coeff_list = np.abs(mix_coeff)
             
+            # 使用传入的当前计算CSF预测概率（与ann3_proba.py保持一致的数据处理）
+            if y_current_calc_probability is not None:
+                y_prob_current_cal = y_current_calc_probability
+                
+                if logger:
+                    logger.info(f"绘图数据检查 - 混合系数数量: {len(cal_mix_coeff_list)}, 预测概率数量: {len(y_prob_current_cal)}")
+                    
+                # 数据维度验证
+                if len(cal_mix_coeff_list) != len(y_prob_current_cal):
+                    if logger:
+                        logger.warning(f"数据维度不匹配: 混合系数({len(cal_mix_coeff_list)}) vs 预测概率({len(y_prob_current_cal)})")
+                    # 取较小的长度
+                    min_len = min(len(cal_mix_coeff_list), len(y_prob_current_cal))
+                    cal_mix_coeff_list = cal_mix_coeff_list[:min_len]
+                    y_prob_current_cal = y_prob_current_cal[:min_len]
+                    if logger:
+                        logger.info(f"已调整为相同长度: {min_len}")
+            elif caled_csfs_indices_dict is not None:
+                # 回退到原有逻辑（从全局概率中提取对应部分）
+                current_cal_indices = caled_csfs_indices_dict[0]
+                y_prob_current_cal = y_prob_all[current_cal_indices]
+                
+                if logger:
+                    logger.info(f"使用索引提取 - 混合系数数量: {len(cal_mix_coeff_list)}, 对应概率数量: {len(y_prob_current_cal)}")
+                    logger.info(f"当前计算CSF索引范围: {current_cal_indices.min()}-{current_cal_indices.max()}")
+            else:
+                # 如果没有提供任何信息，使用原有逻辑（可能有问题）
+                y_prob_current_cal = y_prob_all
+                if logger:
+                    logger.warning("未提供y_current_calc_probability或caled_csfs_indices_dict，第四个子图可能显示不正确")
+            
             # 绘制ROC和PR曲线
             plot_file = roc_curves_dir / f"{file_name}_roc_pr_curves.png"
             roc_auc, pr_auc = ANNClassifier.plot_curve(
                 cal_mix_coeff_list, 
-                y_prob_all, 
+                y_prob_current_cal,  # 使用对应的概率数据
                 evaluation_results['true_labels']['y_test'], 
                 evaluation_results['probabilities']['y_probability_test'], 
                 str(plot_file)
