@@ -4,6 +4,7 @@
 @Id :train.py
 @date :2025/05/25 13:53:10
 @author :YenochQin (秦毅)
+@update :2025/01/22 - 集成ann3_proba.py的ML策略优化
 '''
 import argparse
 import logging
@@ -98,12 +99,37 @@ def main(config):
             model, X_train, X_test, y_train, y_test, X_unselected, config, logger
         )
 
-        # 访问结果用于过拟合检查
-        test_f1 = evaluation_results['test_metrics']['f1']
-        train_f1 = evaluation_results['train_metrics']['f1']
-
-        overfitting_check = test_f1 - train_f1  # 如果差异过大说明过拟合
-        logger.info(f'             过拟合检查差异: {overfitting_check:.4f}')
+        # 详细的模型评估 - 借鉴ann3_proba.py的评估方式
+        test_metrics = evaluation_results['test_metrics']
+        train_metrics = evaluation_results['train_metrics']
+        
+        # 测试集性能
+        test_f1, test_roc_auc, test_accuracy, test_precision, test_recall = (
+            test_metrics['f1'], test_metrics['roc_auc'], test_metrics['accuracy'],
+            test_metrics['precision'], test_metrics['recall']
+        )
+        
+        # 训练集性能
+        train_f1, train_roc_auc, train_accuracy, train_precision, train_recall = (
+            train_metrics['f1'], train_metrics['roc_auc'], train_metrics['accuracy'],
+            train_metrics['precision'], train_metrics['recall']
+        )
+        
+        logger.info("             测试集预测结果:")
+        logger.info(f"             AUC: {test_roc_auc:.4f}, F1: {test_f1:.4f}, Accuracy: {test_accuracy:.4f}")
+        logger.info(f"             Precision: {test_precision:.4f}, Recall: {test_recall:.4f}")
+        
+        logger.info("             训练集预测结果:")
+        logger.info(f"             AUC: {train_roc_auc:.4f}, F1: {train_f1:.4f}, Accuracy: {train_accuracy:.4f}")
+        logger.info(f"             Precision: {train_precision:.4f}, Recall: {train_recall:.4f}")
+        
+        # 过拟合监控
+        overfitting_check = train_f1 - test_f1
+        logger.info(f'             过拟合检查差异(训练-测试): {overfitting_check:.4f}')
+        if overfitting_check > config.ml_config.overfitting_threshold:
+            logger.warning("             检测到可能的过拟合现象")
+        elif overfitting_check < config.ml_config.underfitting_threshold:
+            logger.warning("             检测到可能的欠拟合现象")
         
         # 对所有原始CSF描述符进行模型推理
         logger.info("             对所有CSF描述符进行模型推理")
@@ -134,10 +160,15 @@ def main(config):
         filtered_chosen_indices = caled_csfs_indices_dict[0][csfs_above_threshold_indices]
         logger.info(f"             基于混合系数的重要组态数: {len(filtered_chosen_indices)}")
         
-        # 基于机器学习模型选择高概率CSF组态
-        # 修改1：使用分类结果而非概率阈值
+        # 基于机器学习模型的智能组态选择策略
+        # 步骤1：分析ML预测结果
         true_prediction_indices = np.where(y_all_prediction == 1)[0]
+        high_prob_threshold = np.percentile(y_all_probability, config.ml_config.high_prob_percentile)
+        high_prob_indices = np.where(y_all_probability > high_prob_threshold)[0]
+        
         logger.info(f"             ML预测为重要的组态总数: {len(true_prediction_indices)}")
+        logger.info(f"             ML高概率阈值({config.ml_config.high_prob_percentile}分位数): {high_prob_threshold:.4f}")
+        logger.info(f"             高概率组态数: {len(high_prob_indices)}")
         
         # 数据一致性检查：确保CSFs数量的两个来源一致
         csfs_count_from_cal = cal_csfs_data.CSFs_block_length[0]
@@ -147,29 +178,44 @@ def main(config):
             logger.error(f"CSFs数量不一致: cal_csfs_data.CSFs_block_length[0]={csfs_count_from_cal}, rmix_file_data.block_CSFs_nums[0]={csfs_count_from_rmix}")
             raise ValueError("本轮计算的CSFs数量数据不一致，请检查数据文件")
         
-        current_calculation_csfs = csfs_count_from_cal  # 统一使用一个变量
+        current_calculation_csfs = csfs_count_from_cal
         logger.info(f"             本轮计算CSFs数量: {current_calculation_csfs}")
         
-        # 修改2：如果ML预测数量过多，选择概率最高的前n个
-        n_target = current_calculation_csfs  # 以本轮计算的CSFs数量为基准
-        if len(true_prediction_indices) > n_target:
-            # 从ML预测为True的组态中，选择概率最高的前n个
+        # 步骤2：智能选择策略 - 借鉴ann3_proba.py的策略
+        # 扩展因子：下次计算的目标组态数
+        expansion_ratio = config.ml_config.expansion_ratio
+        n_target = expansion_ratio * len(filtered_chosen_indices)  # 基于重要组态数量确定目标
+        
+        # 优先使用分类结果，如果数量过多则按概率排序选择
+        if len(true_prediction_indices) >= n_target:
+            # ML预测数量充足，从中选择概率最高的
             true_prob_scores = y_all_probability[true_prediction_indices]
-            top_n_local_indices = np.argsort(true_prob_scores)[-n_target:]  # 概率最高的n个
+            top_n_local_indices = np.argsort(true_prob_scores)[-n_target:]
             ml_selected_indices = true_prediction_indices[top_n_local_indices]
-            logger.info(f"             ML预测数量过多，选择概率最高的前{n_target}个")
+            logger.info(f"             ML预测充足，选择概率最高的前{n_target}个")
+        elif len(high_prob_indices) >= n_target:
+            # 分类结果不足，使用高概率组态补充
+            high_prob_scores = y_all_probability[high_prob_indices]
+            top_n_local_indices = np.argsort(high_prob_scores)[-n_target:]
+            ml_selected_indices = high_prob_indices[top_n_local_indices]
+            logger.info(f"             使用高概率组态，选择概率最高的前{n_target}个")
         else:
-            ml_selected_indices = true_prediction_indices
-            logger.info(f"             ML预测数量适中，选择全部{len(ml_selected_indices)}个")
+            # 高概率组态也不足，取所有高概率组态
+            ml_selected_indices = high_prob_indices
+            logger.info(f"             高概率组态不足，选择全部{len(ml_selected_indices)}个")
         
         # 排除已经在本轮计算中使用的组态
         already_calculated_indices = caled_csfs_indices_dict[0]
         promising_ml_indices = np.setdiff1d(ml_selected_indices, already_calculated_indices)
         logger.info(f"             ML选择的新增高概率组态数: {len(promising_ml_indices)}")
         
-        # 修改3：最终选择策略 - 重要组态与ML预测组态的并集
+        # 步骤3：最终选择策略 - 重要组态与ML预测组态的并集
         final_chosen_indices = np.union1d(filtered_chosen_indices, promising_ml_indices)
         logger.info(f"             最终下轮计算组态数（重要+ML并集）: {len(final_chosen_indices)}")
+        
+        # 统计信息
+        ml_improvement_ratio = len(promising_ml_indices) / len(filtered_chosen_indices) if len(filtered_chosen_indices) > 0 else 0
+        logger.info(f"             ML扩展比例: {ml_improvement_ratio:.2f} (ML新增/重要组态)")
         
         # 计算数据留存率
         total_original_csfs = len(raw_csfs_descriptors)
@@ -236,22 +282,53 @@ def main(config):
         gdp.csfs_index_storange(final_chosen_csfs_indices_dict, final_chosen_indices_path)
         logger.info(f"             最终选择组态索引保存到: {final_chosen_indices_path}")
 
-        # 保存迭代结果
+        # 保存迭代结果 - 增强版本，借鉴ann3_proba.py的详细记录
         selection_results = {
+            # 组态索引信息
             'important_csfs_indices': filtered_chosen_indices.tolist(),
             'ml_predicted_csfs_indices': promising_ml_indices.tolist(),
             'final_chosen_csfs_indices': final_chosen_indices.tolist(),
+            
+            # 数量统计
             'important_count': len(filtered_chosen_indices),
             'ml_predicted_count': len(ml_selected_indices), 
             'ml_new_count': len(promising_ml_indices),
             'final_chosen_count': len(final_chosen_indices),
             'total_original_count': total_original_csfs,
             'current_calculation_count': current_calculation_csfs,
+            
+            # 留存率统计
             'data_retention_rate': data_retention_rate,
             'important_retention_rate': important_retention_rate,
             'ml_retention_rate': ml_retention_rate,
             'final_retention_rate': final_retention_rate,
-            'chosen_index': final_chosen_indices.tolist()  # 下次计算将使用的索引
+            'ml_improvement_ratio': ml_improvement_ratio,
+            
+            # ML模型性能 - 测试集
+            'test_f1': test_f1,
+            'test_roc_auc': test_roc_auc,
+            'test_accuracy': test_accuracy,
+            'test_precision': test_precision,
+            'test_recall': test_recall,
+            
+            # ML模型性能 - 训练集
+            'train_f1': train_f1,
+            'train_roc_auc': train_roc_auc,
+            'train_accuracy': train_accuracy,
+            'train_precision': train_precision,
+            'train_recall': train_recall,
+            
+            # 模型质量评估
+            'overfitting_check': overfitting_check,
+            'high_prob_threshold': high_prob_threshold,
+            'expansion_ratio': expansion_ratio,
+            
+            # 选择策略信息
+            'sampling_method': 'supervised_ml',
+            'selection_strategy': 'importance_union_ml',
+            
+            # 下次计算使用的索引
+            'chosen_index': final_chosen_indices.tolist()
         }
         
         # 计算总执行时间
