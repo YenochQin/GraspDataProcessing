@@ -177,24 +177,109 @@ def check_configuration_coupling(config, energy_level_data_pd, logger):
         return False, []
 
 
-def generate_chosen_csfs_descriptors(config, chosen_csfs_indices_dict: Dict, raw_csfs_descriptors: np.ndarray, rmix_file_data: MixCoefficientData, asfs_position: List[int], logger) -> np.ndarray:
+def generate_chosen_csfs_descriptors(config, chosen_csfs_indices_dict: Dict, raw_csfs_descriptors: np.ndarray, rmix_file_data: MixCoefficientData, asfs_position: List[int], logger, include_wrong_level_negatives: bool = True) -> np.ndarray:
+    """
+    生成用于机器学习训练的CSFs描述符数据
     
+    Args:
+        config: 配置对象
+        chosen_csfs_indices_dict: 选中的CSFs索引字典
+        raw_csfs_descriptors: 原始CSFs描述符数组
+        rmix_file_data: 混合系数数据
+        asfs_position: 正确能级位置索引列表
+        logger: 日志记录器
+        include_wrong_level_negatives: 是否包含错误能级的组态作为负样本
+        
+    Returns:
+        np.ndarray: 包含描述符和标签的训练数据
+    """
     
     ## 使用chosen_csfs_indices_dict[0]是临时的，后续需要改进一下！TODO
     selected_indices = np.array(chosen_csfs_indices_dict[0])
-    
     selected_csfs_descriptors = raw_csfs_descriptors[selected_indices]
     
-    ## 使用rmix_file_data.mix_coefficient_List[0]是临时的，后续需要改进一下！TODO
-    csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0][asfs_position]**2, axis=0) 
+    # 获取所有能级的混合系数数据
+    all_mix_coeffs = rmix_file_data.mix_coefficient_List[0]  # shape: (n_levels, n_csfs)
     
-    csf_mix_coeff_descriptors = np.zeros(selected_csfs_descriptors.shape[0], dtype=bool)
-    csf_mix_coeff_descriptors[csf_mix_coeff_squared_sum >= np.float64(config.cutoff_value)] = True
+    ## 方案1：仅使用正确能级位置的数据（原有方案）
+    if not include_wrong_level_negatives:
+        # 获取所有CSFs在正确能级位置的混合系数平方和
+        all_csfs_mix_coeff_squared_sum = np.sum(all_mix_coeffs[asfs_position]**2, axis=0)
+        
+        # 只取选中CSFs对应的混合系数
+        selected_csfs_mix_coeff_squared_sum = all_csfs_mix_coeff_squared_sum[selected_indices]
+        
+        # 生成标签（只基于正确能级位置的混合系数）
+        csf_mix_coeff_descriptors = selected_csfs_mix_coeff_squared_sum >= np.float64(config.cutoff_value)
+        
+        logger.info(f"使用原有方案（仅正确能级）")
+        logger.info(f"正确能级位置: {asfs_position}")
+        logger.info(f"选中CSFs数量: {len(selected_indices)}")
+        logger.info(f"超过阈值的CSFs数量: {np.sum(csf_mix_coeff_descriptors)}")
+        logger.info(f"正样本比例: {np.sum(csf_mix_coeff_descriptors)/len(csf_mix_coeff_descriptors):.4f}")
+        
+        caled_csfs_descriptors = np.column_stack([selected_csfs_descriptors, csf_mix_coeff_descriptors])
     
-    caled_csfs_descriptors = np.column_stack([selected_csfs_descriptors, csf_mix_coeff_descriptors])
+    ## 方案2：增强方案 - 包含错误能级的组态作为负样本
+    else:
+        # 获取正确能级位置的混合系数平方和
+        correct_level_mix_coeff_squared_sum = np.sum(all_mix_coeffs[asfs_position]**2, axis=0)
+        
+        # 获取错误能级位置的索引
+        all_level_indices = set(range(all_mix_coeffs.shape[0]))
+        correct_level_indices = set(asfs_position)
+        wrong_level_indices = list(all_level_indices - correct_level_indices)
+        
+        # 获取错误能级位置的混合系数平方和
+        if len(wrong_level_indices) > 0:
+            wrong_level_mix_coeff_squared_sum = np.sum(all_mix_coeffs[wrong_level_indices]**2, axis=0)
+        else:
+            wrong_level_mix_coeff_squared_sum = np.zeros(all_mix_coeffs.shape[1])
+        
+        # 对选中的CSFs进行分类
+        selected_correct_mix_coeff = correct_level_mix_coeff_squared_sum[selected_indices]
+        selected_wrong_mix_coeff = wrong_level_mix_coeff_squared_sum[selected_indices]
+        
+        # 生成增强标签
+        cutoff_value = np.float64(config.cutoff_value)
+        
+        # 正样本：在正确能级位置有较高混合系数
+        positive_mask = selected_correct_mix_coeff >= cutoff_value
+        
+        # 负样本包括：
+        # 1. 在正确能级位置混合系数较低的CSFs
+        # 2. 在错误能级位置有较高混合系数但在正确能级位置较低的CSFs（这些是"坏"组态）
+        negative_mask_low_correct = selected_correct_mix_coeff < cutoff_value
+        negative_mask_high_wrong = (selected_wrong_mix_coeff >= cutoff_value) & (selected_correct_mix_coeff < cutoff_value)
+        
+        # 最终标签：正样本为True，负样本为False
+        csf_mix_coeff_descriptors = positive_mask
+        
+        # 统计信息
+        n_positive = np.sum(positive_mask)
+        n_negative_low_correct = np.sum(negative_mask_low_correct & ~negative_mask_high_wrong)
+        n_negative_high_wrong = np.sum(negative_mask_high_wrong)
+        n_total = len(selected_indices)
+        
+        logger.info(f"使用增强方案（包含错误能级负样本）")
+        logger.info(f"正确能级位置: {asfs_position}")
+        logger.info(f"错误能级位置: {wrong_level_indices}")
+        logger.info(f"选中CSFs数量: {n_total}")
+        logger.info(f"正样本数量: {n_positive} (在正确能级位置混合系数 ≥ {cutoff_value})")
+        logger.info(f"负样本数量: {n_total - n_positive}")
+        logger.info(f"  - 正确能级位置低混合系数: {n_negative_low_correct}")
+        logger.info(f"  - 错误能级位置高混合系数: {n_negative_high_wrong}")
+        logger.info(f"正样本比例: {n_positive/n_total:.4f}")
+        logger.info(f"错误能级高混合系数比例: {n_negative_high_wrong/n_total:.4f}")
+        
+        # 如果有错误能级的高混合系数组态，说明这些是"坏"组态
+        if n_negative_high_wrong > 0:
+            logger.info(f"发现 {n_negative_high_wrong} 个在错误能级有高混合系数的组态，这些将作为负样本帮助模型学习识别错误组态")
+        
+        caled_csfs_descriptors = np.column_stack([selected_csfs_descriptors, csf_mix_coeff_descriptors])
     
+    # 保存描述符文件
     cal_path = config.root_path / f'{config.conf}_{config.cal_loop_num}'
-
     save_descriptors(caled_csfs_descriptors, f'{cal_path}/{config.conf}_{config.cal_loop_num}', 'npy')
     logger.info(f"保存本轮选择的 CSFs 的描述符文件: {cal_path}/{config.conf}_{config.cal_loop_num}.npy")
 

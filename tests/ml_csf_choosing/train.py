@@ -86,13 +86,15 @@ def main(config):
 
         # 提取特征
         logger.info("             数据预处理")
-        caled_csfs_descriptors = gdp.generate_chosen_csfs_descriptors(config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, asfs_position, logger)
+        # 获取是否包含错误能级负样本的配置
+        include_wrong_level_negatives = getattr(config, 'ml_config', {}).get('include_wrong_level_negatives', True)
+        caled_csfs_descriptors = gdp.generate_chosen_csfs_descriptors(config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, asfs_position, logger, include_wrong_level_negatives)
         unselected_csfs_descriptors = gdp.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
         X_unselected = unselected_csfs_descriptors.copy()
         logger.info("             特征提取完成")
 
         # 训练模型
-        model, X_train, X_test, y_train, y_test, training_time = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, logger)
+        model, X_train, X_test, y_train, y_test, training_time = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, asfs_position, logger)
 
         # 评估模型
         evaluation_results = gdp.evaluate_model(
@@ -153,6 +155,7 @@ def main(config):
             model=model,
             config=config,
             rmix_file_data=rmix_file_data,
+            asfs_position=asfs_position,
             caled_csfs_indices_dict=caled_csfs_indices_dict,  # 传入当前计算的CSF索引
             y_current_calc_probability=y_current_calc_probability,  # 传入当前计算CSF的预测概率
             save_model=True,

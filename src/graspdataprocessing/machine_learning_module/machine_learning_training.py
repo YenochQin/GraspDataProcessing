@@ -39,7 +39,8 @@ def train_model(
                 config, 
                 caled_csfs_descriptors: 
                 np.ndarray, 
-                rmix_file_data: MixCoefficientData, 
+                rmix_file_data: MixCoefficientData,
+                asfs_position: List[int], 
                 logger):
     """训练机器学习模型"""
     
@@ -206,13 +207,15 @@ def train_model(
         logger.info(f"自适应阈值:{adaptive_threshold:.4f}, 预测正样本数:{np.sum(y_prediction_adaptive)}")
         y_prediction = y_prediction_adaptive
     
-    # For plotting, we compare against the mixing coefficients of the first energy level.
-    csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0]**2, axis=0) 
+    # 修复：使用正确能级位置的混合系数进行绘图
+    # 获取所有CSFs在正确能级位置的混合系数平方和
+    csf_mix_coeff_squared_sum = np.sum(rmix_file_data.mix_coefficient_List[0][asfs_position]**2, axis=0) 
     
     # 诊断混合系数的信息
     logger.info(f"混合系数统计 - 最小值:{csf_mix_coeff_squared_sum.min():.6f}, 最大值:{csf_mix_coeff_squared_sum.max():.6f}")
     logger.info(f"混合系数平均值:{csf_mix_coeff_squared_sum.mean():.6f}, 零值数量:{np.sum(csf_mix_coeff_squared_sum == 0)}")
     logger.info(f"y_probability_all形状: {y_probability_all.shape}")
+    logger.info(f"正确能级位置: {asfs_position}")
 
     roc_auc, pr_auc = ANNClassifier.plot_curve(
         csf_mix_coeff_squared_sum, 
@@ -611,6 +614,7 @@ def get_unselected_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_ind
 def save_and_plot_results(
                             evaluation_results, model, config, 
                             rmix_file_data,
+                            asfs_position: List[int],
                             caled_csfs_indices_dict=None,
                             y_current_calc_probability=None,
                             save_model: bool = True,
@@ -626,6 +630,7 @@ def save_and_plot_results(
         model: 训练好的模型对象
         config: 配置对象，包含root_path和file_name等信息
         rmix_file_data: 混合系数数据对象，包含真实的Ci值用于绘图
+        asfs_position: 正确能级位置索引列表
         caled_csfs_indices_dict: 当前计算的CSF索引字典（用于数据对应检查）
         y_current_calc_probability: 当前计算CSF的预测概率，与混合系数维度匹配
         save_model: 是否保存模型文件
@@ -701,13 +706,17 @@ def save_and_plot_results(
             # 获取真实的混合系数数据或使用占位数据
             y_prob_all = evaluation_results['probabilities']['y_probability_all']
             
-            # 使用真实的混合系数数据
-            mix_coeff = rmix_file_data.mix_coefficient_List[0]
+            # 修复：使用正确能级位置的混合系数数据
+            mix_coeff = rmix_file_data.mix_coefficient_List[0][asfs_position]
             if len(mix_coeff.shape) > 1:
                 # 如果是多维数组，计算每个CSF的混合系数幅值
                 cal_mix_coeff_list = np.sqrt(np.sum(mix_coeff**2, axis=0))
             else:
                 cal_mix_coeff_list = np.abs(mix_coeff)
+            
+            if logger:
+                logger.info(f"使用正确能级位置的混合系数: {asfs_position}")
+                logger.info(f"混合系数维度: {cal_mix_coeff_list.shape}")
             
             # 使用传入的当前计算CSF预测概率（与ann3_proba.py保持一致的数据处理）
             if y_current_calc_probability is not None:
