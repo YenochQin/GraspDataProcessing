@@ -57,8 +57,7 @@ def main(config):
         
         # 检查组态耦合
         cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
-        logger.info
-        ("************************************************")
+        logger.info("************************************************")
 
     except Exception as e:
             logger.error(f"程序执行过程中发生错误: {str(e)}")
@@ -133,19 +132,29 @@ def main(config):
         elif overfitting_check < config.ml_config['underfitting_threshold']:
             logger.warning("             检测到可能的欠拟合现象")
         
-        # 对所有原始CSF描述符进行模型推理
-        logger.info("             对所有CSF描述符进行模型推理")
+        # 模型推理 - 仅对未选择的CSF进行推理（借鉴ann3_proba.py的高效策略）
+        logger.info("             模型推理")
         start_time = time.time()
-        # 直接使用所有原始CSF描述符（已经是纯特征数据）
-        y_all_prediction = model.predict(raw_csfs_descriptors)
-        y_all_probability = model.predict_probability(raw_csfs_descriptors)[:, 1]
+        
+        # 获取未选择的CSF索引
+        total_csfs_count = len(raw_csfs_descriptors)
+        all_csfs_indices = np.arange(total_csfs_count)
+        current_calc_indices = caled_csfs_indices_dict[0]
+        unselected_indices = np.setdiff1d(all_csfs_indices, current_calc_indices)
+        
+        # 仅对未选择的CSF进行预测
+        X_unselected_for_prediction = raw_csfs_descriptors[unselected_indices]
+        y_unselected_prediction = model.predict(X_unselected_for_prediction)
+        y_unselected_probability = model.predict_probability(X_unselected_for_prediction)[:, 1]
+        
         eval_time = time.time() - start_time
         logger.info(f"             模型推理时间: {eval_time:.4f}秒")
-        logger.info(f"             推理了 {len(y_all_probability)} 个CSF组态")
+        logger.info(f"             推理了 {len(y_unselected_probability)} 个未选择CSF组态")
         
-        # 为绘图准备当前计算CSF的预测概率 - 与ann3_proba.py保持一致
-        current_calc_indices = caled_csfs_indices_dict[0]
-        y_current_calc_probability = y_all_probability[current_calc_indices]
+        # 为绘图准备当前计算CSF的预测概率
+        # 对当前计算的CSF也进行预测（用于绘图和分析）
+        X_current_calc = raw_csfs_descriptors[current_calc_indices]
+        y_current_calc_probability = model.predict_probability(X_current_calc)[:, 1]
         logger.info(f"             当前计算CSF数量: {len(current_calc_indices)}")
         logger.info(f"             当前计算CSF预测概率维度: {y_current_calc_probability.shape}")
         
@@ -156,8 +165,8 @@ def main(config):
             config=config,
             rmix_file_data=rmix_file_data,
             asfs_position=asfs_position,
-            caled_csfs_indices_dict=caled_csfs_indices_dict,  # 传入当前计算的CSF索引
-            y_current_calc_probability=y_current_calc_probability,  # 传入当前计算CSF的预测概率
+            caled_csfs_indices_dict=caled_csfs_indices_dict,
+            y_current_calc_probability=y_current_calc_probability,
             save_model=True,
             save_data=True,
             plot_curves=True,
@@ -166,20 +175,64 @@ def main(config):
         logger.info(f"             预测结果与模型保存成功")
         logger.info(f"             保存的文件: {list(saved_files.keys())}")
 
-        # 基于混合系数选择重要组态
+        # 基于混合系数选择重要组态（已验证重要组态）
         csfs_above_threshold_indices = np.where(np.any(rmix_file_data.mix_coefficient_List[0][asfs_position]**2 >= np.float64(config.cutoff_value), axis = 0))[0]
-        filtered_chosen_indices = caled_csfs_indices_dict[0][csfs_above_threshold_indices]
-        logger.info(f"             基于混合系数的重要组态数: {len(filtered_chosen_indices)}")
+        verified_important_indices = caled_csfs_indices_dict[0][csfs_above_threshold_indices]
+        logger.info(f"             已验证重要组态数: {len(verified_important_indices)}")
         
-        # 基于机器学习模型的智能组态选择策略
-        # 步骤1：分析ML预测结果
-        true_prediction_indices = np.where(y_all_prediction == 1)[0]
-        high_prob_threshold = np.percentile(y_all_probability, config.ml_config['high_prob_percentile'])
-        high_prob_indices = np.where(y_all_probability > high_prob_threshold)[0]
+        # ============ 智能动态选择机制 ============
+        logger.info("      组态采样")
+        logger.info("             更新重要组态索引")
         
-        logger.info(f"             ML预测为重要的组态总数: {len(true_prediction_indices)}")
-        logger.info(f"             ML高概率阈值({config.ml_config['high_prob_percentile']}分位数): {high_prob_threshold:.4f}")
-        logger.info(f"             高概率组态数: {len(high_prob_indices)}")
+        # 计算当前重要组态数量作为基准
+        current_important_count = len(verified_important_indices)
+        
+        # 获取最小重要组态数量保护
+        min_important_count = getattr(config, 'min_important_count', max(50, int(total_csfs_count * 0.01)))  # 默认1%或50个
+        if current_important_count <= min_important_count:
+            current_important_count = min_important_count
+            logger.info(f"             重要组态数目小于等于最小值，调整为{min_important_count}")
+        
+        # 获取扩展比例
+        expansion_ratio = config.ml_config.get('expansion_ratio', 2)
+        
+        # 在未选择的CSF中找出被预测为重要的组态
+        ml_predicted_important_mask = y_unselected_prediction == 1
+        ml_predicted_important_local_indices = np.where(ml_predicted_important_mask)[0]
+        ml_predicted_important_global_indices = unselected_indices[ml_predicted_important_local_indices]
+        
+        logger.info(f"             开始选择组态，当前重要组态数为：{len(verified_important_indices)}")
+        logger.info(f"             ML预测的重要组态数（在未选择中）：{len(ml_predicted_important_global_indices)}")
+        logger.info(f"             目标新增组态数：{expansion_ratio * current_important_count}")
+        
+        # 智能选择策略
+        target_new_csf_count = expansion_ratio * current_important_count
+        if len(ml_predicted_important_local_indices) >= target_new_csf_count:
+            # 情况1：ML预测的重要组态数量充足，按概率排序选择top-k
+            logger.info(f"             ML预测组态充足，按概率排序选择前{target_new_csf_count}个")
+            
+            # 获取ML预测重要组态的概率
+            ml_predicted_important_probabilities = y_unselected_probability[ml_predicted_important_local_indices]
+            
+            # 按概率降序排序
+            probability_sorted_indices = np.argsort(ml_predicted_important_probabilities)[::-1]
+            
+            # 选择前target_new_csf_count个
+            top_k_local_indices = ml_predicted_important_local_indices[probability_sorted_indices[:target_new_csf_count]]
+            ml_selected_indices = unselected_indices[top_k_local_indices]
+            
+            logger.info(f"             从{len(ml_predicted_important_local_indices)}个ML预测重要组态中选择了{len(ml_selected_indices)}个")
+        else:
+            # 情况2：ML预测的重要组态数量不足，全部采用
+            logger.info(f"             ML预测组态不足，全部采用{len(ml_predicted_important_global_indices)}个")
+            ml_selected_indices = ml_predicted_important_global_indices
+        
+        # 最终选择：已验证重要组态 + ML选择的新组态
+        final_chosen_indices = np.unique(np.sort(np.concatenate([verified_important_indices, ml_selected_indices])))
+        
+        logger.info(f"             第{config.cal_loop_num + 1}次迭代计算组态数为：{len(final_chosen_indices)}")
+        logger.info(f"             其中已验证重要组态：{len(verified_important_indices)}")
+        logger.info(f"             其中ML新增组态：{len(ml_selected_indices)}")
         
         # 数据一致性检查：确保CSFs数量的两个来源一致
         csfs_count_from_cal = cal_csfs_data.CSFs_block_length[0]
@@ -192,48 +245,11 @@ def main(config):
         current_calculation_csfs = csfs_count_from_cal
         logger.info(f"             本轮计算CSFs数量: {current_calculation_csfs}")
         
-        # 步骤2：智能选择策略 - 借鉴ann3_proba.py的策略
-        # 扩展因子：下次计算的目标组态数
-        expansion_ratio = config.ml_config['expansion_ratio']
-        n_target = expansion_ratio * len(filtered_chosen_indices)  # 基于重要组态数量确定目标
-        
-        # 优先使用分类结果，如果数量过多则按概率排序选择
-        if len(true_prediction_indices) >= n_target:
-            # ML预测数量充足，从中选择概率最高的
-            true_prob_scores = y_all_probability[true_prediction_indices]
-            top_n_local_indices = np.argsort(true_prob_scores)[-n_target:]
-            ml_selected_indices = true_prediction_indices[top_n_local_indices]
-            logger.info(f"             ML预测充足，选择概率最高的前{n_target}个")
-        elif len(high_prob_indices) >= n_target:
-            # 分类结果不足，使用高概率组态补充
-            high_prob_scores = y_all_probability[high_prob_indices]
-            top_n_local_indices = np.argsort(high_prob_scores)[-n_target:]
-            ml_selected_indices = high_prob_indices[top_n_local_indices]
-            logger.info(f"             使用高概率组态，选择概率最高的前{n_target}个")
-        else:
-            # 高概率组态也不足，取所有高概率组态
-            ml_selected_indices = high_prob_indices
-            logger.info(f"             高概率组态不足，选择全部{len(ml_selected_indices)}个")
-        
-        # 排除已经在本轮计算中使用的组态
-        already_calculated_indices = caled_csfs_indices_dict[0]
-        promising_ml_indices = np.setdiff1d(ml_selected_indices, already_calculated_indices)
-        logger.info(f"             ML选择的新增高概率组态数: {len(promising_ml_indices)}")
-        
-        # 步骤3：最终选择策略 - 重要组态与ML预测组态的并集
-        final_chosen_indices = np.union1d(filtered_chosen_indices, promising_ml_indices)
-        logger.info(f"             最终下轮计算组态数（重要+ML并集）: {len(final_chosen_indices)}")
-        
-        # 统计信息
-        ml_improvement_ratio = len(promising_ml_indices) / len(filtered_chosen_indices) if len(filtered_chosen_indices) > 0 else 0
-        logger.info(f"             ML扩展比例: {ml_improvement_ratio:.2f} (ML新增/重要组态)")
-        
         # 计算数据留存率
         total_original_csfs = len(raw_csfs_descriptors)
-        total_important_csfs = len(filtered_chosen_indices)
-        total_ml_predicted_csfs = len(promising_ml_indices)
+        total_important_csfs = len(verified_important_indices)
+        total_ml_predicted_csfs = len(ml_selected_indices)
         total_final_csfs = len(final_chosen_indices)
-        # current_calculation_csfs 已在上面统一定义
         
         # 修改4：组态留存率使用标准计算方法
         if config.cal_loop_num > 1:
@@ -244,11 +260,11 @@ def main(config):
                     previous_important_indices = previous_important_indices_dict[0]
                     
                     # 标准组态留存率计算：交集/上轮重要组态数
-                    important_intersection = np.intersect1d(filtered_chosen_indices, previous_important_indices)
+                    important_intersection = np.intersect1d(verified_important_indices, previous_important_indices)
                     data_retention_rate = len(important_intersection) / len(previous_important_indices)
                     
                     logger.info(f"             组态留存率计算（标准方法）:")
-                    logger.info(f"             - 本次重要组态数: {len(filtered_chosen_indices)}")
+                    logger.info(f"             - 本次重要组态数: {len(verified_important_indices)}")
                     logger.info(f"             - 上次重要组态数: {len(previous_important_indices)}")
                     logger.info(f"             - 交集组态数: {len(important_intersection)}")
                     logger.info(f"             - 组态留存率: {data_retention_rate:.4%}")
@@ -263,27 +279,30 @@ def main(config):
             data_retention_rate = 0.0
             logger.info(f"             第一轮计算，无法计算组态留存率")
         
+        # 计算各种统计率
         important_retention_rate = total_important_csfs / total_original_csfs
         ml_retention_rate = total_ml_predicted_csfs / total_original_csfs
         final_retention_rate = total_final_csfs / total_original_csfs
+        ml_improvement_ratio = len(ml_selected_indices) / len(verified_important_indices) if len(verified_important_indices) > 0 else 0
         
         logger.info(f"             统计信息:")
         logger.info(f"             - 原始CSFs总数: {total_original_csfs}")
         logger.info(f"             - 重要CSFs数量: {total_important_csfs} (占原始: {important_retention_rate:.4%})")
         logger.info(f"             - ML新增CSFs数量: {total_ml_predicted_csfs} (占原始: {ml_retention_rate:.4%})")
         logger.info(f"             - 最终选择CSFs数量: {total_final_csfs} (占原始: {final_retention_rate:.4%})")
+        logger.info(f"             - ML扩展比例: {ml_improvement_ratio:.2f} (ML新增/重要组态)")
         
         # 分别保存重要组态索引和ML预测组态索引
-        important_csfs_indices_dict = {0: filtered_chosen_indices}
-        ml_predicted_csfs_indices_dict = {0: promising_ml_indices}
+        important_csfs_indices_dict = {0: verified_important_indices}
+        ml_predicted_csfs_indices_dict = {0: ml_selected_indices}
         final_chosen_csfs_indices_dict = {0: final_chosen_indices}
         
-        # 保存重要组态索引
+        # 保存重要组态索引（借鉴ann3_proba.py的命名方式）
         important_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_important_indices.pkl'
         gdp.csfs_index_storange(important_csfs_indices_dict, important_indices_path)
         logger.info(f"             重要组态索引保存到: {important_indices_path}")
         
-        # 保存ML预测组态索引
+        # 保存ML预测组态索引（借鉴ann3_proba.py的命名方式）
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
         gdp.csfs_index_storange(ml_predicted_csfs_indices_dict, ml_chosen_indices_dict_path)
         logger.info(f"             ML预测组态索引保存到: {ml_chosen_indices_dict_path}")
@@ -296,17 +315,23 @@ def main(config):
         # 保存迭代结果 - 增强版本，借鉴ann3_proba.py的详细记录
         selection_results = {
             # 组态索引信息
-            'important_csfs_indices': filtered_chosen_indices.tolist(),
-            'ml_predicted_csfs_indices': promising_ml_indices.tolist(),
+            'important_csfs_indices': verified_important_indices.tolist(),
+            'ml_predicted_csfs_indices': ml_selected_indices.tolist(),
             'final_chosen_csfs_indices': final_chosen_indices.tolist(),
             
             # 数量统计
-            'important_count': len(filtered_chosen_indices),
-            'ml_predicted_count': len(ml_selected_indices), 
-            'ml_new_count': len(promising_ml_indices),
+            'important_count': len(verified_important_indices),
+            'ml_predicted_count': len(ml_predicted_important_global_indices),  # 总预测数量
+            'ml_new_count': len(ml_selected_indices),  # 实际新增数量
             'final_chosen_count': len(final_chosen_indices),
             'total_original_count': total_original_csfs,
             'current_calculation_count': current_calculation_csfs,
+            
+            # 选择策略参数
+            'current_important_count': current_important_count,
+            'min_important_count': min_important_count,
+            'expansion_ratio': expansion_ratio,
+            'target_new_count': target_new_csf_count,
             
             # 留存率统计
             'data_retention_rate': data_retention_rate,
@@ -331,12 +356,10 @@ def main(config):
             
             # 模型质量评估
             'overfitting_check': overfitting_check,
-            'high_prob_threshold': high_prob_threshold,
-            'expansion_ratio': expansion_ratio,
             
             # 选择策略信息
-            'sampling_method': 'supervised_ml',
-            'selection_strategy': 'importance_union_ml',
+            'sampling_method': 'supervised_ml_ann3_style',
+            'selection_strategy': 'verified_important_plus_ml_expansion',
             
             # 下次计算使用的索引
             'chosen_index': final_chosen_indices.tolist()
@@ -358,20 +381,24 @@ def main(config):
         gdp.update_config(config_file_path, {'continue_cal': True})
         gdp.update_config(config_file_path, {'cal_error_num': 0})
         gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
-        # gdp.continue_calculate(config.root_path, True)
-
-        # 计算动态选择率
-        dynamic_ratio = gdp.calculate_dynamic_chosen_ratio(
-            config, 
-            caled_csfs_indices_dict[0], 
-            target_pool_csfs_data, 
-            y_all_probability, 
-            evaluation_results, 
-            energy_level_data_pd, 
-            logger
-        )
-        config.chosen_ratio = dynamic_ratio
-        gdp.update_config(config_file_path, {'chosen_ratio': dynamic_ratio})
+        
+        # ============ 取消动态选择率修改 ============
+        # 注释掉原有的动态选择率计算，保持chosen_ratio不变
+        logger.info(f"             保持选择率不变: {config.chosen_ratio}")
+        logger.info(f"             下次计算将使用固定的组态索引，不依赖选择率")
+        
+        # 不再调用动态选择率计算函数
+        # dynamic_ratio = gdp.calculate_dynamic_chosen_ratio(
+        #     config, 
+        #     caled_csfs_indices_dict[0], 
+        #     target_pool_csfs_data, 
+        #     y_all_probability, 
+        #     evaluation_results, 
+        #     energy_level_data_pd, 
+        #     logger
+        # )
+        # config.chosen_ratio = dynamic_ratio
+        # gdp.update_config(config_file_path, {'chosen_ratio': dynamic_ratio})
 
     elif not should_continue:
         logger.info("************************************************")
