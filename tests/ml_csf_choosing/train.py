@@ -69,13 +69,7 @@ def main(config):
     selected_energy_data.to_csv(correct_levels_csv_path, index=False)
     logger.info(f"选择的能级数据已保存到: {correct_levels_csv_path}")
 
-    should_continue = True
-    if config.cal_loop_num >= 3:
-        # 检查收敛性
-        should_continue = gdp.check_grasp_cal_convergence(config, logger)
-        logger.info(f"检查收敛性结果: {not should_continue}")
-
-    if cal_result and should_continue:
+    if cal_result:
         # 记录能量信息
         logger.info("能级数据表格：\n%s", 
             tabulate(
@@ -316,7 +310,7 @@ def main(config):
         gdp.csfs_index_storange(final_chosen_csfs_indices_dict, final_chosen_indices_path)
         logger.info(f"最终选择组态索引保存到: {final_chosen_indices_path}")
 
-        # 保存迭代结果 - 增强版本，借鉴ann3_proba.py的详细记录
+        # 保存迭代结果
         selection_results = {
             # 组态索引信息
             'important_csfs_indices': verified_important_indices.tolist(),
@@ -382,9 +376,21 @@ def main(config):
             logger=logger
         )
         
-        gdp.update_config(config_file_path, {'continue_cal': True})
-        gdp.update_config(config_file_path, {'cal_error_num': 0})
-        gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
+        # 数据保存完成后，检查收敛性
+        should_continue = True
+        if config.cal_loop_num >= 3:
+            logger.info("数据已保存，开始检查收敛性...")
+            should_continue = gdp.check_grasp_cal_convergence(config, logger)
+            logger.info(f"检查收敛性结果: {'继续计算' if should_continue else '已收敛，停止计算'}")
+        
+        if should_continue:
+            gdp.update_config(config_file_path, {'continue_cal': True})
+            gdp.update_config(config_file_path, {'cal_error_num': 0})
+            gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
+        else:
+            logger.info("************************************************")
+            logger.info("计算收敛，停止计算")
+            gdp.update_config(config_file_path, {'continue_cal': False})
         
         # ============ 取消动态选择率修改 ============
         # 注释掉原有的动态选择率计算，保持chosen_ratio不变
@@ -403,11 +409,6 @@ def main(config):
         # )
         # config.chosen_ratio = dynamic_ratio
         # gdp.update_config(config_file_path, {'chosen_ratio': dynamic_ratio})
-
-    elif not should_continue:
-        logger.info("************************************************")
-        logger.info("计算收敛，停止计算")
-        gdp.update_config(config_file_path, {'continue_cal': False})
 
     else:
         logger.info("************************************************")

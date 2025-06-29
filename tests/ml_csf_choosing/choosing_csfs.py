@@ -289,12 +289,12 @@ def perform_csfs_selection(config):
         
         # 处理第一轮initial_selected数量过多的情况
         total_target_pool = sum(len(target_pool_csfs_data.CSFs_block_data[block]) 
-                              for block in range(target_pool_csfs_data.block_num))
+        for block in range(target_pool_csfs_data.block_num))
         total_target_chosen = math.ceil(total_target_pool * config.chosen_ratio)
         
         # 检查initial_selected的总数量
         total_initial_selected = sum(len(selected_csfs_indices_dict.get(block, [])) 
-                                   for block in range(target_pool_csfs_data.block_num))
+                    for block in range(target_pool_csfs_data.block_num))
         
         if total_initial_selected > total_target_chosen:
             logger.warning(f"⚠️ Initial selected CSFs数量过多: {total_initial_selected} > 目标数量: {total_target_chosen}")
