@@ -3,29 +3,18 @@
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=46
 #SBATCH -p work3
-#SBATCH --output=%x_%j.log
-#SBATCH --error=%x_%j.log
+#SBATCH --output=%j_%x.log
+#SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
-
-# 动态获取日志文件名（作业名_作业编号.log）
-LOG_FILE="${SLURM_JOB_NAME}_${SLURM_JOB_ID}.log"
-
-# 确保所有输出都重定向到动态生成的日志文件
-exec > >(tee -a "$LOG_FILE") 2>&1
 
 # 添加时间戳函数
 log_with_timestamp() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-# 验证作业名是否匹配
-if [[ "${SLURM_JOB_NAME}" == "GdIoddImlcias4_odd2" ]]; then
-    log_with_timestamp "✅ 作业名匹配正确"
-else
-    log_with_timestamp "⚠️  作业名不匹配！"
-    log_with_timestamp "  期望: 'GdIoddImlcias4_odd2'"
-    log_with_timestamp "  实际: '${SLURM_JOB_NAME}'"
-fi
+log_with_timestamp "========== 开始执行 sbatch 脚本 =========="
+log_with_timestamp "作业名: ${SLURM_JOB_NAME:-未设置}"
+log_with_timestamp "作业编号: ${SLURM_JOB_ID:-未设置}"
 
 ###########################################
 # mpi run CPU core
