@@ -3,27 +3,52 @@
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=46
 #SBATCH -p work3
-#SBATCH --output=as4_odd2GdIoddImlci.log
+#SBATCH --output=%x_%j.log
+#SBATCH --error=%x_%j.log
 . /usr/share/Modules/init/zsh
+
+# 动态获取日志文件名（作业名_作业编号.log）
+LOG_FILE="${SLURM_JOB_NAME}_${SLURM_JOB_ID}.log"
+
+# 确保所有输出都重定向到动态生成的日志文件
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# 添加时间戳函数
+log_with_timestamp() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+# 验证作业名是否匹配
+if [[ "${SLURM_JOB_NAME}" == "GdIoddImlcias4_odd2" ]]; then
+    log_with_timestamp "✅ 作业名匹配正确"
+else
+    log_with_timestamp "⚠️  作业名不匹配！"
+    log_with_timestamp "  期望: 'GdIoddImlcias4_odd2'"
+    log_with_timestamp "  实际: '${SLURM_JOB_NAME}'"
+fi
+
 ###########################################
 # mpi run CPU core
 processor=46
 ###########################################
 ## module load
+log_with_timestamp "加载必要的模块..."
 module load mpi/openmpi-x86_64-gcc
 module load openblas/0.3.28-gcc-11.4.1
 module load grasp/grasp_openblas
 ###########################################
 # ⚠️ 关键修改：确保正确加载 Conda（zsh 需要手动初始化）
+log_with_timestamp "初始化 Conda 环境..."
 source /home/workstation3/AppFiles/miniconda3/etc/profile.d/conda.sh  || {
-    echo "❌ 加载 Conda 失败！请检查路径是否正确。"
+    log_with_timestamp "❌ 加载 Conda 失败！请检查路径是否正确。"
     exit 1
 }
 # conda init zsh  # 如果未初始化过 Conda for zsh，运行一次（本地终端）
 conda activate grasp-env || {
-    echo "❌ 激活环境失败！请确认环境名是否正确。"
+    log_with_timestamp "❌ 激活环境失败！请确认环境名是否正确。"
     exit 1
 }
+log_with_timestamp "✅ Conda 环境激活成功"
 ###########################################
 echo "True" > run.input
 ###########################################
@@ -33,59 +58,77 @@ conf="cv4odd1as4_odd2"
 varied="3"
 loop1_rwfn_file="mJ-1-90chosenas3_odd2.w"
 rwfnestimate_file=${conf}_1.w
+
+log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
 ###########################################
 # 检查 Python 路径
+log_with_timestamp "检查 Python 环境..."
 which python
 python --version
 ###########################################
 while true
 do
 ###########################################
-loop=$(csfs_ml_choosing_config_load.py get cal_loop_num)
+log_with_timestamp "获取循环计数..."
+loop=$(csfs_ml_choosing_config_load.py get cal_loop_num 2>&1)
+log_with_timestamp "当前循环: $loop"
+
 if [ $loop -eq 1 ]; then
     # 初始化必要csfs文件数据
-    echo "================初始化必要csfs文件数据================"
+    log_with_timestamp "================初始化必要csfs文件数据================"
     # python initial_csfs.py 
 fi
 ###########################################
-cal_status=$(csfs_ml_choosing_config_load.py get continue_cal)
+log_with_timestamp "检查计算状态..."
+cal_status=$(csfs_ml_choosing_config_load.py get continue_cal 2>&1)
+log_with_timestamp "计算状态: $cal_status"
+
 if [[ "$cal_status" == "false" ]]; then
-    echo "================计算终止================"
+    log_with_timestamp "================计算终止================"
     break
 fi
 ###########################################
 ## 组态选择处理
-echo "================执行组态选择================"
-python choosing_csfs.py 
+log_with_timestamp "================执行组态选择================"
+python choosing_csfs.py 2>&1
 if [ $? -ne 0 ]; then
-    echo "组态选择失败!"
+    log_with_timestamp "❌ 组态选择失败!"
     exit 1
 fi
+log_with_timestamp "✅ 组态选择完成"
 ###########################################
 ## grasp calculation routine
 
+log_with_timestamp "进入计算目录: ${conf}_${loop}"
 cd ${conf}_${loop}
-mkdisks ${processor} caltmp
+
+log_with_timestamp "创建磁盘空间..."
+mkdisks ${processor} caltmp 2>&1
+
 ### 1. rcsf
+log_with_timestamp "准备 rcsf 输入文件..."
 cp ${conf}_${loop}.c rcsf.inp # rmcdhf
 cp ../isodata .
 
 if [ $loop -eq 1 ]; then
-echo "================第一次循环，使用${loop1_rwfn_file}================"
-cp ../${loop1_rwfn_file} ${conf}.w
+    log_with_timestamp "================第一次循环，使用${loop1_rwfn_file}================"
+    cp ../${loop1_rwfn_file} ${conf}.w
 else
-echo "================第${loop}次循环，使用${rwfnestimate_file}================"
-cp ../${rwfnestimate_file} ${conf}.w
+    log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
+    cp ../${rwfnestimate_file} ${conf}.w
 fi
 
 ### 2. rangular
-mpirun -np ${processor} rangular_mpi <<EOF
+log_with_timestamp "执行 rangular_mpi..."
+mpirun -np ${processor} rangular_mpi 2>&1 <<EOF
 y
 EOF
+log_with_timestamp "✅ rangular_mpi 完成"
 
 if [ $loop -eq 1 ]; then
 ### 3.rwfnestimate
-rwfnestimate << EOF
+log_with_timestamp "执行 rwfnestimate (第一次循环)..."
+rwfnestimate 2>&1 << EOF
 y
 1
 ${loop1_rwfn_file}
@@ -98,9 +141,11 @@ EOF
 
 ### 4. rmcdhf - 首次循环使用特定轨道参数
 orbital_params="10s,9p,8d,7f,6g"
+log_with_timestamp "设置轨道参数: $orbital_params"
 else
 ### 3.rwfnestimate (与上面相同)
-rwfnestimate << EOF
+log_with_timestamp "执行 rwfnestimate (后续循环)..."
+rwfnestimate 2>&1 << EOF
 y
 1
 ${loop1_rwfn_file}
@@ -113,10 +158,14 @@ EOF
 
 ### 4. rmcdhf - 后续循环不使用轨道参数
 orbital_params=""
+log_with_timestamp "后续循环，不使用特定轨道参数"
 fi
 
+log_with_timestamp "✅ rwfnestimate 完成"
+
 ### 4. rmcdhf (统一执行)
-mpirun -np ${processor} rmcdhf_mem_mpi <<EOF
+log_with_timestamp "执行 rmcdhf_mem_mpi..."
+mpirun -np ${processor} rmcdhf_mem_mpi 2>&1 <<EOF
 y
 1-4
 5
@@ -124,14 +173,21 @@ ${orbital_params}
 
 100
 EOF
+log_with_timestamp "✅ rmcdhf_mem_mpi 完成"
+
 ### 5. rsave
-rsave ${conf}_${loop}
+log_with_timestamp "执行 rsave..."
+rsave ${conf}_${loop} 2>&1
+log_with_timestamp "✅ rsave 完成"
 
 if [ $loop -eq 1 ]; then
-cp ${conf}_${loop}.w ..
+    log_with_timestamp "复制波函数文件..."
+    cp ${conf}_${loop}.w ..
 fi
+
 # # 5. rci
-# mpirun -np ${processor} rci_mpi <<EOF
+# log_with_timestamp "执行 rci_mpi..."
+# mpirun -np ${processor} rci_mpi 2>&1 <<EOF
 # y
 # ${conf}_${loop}
 # y
@@ -146,30 +202,43 @@ fi
 # EOF
 
 ### 6. jj2lsj rmcdhf
-jj2lsj << EOF
+log_with_timestamp "执行 jj2lsj (rmcdhf)..."
+jj2lsj 2>&1 << EOF
 ${conf}_${loop}
 n
 y
 y
 EOF
+log_with_timestamp "✅ jj2lsj 完成"
+
 # ### 6. jj2lsj rci
-# jj2lsj << EOF
+# log_with_timestamp "执行 jj2lsj (rci)..."
+# jj2lsj 2>&1 << EOF
 # ${conf}_${loop}
 # y
 # y
 # y
 # EOF
+
 ### 7. generate energy levels data file
-rlevels ${conf}_${loop}.m > ${conf}_${loop}.level # rmcdhf
-# rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level # rci
+log_with_timestamp "生成能级数据文件..."
+rlevels ${conf}_${loop}.m > ${conf}_${loop}.level 2>&1 # rmcdhf
+# rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level 2>&1 # rci
+log_with_timestamp "✅ 能级数据文件生成完成"
+
+log_with_timestamp "返回上级目录..."
 cd ..
 
 ## 机器学习训练
-echo "================执行机器学习训练================"
-python train.py 
+log_with_timestamp "================执行机器学习训练================"
+python train.py 2>&1
 if [ $? -ne 0 ]; then
-    echo "机器学习训练失败!"
+    log_with_timestamp "❌ 机器学习训练失败!"
     exit 1
 fi
+log_with_timestamp "✅ 机器学习训练完成"
 
+log_with_timestamp "循环 $loop 完成，准备下一次迭代..."
 done
+
+log_with_timestamp "========== sbatch 脚本执行完成 =========="
