@@ -301,12 +301,12 @@ def main(config):
         ml_predicted_csfs_indices_dict = {0: ml_selected_indices}
         final_chosen_csfs_indices_dict = {0: final_chosen_indices}
         
-        # 保存重要组态索引（借鉴ann3_proba.py的命名方式）
+        # 保存重要组态索引
         important_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_important_indices.pkl'
         gdp.csfs_index_storange(important_csfs_indices_dict, important_indices_path)
         logger.info(f"重要组态索引保存到: {important_indices_path}")
         
-        # 保存ML预测组态索引（借鉴ann3_proba.py的命名方式）
+        # 保存ML预测组态索引
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
         gdp.csfs_index_storange(ml_predicted_csfs_indices_dict, ml_chosen_indices_dict_path)
         logger.info(f"ML预测组态索引保存到: {ml_chosen_indices_dict_path}")
