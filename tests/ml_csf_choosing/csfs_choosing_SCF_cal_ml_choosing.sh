@@ -39,15 +39,13 @@ conda activate grasp-env || {
 }
 log_with_timestamp "✅ Conda 环境激活成功"
 ###########################################
-echo "True" > run.input
-###########################################
 ## configuration
 atom=GdI
 conf="cv4odd1as4_odd2"
 varied="3"
 loop1_rwfn_file="mJ-1-90chosenas3_odd2.w"
 rwfnestimate_file=${conf}_1.w
-
+Active_space="10s,9p,8d,7f,6g"
 log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
 ###########################################
 # 检查 Python 路径
@@ -94,7 +92,7 @@ cd ${conf}_${loop}
 log_with_timestamp "创建磁盘空间..."
 mkdisks ${processor} caltmp 2>&1
 
-### 1. rcsf
+### rcsf
 log_with_timestamp "准备 rcsf 输入文件..."
 cp ${conf}_${loop}.c rcsf.inp # rmcdhf
 cp ../isodata .
@@ -102,57 +100,36 @@ cp ../isodata .
 if [ $loop -eq 1 ]; then
     log_with_timestamp "================第一次循环，使用${loop1_rwfn_file}================"
     cp ../${loop1_rwfn_file} ${conf}.w
+    orbital_params=${Active_space}
+
 else
     log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
     cp ../${rwfnestimate_file} ${conf}.w
+    orbital_params=""
 fi
 
-### 2. rangular
+### rangular
 log_with_timestamp "执行 rangular_mpi..."
 mpirun -np ${processor} rangular_mpi 2>&1 <<EOF
 y
 EOF
 log_with_timestamp "✅ rangular_mpi 完成"
 
-if [ $loop -eq 1 ]; then
-### 3.rwfnestimate
+### rwfnestimate
 log_with_timestamp "执行 rwfnestimate (第一次循环)..."
 rwfnestimate 2>&1 << EOF
 y
 1
-${loop1_rwfn_file}
+${conf}.w
 *
 2
 *
 3
 *
 EOF
-
-### 4. rmcdhf - 首次循环使用特定轨道参数
-orbital_params="10s,9p,8d,7f,6g"
-log_with_timestamp "设置轨道参数: $orbital_params"
-else
-### 3.rwfnestimate (与上面相同)
-log_with_timestamp "执行 rwfnestimate (后续循环)..."
-rwfnestimate 2>&1 << EOF
-y
-1
-${loop1_rwfn_file}
-*
-2
-*
-3
-*
-EOF
-
-### 4. rmcdhf - 后续循环不使用轨道参数
-orbital_params=""
-log_with_timestamp "后续循环，不使用特定轨道参数"
-fi
-
 log_with_timestamp "✅ rwfnestimate 完成"
 
-### 4. rmcdhf (统一执行)
+### rmcdhf
 log_with_timestamp "执行 rmcdhf_mem_mpi..."
 mpirun -np ${processor} rmcdhf_mem_mpi 2>&1 <<EOF
 y
@@ -164,7 +141,7 @@ ${orbital_params}
 EOF
 log_with_timestamp "✅ rmcdhf_mem_mpi 完成"
 
-### 5. rsave
+### rsave
 log_with_timestamp "执行 rsave..."
 rsave ${conf}_${loop} 2>&1
 log_with_timestamp "✅ rsave 完成"
@@ -174,7 +151,7 @@ if [ $loop -eq 1 ]; then
     cp ${conf}_${loop}.w ..
 fi
 
-# # 5. rci
+# # rci
 # log_with_timestamp "执行 rci_mpi..."
 # mpirun -np ${processor} rci_mpi 2>&1 <<EOF
 # y
@@ -190,7 +167,7 @@ fi
 # 1-4
 # EOF
 
-### 6. jj2lsj rmcdhf
+### jj2lsj rmcdhf
 log_with_timestamp "执行 jj2lsj (rmcdhf)..."
 jj2lsj 2>&1 << EOF
 ${conf}_${loop}
@@ -200,7 +177,7 @@ y
 EOF
 log_with_timestamp "✅ jj2lsj 完成"
 
-# ### 6. jj2lsj rci
+# ### jj2lsj rci
 # log_with_timestamp "执行 jj2lsj (rci)..."
 # jj2lsj 2>&1 << EOF
 # ${conf}_${loop}
@@ -209,7 +186,7 @@ log_with_timestamp "✅ jj2lsj 完成"
 # y
 # EOF
 
-### 7. generate energy levels data file
+### generate energy levels data file
 log_with_timestamp "生成能级数据文件..."
 rlevels ${conf}_${loop}.m > ${conf}_${loop}.level 2>&1 # rmcdhf
 # rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level 2>&1 # rci
