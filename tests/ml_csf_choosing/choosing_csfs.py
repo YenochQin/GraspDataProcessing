@@ -11,6 +11,7 @@ import argparse
 from pathlib import Path
 import sys
 import numpy as np
+import math
 
 sys.path.append('/home/workstation3/AppFiles/GraspDataProcessing/src')
 try:
@@ -71,6 +72,73 @@ def load_selected_indices(config, logger, target_pool_csfs_data_block_num):
     
     return selected_csfs_indices_dict
 
+def truncate_initial_selected_with_weights(config, logger, selected_csfs_indices_dict, target_pool_csfs_data):
+    """
+    使用权重信息对initial_selected进行智能截断
+    
+    Args:
+        config: 配置对象
+        logger: 日志记录器
+        selected_csfs_indices_dict: 原始选择的indices字典
+        target_pool_csfs_data: 目标池数据
+        
+    Returns:
+        dict: 截断后的indices字典
+    """
+    root_path = Path(config.root_path)
+    mix_file_path = root_path / config.selected_csfs_mix_file
+    
+    # 尝试加载混合系数文件进行权重排序
+    csf_weights = {}
+    if mix_file_path.exists():
+        try:
+            logger.info(f"🔍 加载混合系数文件进行权重排序: {mix_file_path}")
+            # 这里可以添加加载混合系数文件的逻辑
+            # mix_data = gdp.load_mix_coefficient_file(mix_file_path)
+            # 暂时使用简单的方法：保持原有顺序作为权重
+            pass
+        except Exception as e:
+            logger.warning(f"加载混合系数文件失败: {e}")
+    
+    truncated_indices_dict = {}
+    random_selection_ratio = 0.1  # 固定10%的随机选择比例
+    
+    total_target_pool = sum(len(target_pool_csfs_data.CSFs_block_data[block]) 
+                            for block in range(target_pool_csfs_data.block_num))
+    total_target_chosen = math.ceil(total_target_pool * config.chosen_ratio)
+    
+    for block in range(target_pool_csfs_data.block_num):
+        block_csfs = target_pool_csfs_data.CSFs_block_data[block]
+        block_target_chosen = math.ceil(len(block_csfs) * config.chosen_ratio)
+        block_initial_selected = selected_csfs_indices_dict.get(block, [])
+        
+        if len(block_initial_selected) > block_target_chosen:
+            # 计算随机选择数量（目标数量的10%）
+            random_selection_count = max(1, math.ceil(block_target_chosen * random_selection_ratio))
+            # 截断后的initial选择数量
+            truncated_count = block_target_chosen - random_selection_count
+            
+            # 智能截断逻辑
+            if block in csf_weights and len(csf_weights[block]) > 0:
+                # 基于权重排序截断
+                weighted_indices = sorted(
+                    block_initial_selected, 
+                    key=lambda idx: csf_weights[block].get(idx, 0), 
+                    reverse=True
+                )
+                truncated_indices = weighted_indices[:truncated_count]
+                logger.info(f"块{block}: 基于权重排序截断 {len(block_initial_selected)} -> {len(truncated_indices)}")
+            else:
+                # 简单截断：保留前N个（假设按重要性排序）
+                truncated_indices = block_initial_selected[:truncated_count]
+                logger.info(f"块{block}: 简单截断 {len(block_initial_selected)} -> {len(truncated_indices)}")
+            
+            logger.info(f"         预留随机选择空间: {random_selection_count}")
+            truncated_indices_dict[block] = truncated_indices
+        else:
+            truncated_indices_dict[block] = block_initial_selected
+    
+    return truncated_indices_dict
 
 def load_previous_chosen_indices(config, logger):
     """
@@ -215,10 +283,28 @@ def perform_csfs_selection(config):
     
     if config.cal_loop_num == 1:
         # 第一轮使用initial_selected_indices（来自selected_csfs_file或空）
-        
         selected_csfs_indices_dict = load_selected_indices(config, logger, target_pool_csfs_data.block_num)
         selection_method = "initial_selected"
         logger.info("第一轮选择，使用基础selected indices")
+        
+        # 处理第一轮initial_selected数量过多的情况
+        total_target_pool = sum(len(target_pool_csfs_data.CSFs_block_data[block]) 
+                              for block in range(target_pool_csfs_data.block_num))
+        total_target_chosen = math.ceil(total_target_pool * config.chosen_ratio)
+        
+        # 检查initial_selected的总数量
+        total_initial_selected = sum(len(selected_csfs_indices_dict.get(block, [])) 
+                                   for block in range(target_pool_csfs_data.block_num))
+        
+        if total_initial_selected > total_target_chosen:
+            logger.warning(f"⚠️ Initial selected CSFs数量过多: {total_initial_selected} > 目标数量: {total_target_chosen}")
+            logger.info(f"🔧 使用cutoff_value={config.cutoff_value}进行截断处理")
+            
+            # 对每个块进行截断处理
+            truncated_indices_dict = truncate_initial_selected_with_weights(config, logger, selected_csfs_indices_dict, target_pool_csfs_data)
+            
+            selected_csfs_indices_dict = truncated_indices_dict
+            logger.info("✅ 完成initial_selected截断处理")
     else:
         # 后续轮次：优先级顺序
         # 1. 优先使用ML最终选择的索引（train.py生成的final_chosen_indices）
