@@ -96,17 +96,20 @@ def process_target_pool_csfs(config):
             selected_csfs_mix_coefficient_data = selected_csfs_mix_coefficient_load.data_file_process()
             logger.info(f"已选择CSFs文件{config.selected_csfs_file} CSFs 混合系数文件读取成功")
             
-            # 根据阈值筛选
+            # 根据阈值筛选 - 正确处理所有blocks
             selected_csfs_mix_coeff_above_threshold_indices = gdp.batch_asfs_mix_square_above_threshold(
                 selected_csfs_mix_coefficient_data, 
                 threshold=config.cutoff_value
             )
-            threshold_indices = selected_csfs_mix_coeff_above_threshold_indices[0]  # 获取第0个block的索引数组
             
-            # 使用列表推导式根据索引筛选CSFs
-            selected_csfs_data.CSFs_block_data[0] = [
-                selected_csfs_data.CSFs_block_data[0][i] for i in threshold_indices
-            ]
+            # 对所有blocks应用相应的阈值过滤，确保数据结构一致性
+            for block_idx, threshold_indices in selected_csfs_mix_coeff_above_threshold_indices.items():
+                if block_idx < len(selected_csfs_data.CSFs_block_data) and len(threshold_indices) > 0:
+                    # 使用临时变量避免自引用赋值的bug
+                    original_csfs_block = selected_csfs_data.CSFs_block_data[block_idx]
+                    selected_csfs_data.CSFs_block_data[block_idx] = [
+                        original_csfs_block[i] for i in threshold_indices
+                    ]
             
         # 映射CSFs索引
         selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
