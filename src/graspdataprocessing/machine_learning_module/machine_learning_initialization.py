@@ -200,7 +200,13 @@ def generate_chosen_csfs_descriptors(
         np.ndarray: 包含描述符和标签的训练数据
     """
     
-    ## 使用chosen_csfs_indices_dict[0]是临时的，后续需要改进一下！TODO
+    # 验证字典并安全获取block 0的索引
+    if not chosen_csfs_indices_dict:
+        raise ValueError("chosen_csfs_indices_dict为空，无法获取选中的CSFs索引")
+    
+    if 0 not in chosen_csfs_indices_dict:
+        raise KeyError(f"chosen_csfs_indices_dict中缺少键0，可用键: {list(chosen_csfs_indices_dict.keys())}")
+    
     selected_indices = np.array(chosen_csfs_indices_dict[0])
     selected_csfs_descriptors = raw_csfs_descriptors[selected_indices]
     
@@ -298,7 +304,13 @@ def get_stay_descriptors(raw_csfs_descriptors: np.ndarray, chosen_csfs_indices_d
     Returns:
         np.ndarray: 不在chosen_csfs_indices_dict中的描述符数组
     """
-    # 获取所有已选择的索引
+    # 验证字典并安全获取所有已选择的索引
+    if not chosen_csfs_indices_dict:
+        raise ValueError("chosen_csfs_indices_dict为空，无法获取选中的CSFs索引")
+    
+    if 0 not in chosen_csfs_indices_dict:
+        raise KeyError(f"chosen_csfs_indices_dict中缺少键0，可用键: {list(chosen_csfs_indices_dict.keys())}")
+    
     chosen_indices = set(chosen_csfs_indices_dict[0])
     
     # 获取所有可能的索引
