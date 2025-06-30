@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import graspdataprocessing as gdt
+import graspdataprocessing as gdp
 
 
 level_test = {"atom": "NdGalike", 
@@ -23,7 +23,7 @@ level_test = {"atom": "NdGalike",
 
 as_list = [0, 1, 2, 3, 4, 5]
 
-lllldata = gdt.mcdhf_energy_data_collection(level_test, as_list)
+lllldata = gdp.mcdhf_energy_data_collection(level_test, as_list)
 print(lllldata)
 
 
@@ -34,7 +34,7 @@ data_parameter1 = {"atom": "NdGalike",
               "this_as": 5, 
               "cut_off_subshell": "3d", 
               "file_type": "level"}
-lllldata = gdt.ci_energy_data_collection(lllldata, data_parameter1)
+lllldata = gdp.ci_energy_data_collection(lllldata, data_parameter1)
 
 
 data_parameter2 = {"atom": "NdGalike", 
@@ -44,9 +44,9 @@ data_parameter2 = {"atom": "NdGalike",
               "this_as": 5, 
               "cut_off_subshell": "3d", 
               "file_type": "lsj"}
-# lllldata = gdt.LevelsASFComposition(lllldata, data_parameter2)
+# lllldata = gdp.LevelsASFComposition(lllldata, data_parameter2)
 
-lllldata = gdt.LevelsASFComposition(lllldata, data_parameter2).level_comp_of_asf()
+lllldata = gdp.LevelsASFComposition(lllldata, data_parameter2).level_comp_of_asf()
 
 lllldata.to_excel("test.xlsx")
 print(lllldata)

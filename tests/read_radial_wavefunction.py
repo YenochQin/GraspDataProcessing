@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import graspdataprocessing as gdt
+import graspdataprocessing as gdp
 
 
 
@@ -26,22 +26,22 @@ test1 = {"atom": "Ni",
               "max_r": 1,
               "file_type": "wavefunction"}
 
-data = gdt.GraspFileLoad(test1)
+data = gdp.GraspFileLoad(test1)
 
 
 test = data.data_file_process()
 
 plt.axhline(y=0.0, color='black', lw=0.75, ls='--')
-plt.plot(test['r(a.u)'][1:], test['P(1s)'][1:] ,label='P(1s)')
-plt.plot(test['r(a.u)'][1:], test['P(2s)'][1:],label = 'P(2s)')
-plt.plot(test['r(a.u)'][1:], test['P(2p)'][1:],label='P(2p)')
+plt.plot(test['r(a.u)'][1:], test['P(1s )'][1:])
+plt.plot(test['r(a.u)'][1:], test['P(2s )'][1:],label ='P(2s)')
+plt.plot(test['r(a.u)'][1:], test['P(2p )'][1:],label='P(2p)')
 plt.plot(test['r(a.u)'][1:], test['P(2p-)'][1:],label='P(2p-)')
-plt.plot(test['r(a.u)'][1:], test['P(3s)'][1:],label='P(3s)')
-plt.plot(test['r(a.u)'][1:], test['P(3p)'][1:],label='P(3p)')
+plt.plot(test['r(a.u)'][1:], test['P(3s )'][1:],label='P(3s)')
+plt.plot(test['r(a.u)'][1:], test['P(3p )'][1:],label='P(3p)')
 plt.plot(test['r(a.u)'][1:], test['P(3p-)'][1:],label='P(3p-)')
-plt.plot(test['r(a.u)'][1:], test['P(3d)'][1:],label='P(3d)')
+plt.plot(test['r(a.u)'][1:], test['P(3d )'][1:],label='P(3d)')  
 plt.plot(test['r(a.u)'][1:], test['P(3d-)'][1:],label='P(3d-)')
-# plt.xlim([0,plottest['max_r']])
+# plt.xlim([0, test['r(a.u)']])
 plt.legend()
 # plt.savefig(f"{atom}{parameters}.pdf", bbox_inches='tight')
 plt.show()
