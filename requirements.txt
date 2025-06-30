@@ -1,4 +1,28 @@
-matplotlib==3.8.4
-numpy==2.0.0
-pandas==2.2.2
-tqdm==4.66.4
+# 核心数据处理库
+numpy>=2.0.0
+pandas>=2.2.2
+matplotlib>=3.8.4
+tqdm>=4.66.4
+
+# 机器学习库
+torch>=2.0.0
+scikit-learn>=1.3.0
+imbalanced-learn>=0.11.0
+
+# 数据可视化
+seaborn>=0.11.0
+
+# 模型序列化和工具
+joblib>=1.1.0
+
+# 表格格式化
+tabulate>=0.8.9
+
+# 位数组处理 (可选，仅在特定功能中使用)
+bitarray>=2.0.0
+
+# 配置文件处理
+pyyaml>=6.0
+
+# 类型提示支持 (Python < 3.10)
+typing-extensions>=4.0.0; python_version < "3.10"
