@@ -143,7 +143,7 @@ def main(config):
         # 仅对未选择的CSF进行预测
         X_unselected_for_prediction = raw_csfs_descriptors[unselected_indices]
         y_unselected_prediction = model.predict(X_unselected_for_prediction)
-        y_unselected_probability = model.predict_probability(X_unselected_for_prediction)[:, 1]
+        y_unselected_probability = model.predict_proba(X_unselected_for_prediction)[:, 1]
         
         eval_time = time.time() - start_time
         logger.info(f"模型推理时间: {eval_time:.4f}秒")
@@ -152,7 +152,7 @@ def main(config):
         # 为绘图准备当前计算CSF的预测概率
         # 对当前计算的CSF也进行预测（用于绘图和分析）
         X_current_calc = raw_csfs_descriptors[current_calc_indices]
-        y_current_calc_probability = model.predict_probability(X_current_calc)[:, 1]
+        y_current_calc_probability = model.predict_proba(X_current_calc)[:, 1]
         logger.info(f"当前计算CSF数量: {len(current_calc_indices)}")
         logger.info(f"当前计算CSF预测概率维度: {y_current_calc_probability.shape}")
         

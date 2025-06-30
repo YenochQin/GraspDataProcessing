@@ -158,10 +158,10 @@ def train_model(
     # Model evaluation
     logger.info("             预测与评估")
     y_prediction = model.predict(X_test)
-    y_probability = model.predict_probability(X_test)[:, 1]
+    y_probability = model.predict_proba(X_test)[:, 1]
     y_prediction_train = model.predict(X_train)
-    y_probability_train = model.predict_probability(X_train)[:, 1]
-    y_probability_all = model.predict_probability(X)
+    y_probability_train = model.predict_proba(X_train)[:, 1]
+    y_probability_all = model.predict_proba(X)[:, 1]
     
     # 诊断预测概率分布
     logger.info(f"预测概率统计 - 最小值:{y_probability.min():.4f}, 最大值:{y_probability.max():.4f}, 平均值:{y_probability.mean():.4f}")
@@ -259,13 +259,13 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_unselected, config
     eval_time = time.time() - start_time
     
     # 预测概率
-    y_probability = model.predict_probability(X_test)[:, 1]
+    y_probability = model.predict_proba(X_test)[:, 1]
     y_prediction_train = model.predict(X_train)
-    y_probability_train = model.predict_probability(X_train)[:, 1]
-    y_probability_other = model.predict_probability(X_unselected)[:, 1]
+    y_probability_train = model.predict_proba(X_train)[:, 1]
+    y_probability_other = model.predict_proba(X_unselected)[:, 1]
     
     # 生成完整数据集的概率用于分析
-    y_probability_all = model.predict_probability(np.vstack([X_train, X_test]))
+    y_probability_all = model.predict_proba(np.vstack([X_train, X_test]))[:, 1]
     
     # 评估指标计算
     f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(
