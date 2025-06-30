@@ -8,10 +8,10 @@ matplotlib>=3.8.4
 tqdm>=4.66.4
 
 # PyTorch CPU版本 (更轻量，启动更快)
+--find-links https://download.pytorch.org/whl/cpu
 torch>=2.0.0+cpu
 torchvision>=0.15.0+cpu
 torchaudio>=2.0.0+cpu
---find-links https://download.pytorch.org/whl/torch_stable.html
 
 # 机器学习库
 scikit-learn>=1.3.0

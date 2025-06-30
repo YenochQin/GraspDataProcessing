@@ -9,12 +9,10 @@ matplotlib>=3.8.4
 tqdm>=4.66.4
 
 # PyTorch GPU版本 (支持CUDA 11.8+)
+# 默认安装CUDA版本，如需特定CUDA版本请参考INSTALL.md
 torch>=2.0.0
 torchvision>=0.15.0
 torchaudio>=2.0.0
-# 如果需要特定CUDA版本，可以取消注释下面的行：
-# --index-url https://download.pytorch.org/whl/cu118
-# --index-url https://download.pytorch.org/whl/cu121
 
 # 机器学习库
 scikit-learn>=1.3.0
