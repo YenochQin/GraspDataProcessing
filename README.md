@@ -30,7 +30,7 @@ pip install -r requirements-gpu.txt    # GPU环境
 
 ```bash
 # 1. 安装依赖
-pip install -r requirements.txt  # 或选择对应环境的依赖文件
+pip install -r requirements-cpu[gpu].txt  # 或选择对应环境的依赖文件
 
 # 2. 构建包
 python -m build

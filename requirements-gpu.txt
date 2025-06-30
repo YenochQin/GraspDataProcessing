@@ -34,9 +34,3 @@ bitarray>=2.0.0
 
 # 配置文件处理
 pyyaml>=6.0
-
-# 类型提示支持 (Python < 3.10)
-typing-extensions>=4.0.0; python_version < "3.10"
-
-# GPU监控工具 (可选)
-# nvidia-ml-py3>=7.352.0 

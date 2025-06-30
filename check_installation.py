@@ -74,7 +74,6 @@ def main():
     # 可选包列表
     optional_packages = [
         ('bitarray', 'bitarray'),
-        ('typing-extensions', 'typing_extensions'),
     ]
     
     print(f"\n📦 核心依赖检查:")

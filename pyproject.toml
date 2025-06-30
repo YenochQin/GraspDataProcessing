@@ -36,9 +36,6 @@ dependencies = [
   
   # 配置文件处理
   "pyyaml>=6.0",
-  
-  # 类型提示支持
-  "typing-extensions>=4.0.0; python_version < '3.10'",
 ]
 
 [tool.hatch.version]
