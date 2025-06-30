@@ -677,12 +677,12 @@ def save_and_plot_results(
         saved_files['train_data'] = str(train_file)
         
         # 保存其他数据预测结果到results目录
-        other_file = results_dir / f"{file_name}_other_predictionictions.csv"
+        other_file = results_dir / f"{file_name}_other_predictions.csv"
         pd.DataFrame({
             "y_prediction": evaluation_results['predictions']['y_prediction_other'],
             "y_proba": evaluation_results['probabilities']['y_probability_other']
         }).to_csv(other_file, index=False)
-        saved_files['other_predictionictions'] = str(other_file)
+        saved_files['other_predictions'] = str(other_file)
         
         if logger:
             logger.info(f"预测数据已保存到: {test_data_dir} 和 {results_dir}")
