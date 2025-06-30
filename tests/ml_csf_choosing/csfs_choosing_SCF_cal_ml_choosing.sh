@@ -42,10 +42,10 @@ log_with_timestamp "✅ Conda 环境激活成功"
 ## configuration
 atom=GdI
 conf="cv4odd1as4_odd2"
-varied="3"
 loop1_rwfn_file="mJ-1-90chosenas3_odd2.w"
 rwfnestimate_file=${conf}_1.w
 Active_space="10s,9p,8d,7f,6g"
+cal_levels="1-4"
 log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
 ###########################################
 # 检查 Python 路径
@@ -98,15 +98,9 @@ cp ${conf}_${loop}.c rcsf.inp # rmcdhf
 cp ../isodata .
 
 if [ $loop -eq 1 ]; then
-    log_with_timestamp "================第一次循环，使用${loop1_rwfn_file}================"
-    cp ../${loop1_rwfn_file} ${conf}.w
-    orbital_params=${Active_space}
-
-else
-    log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
-    cp ../${rwfnestimate_file} ${conf}.w
-    orbital_params=""
-fi
+log_with_timestamp "================第一次循环，使用${loop1_rwfn_file}================"
+cp ../${loop1_rwfn_file} ${conf}.w
+orbital_params=${Active_space}
 
 ### rangular
 log_with_timestamp "执行 rangular_mpi..."
@@ -133,7 +127,7 @@ log_with_timestamp "✅ rwfnestimate 完成"
 log_with_timestamp "执行 rmcdhf_mem_mpi..."
 mpirun -np ${processor} rmcdhf_mem_mpi 2>&1 <<EOF
 y
-1-4
+${cal_levels}
 5
 ${orbital_params}
 
@@ -146,26 +140,7 @@ log_with_timestamp "执行 rsave..."
 rsave ${conf}_${loop} 2>&1
 log_with_timestamp "✅ rsave 完成"
 
-if [ $loop -eq 1 ]; then
-    log_with_timestamp "复制波函数文件..."
-    cp ${conf}_${loop}.w ..
-fi
-
-# # rci
-# log_with_timestamp "执行 rci_mpi..."
-# mpirun -np ${processor} rci_mpi 2>&1 <<EOF
-# y
-# ${conf}_${loop}
-# y
-# y
-# 1.d-6
-# y
-# n
-# n
-# y
-# 5
-# 1-4
-# EOF
+cp ${conf}_${loop}.w ..
 
 ### jj2lsj rmcdhf
 log_with_timestamp "执行 jj2lsj (rmcdhf)..."
@@ -177,19 +152,44 @@ y
 EOF
 log_with_timestamp "✅ jj2lsj 完成"
 
-# ### jj2lsj rci
-# log_with_timestamp "执行 jj2lsj (rci)..."
-# jj2lsj 2>&1 << EOF
-# ${conf}_${loop}
-# y
-# y
-# y
-# EOF
-
-### generate energy levels data file
 log_with_timestamp "生成能级数据文件..."
 rlevels ${conf}_${loop}.m > ${conf}_${loop}.level 2>&1 # rmcdhf
-# rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level 2>&1 # rci
+log_with_timestamp "✅ 能级数据文件生成完成"
+
+else
+log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
+cp ../${rwfnestimate_file} ${conf}_${loop}.w
+orbital_params=""
+fi
+
+# rci
+log_with_timestamp "执行 rci_mpi..."
+mpirun -np ${processor} rci_mpi 2>&1 <<EOF
+y
+${conf}_${loop}
+y
+y
+1.d-6
+y
+n
+n
+y
+5
+${cal_levels}
+EOF
+
+### jj2lsj rci
+log_with_timestamp "执行 jj2lsj (rci)..."
+jj2lsj 2>&1 << EOF
+${conf}_${loop}
+y
+y
+y
+EOF
+log_with_timestamp "✅ jj2lsj 完成"
+
+log_with_timestamp "生成能级数据文件..."
+rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level 2>&1 # rci
 log_with_timestamp "✅ 能级数据文件生成完成"
 
 log_with_timestamp "返回上级目录..."
