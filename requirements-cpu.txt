@@ -1,0 +1,33 @@
+# CPU环境依赖文件
+# 适用于没有GPU或不需要GPU加速的环境
+
+# 核心数据处理库
+numpy>=2.0.0
+pandas>=2.2.2
+matplotlib>=3.8.4
+tqdm>=4.66.4
+
+# PyTorch CPU版本 (更轻量，启动更快)
+--find-links https://download.pytorch.org/whl/cpu
+torch>=2.0.0+cpu
+torchvision>=0.15.0+cpu
+torchaudio>=2.0.0+cpu
+
+# 机器学习库
+scikit-learn>=1.3.0
+imbalanced-learn>=0.11.0
+
+# 数据可视化
+seaborn>=0.11.0
+
+# 模型序列化和工具
+joblib>=1.1.0
+
+# 表格格式化
+tabulate>=0.8.9
+
+# 位数组处理 (可选，仅在特定功能中使用)
+bitarray>=2.0.0
+
+# 配置文件处理
+pyyaml>=6.0
