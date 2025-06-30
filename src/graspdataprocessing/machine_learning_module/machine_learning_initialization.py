@@ -104,14 +104,11 @@ def load_data_files(config, logger) -> tuple:
     logger.info(f"加载能级数据: {energy_level_file_path}")
     
     # 加载rmix文件
-    cal_method = getattr(config, 'cal_method', 'rmcdhf')  # 默认使用rmcdhf方法
-    
-    if cal_method == 'rci':
-        rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.cm'
-    elif cal_method == 'rmcdhf':
+    # 根据计算轮次确定文件后缀
+    if config.cal_loop_num == 1:
         rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.m'
     else:
-        raise ValueError(f"不支持的计算方法: {cal_method}，请在config.toml中设置cal_method为'rci'或'rmcdhf'")
+        rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.cm'
     
     rmix_file_load = GraspFileLoad.from_filepath(str(rmix_file_path), 'mix')
     rmix_file_data = rmix_file_load.data_file_process()

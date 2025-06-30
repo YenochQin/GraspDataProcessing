@@ -92,6 +92,14 @@
             transition: border-color 0.3s ease;
         }
 
+        .spectral-term-input {
+            margin-bottom: 10px;
+        }
+
+        .spectral-term-input:last-child {
+            margin-bottom: 0;
+        }
+
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
@@ -301,8 +309,10 @@
                     
                     <div class="form-group">
                         <label for="spectral_term">光谱项 *</label>
-                        <textarea id="spectral_term" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D"></textarea>
-                        <div class="help-text">需要计算出的能级</div>
+                        <div id="spectral-terms-container">
+                            <input type="text" class="spectral-term-input" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D" oninput="handleSpectralTermInput(this)">
+                        </div>
+                        <div class="help-text">输入光谱项后会自动生成新的输入框</div>
                     </div>
                 </div>
 
@@ -446,13 +456,54 @@
     <script>
 
 
+        // 处理光谱项输入
+        function handleSpectralTermInput(input) {
+            // 如果输入框有内容且是最后一个输入框，则添加新的输入框
+            if (input.value.trim() !== '' && input === document.querySelector('.spectral-term-input:last-child')) {
+                addSpectralTermInput();
+            }
+            
+            // 延迟触发文件生成，避免输入过程中频繁更新
+            clearTimeout(window.spectralTermTimeout);
+            window.spectralTermTimeout = setTimeout(() => {
+                generateFiles();
+            }, 300);
+        }
+
+        // 添加新的光谱项输入框
+        function addSpectralTermInput() {
+            const container = document.getElementById('spectral-terms-container');
+            const newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.className = 'spectral-term-input';
+            newInput.placeholder = '继续输入下一个光谱项';
+            newInput.oninput = function() { handleSpectralTermInput(this); };
+            container.appendChild(newInput);
+        }
+
+        // 获取所有光谱项
+        function getSpectralTerms() {
+            const inputs = document.querySelectorAll('.spectral-term-input');
+            const terms = [];
+            inputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    terms.push(input.value.trim());
+                }
+            });
+            return terms;
+        }
+
         // 生成配置文件和脚本
         function generateFiles() {
             const config = getFormData();
             
             // 检查必填字段
-            const requiredFields = ['atom', 'conf', 'spectral_term', 'root_path', 'selected_csfs'];
-            const missingFields = requiredFields.filter(field => !config[field]);
+            const missingFields = [];
+            if (!config.atom) missingFields.push('原子符号');
+            if (!config.conf) missingFields.push('组态名称');
+            if (config.spectral_terms.length === 0) missingFields.push('光谱项');
+            if (!config.root_path) missingFields.push('根路径');
+            if (!config.selected_csfs) missingFields.push('初筛CSFs文件名');
             
             if (missingFields.length > 0) {
                 document.getElementById('config-output').textContent = '# 请先填写必填字段：' + missingFields.join(', ');
@@ -479,7 +530,7 @@
             return {
                 atom: document.getElementById('atom').value,
                 conf: document.getElementById('conf').value,
-                spectral_term: document.getElementById('spectral_term').value,
+                spectral_terms: getSpectralTerms(),
                 root_path: document.getElementById('root_path').value,
                 selected_csfs: document.getElementById('selected_csfs').value,
                 conda_path: document.getElementById('conda_path').value || '/home/workstation3/AppFiles/miniconda3',
@@ -499,10 +550,17 @@
 
         // 生成config.toml内容
         function generateConfigToml(config) {
+            let spectralTermsString;
+            if (config.spectral_terms.length === 0) {
+                spectralTermsString = '';
+            } else {
+                spectralTermsString = config.spectral_terms.map(term => `    "${term}"`).join(',\n');
+            }
+            
             return `atom = "${config.atom}"
 conf = "${config.conf}"
 spetral_term = [
-    "${config.spectral_term}",
+${spectralTermsString},
 ]
 continue_cal = true
 cal_loop_num = 1
@@ -699,8 +757,6 @@ log_with_timestamp "✅ 能级数据文件生成完成"
 else
 log_with_timestamp "================第\${loop}次循环，使用\${rwfnestimate_file}================"
 cp ../\${rwfnestimate_file} \${conf}_\${loop}.w
-orbital_params=""
-fi
 
 # rci
 log_with_timestamp "执行 rci_mpi..."
@@ -732,6 +788,8 @@ log_with_timestamp "生成能级数据文件..."
 rlevels \${conf}_\${loop}.cm > \${conf}_\${loop}.level 2>&1 # rci
 log_with_timestamp "✅ 能级数据文件生成完成"
 
+fi
+
 log_with_timestamp "返回上级目录..."
 cd ..
 
@@ -755,6 +813,10 @@ log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
             document.querySelectorAll('input, select, textarea').forEach(element => {
                 element.value = '';
             });
+            
+            // 重置光谱项输入框
+            const container = document.getElementById('spectral-terms-container');
+            container.innerHTML = '<input type="text" class="spectral-term-input" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D" oninput="handleSpectralTermInput(this)">';
             
             // 清空输出内容
             document.getElementById('config-output').textContent = '# 请填写左侧参数后，配置文件将在这里生成';
@@ -804,7 +866,10 @@ log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
         // 实时更新
         document.addEventListener('input', function(e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
-                generateFiles();
+                // 对于光谱项输入框，已经在handleSpectralTermInput中处理了
+                if (!e.target.classList.contains('spectral-term-input')) {
+                    generateFiles();
+                }
             }
         });
     </script>

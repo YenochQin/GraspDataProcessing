@@ -159,8 +159,6 @@ log_with_timestamp "✅ 能级数据文件生成完成"
 else
 log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
 cp ../${rwfnestimate_file} ${conf}_${loop}.w
-orbital_params=""
-fi
 
 # rci
 log_with_timestamp "执行 rci_mpi..."
@@ -192,6 +190,7 @@ log_with_timestamp "生成能级数据文件..."
 rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level 2>&1 # rci
 log_with_timestamp "✅ 能级数据文件生成完成"
 
+fi
 log_with_timestamp "返回上级目录..."
 cd ..
 
