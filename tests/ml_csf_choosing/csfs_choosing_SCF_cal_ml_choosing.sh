@@ -12,6 +12,104 @@ log_with_timestamp() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
+# GRASP程序错误检查函数
+check_grasp_errors() {
+    local program_name="$1"
+    local output_log="$2"
+    local expected_files="$3"
+    
+    # 检查严重错误模式
+    local error_patterns=(
+        "Fortran runtime error"
+        "Error termination"
+        "does not exist, redo"
+        "STOP.*ERROR"
+        "ABORT"
+        "Segmentation fault"
+        "Bus error"
+        "killed"
+        "core dumped"
+    )
+    
+    # 搜索错误模式
+    for pattern in "${error_patterns[@]}"; do
+        if grep -qi "$pattern" "$output_log"; then
+            log_with_timestamp "❌ $program_name 检测到错误: $pattern"
+            log_with_timestamp "错误上下文："
+            grep -i -A2 -B2 "$pattern" "$output_log" | tail -10
+            return 1
+        fi
+    done
+    
+    # 检查是否有预期的输出文件
+    if [ -n "$expected_files" ]; then
+        for file in $expected_files; do
+            if [ ! -f "$file" ]; then
+                log_with_timestamp "❌ $program_name 未生成预期文件: $file"
+                return 1
+            fi
+            # 检查文件是否为空
+            if [ ! -s "$file" ]; then
+                log_with_timestamp "❌ $program_name 生成的文件为空: $file"
+                return 1
+            fi
+        done
+    fi
+    
+    return 0
+}
+
+# 安全执行GRASP程序的函数
+safe_grasp_execute() {
+    local program_name="$1"
+    local expected_files="$2"
+    local input_commands="$3"
+    shift 3
+    
+    log_with_timestamp "执行 $program_name..."
+    
+    # 创建临时日志文件
+    local temp_log="/tmp/${program_name}_${SLURM_JOB_ID}_$$.log"
+    
+    # 执行程序并获取退出码
+    local exit_code=0
+    if [ -n "$input_commands" ]; then
+        # 带输入的程序
+        echo "$input_commands" | "$@" 2>&1 | tee "$temp_log"
+        exit_code=${PIPESTATUS[0]:-$?}
+    else
+        # 不带输入的程序
+        "$@" 2>&1 | tee "$temp_log"
+        exit_code=$?
+    fi
+    
+    # 确保退出码是数字
+    if [ -z "$exit_code" ] || ! [ "$exit_code" -eq "$exit_code" ] 2>/dev/null; then
+        exit_code=1
+        log_with_timestamp "⚠️ 无法获取 $program_name 的退出码，假设为失败"
+    fi
+    
+    # 检查退出码
+    if [ "$exit_code" -ne 0 ]; then
+        log_with_timestamp "❌ $program_name 非正常退出，退出码: $exit_code"
+        log_with_timestamp "最后的输出："
+        tail -20 "$temp_log"
+        rm -f "$temp_log"
+        exit 1
+    fi
+    
+    # 检查GRASP特定错误
+    check_grasp_errors "$program_name" "$temp_log" "$expected_files"
+    local check_result=$?
+    if [ "$check_result" -ne 0 ]; then
+        rm -f "$temp_log"
+        exit 1
+    fi
+    
+    rm -f "$temp_log"
+    log_with_timestamp "✅ $program_name 完成"
+}
+
 log_with_timestamp "========== 开始执行 sbatch 脚本 =========="
 log_with_timestamp "作业名: ${SLURM_JOB_NAME:-未设置}"
 log_with_timestamp "作业编号: ${SLURM_JOB_ID:-未设置}"
@@ -63,7 +161,7 @@ log_with_timestamp "当前循环: $loop"
 if [ $loop -eq 1 ]; then
     # 初始化必要csfs文件数据
     log_with_timestamp "================初始化必要csfs文件数据================"
-    # python initial_csfs.py 
+    python initial_csfs.py 
 fi
 ###########################################
 log_with_timestamp "检查计算状态..."
@@ -89,8 +187,7 @@ log_with_timestamp "✅ 组态选择完成"
 log_with_timestamp "进入计算目录: ${conf}_${loop}"
 cd ${conf}_${loop}
 
-log_with_timestamp "创建磁盘空间..."
-mkdisks ${processor} caltmp 2>&1
+safe_grasp_execute "mkdisks" "" "" mkdisks ${processor} caltmp
 
 ### rcsf
 log_with_timestamp "准备 rcsf 输入文件..."
@@ -103,67 +200,49 @@ cp ../${loop1_rwfn_file} ${conf}.w
 orbital_params=${Active_space}
 
 ### rangular
-log_with_timestamp "执行 rangular_mpi..."
-mpirun -np ${processor} rangular_mpi 2>&1 <<EOF
-y
-EOF
-log_with_timestamp "✅ rangular_mpi 完成"
+safe_grasp_execute "rangular_mpi" "" "y" mpirun -np ${processor} rangular_mpi
 
 ### rwfnestimate
-log_with_timestamp "执行 rwfnestimate (第一次循环)..."
-rwfnestimate 2>&1 << EOF
-y
+input_commands="y
 1
 ${conf}.w
 *
 2
 *
 3
-*
-EOF
-log_with_timestamp "✅ rwfnestimate 完成"
+*"
+safe_grasp_execute "rwfnestimate" "rwfn.inp" "$input_commands" rwfnestimate
 
 ### rmcdhf
-log_with_timestamp "执行 rmcdhf_mem_mpi..."
-mpirun -np ${processor} rmcdhf_mem_mpi 2>&1 <<EOF
-y
+input_commands="y
 ${cal_levels}
 5
 ${orbital_params}
 
-100
-EOF
-log_with_timestamp "✅ rmcdhf_mem_mpi 完成"
+100"
+safe_grasp_execute "rmcdhf_mem_mpi" "${conf}_${loop}.m" "$input_commands" mpirun -np ${processor} rmcdhf_mem_mpi
 
 ### rsave
-log_with_timestamp "执行 rsave..."
-rsave ${conf}_${loop} 2>&1
-log_with_timestamp "✅ rsave 完成"
+safe_grasp_execute "rsave" "${conf}_${loop}.w" "" rsave ${conf}_${loop}
 
 cp ${conf}_${loop}.w ..
 
 ### jj2lsj rmcdhf
-log_with_timestamp "执行 jj2lsj (rmcdhf)..."
-jj2lsj 2>&1 << EOF
-${conf}_${loop}
+input_commands="${conf}_${loop}
 n
 y
-y
-EOF
-log_with_timestamp "✅ jj2lsj 完成"
+y"
+safe_grasp_execute "jj2lsj_rmcdhf" "${conf}_${loop}.lsj.lbl" "$input_commands" jj2lsj
 
-log_with_timestamp "生成能级数据文件..."
-rlevels ${conf}_${loop}.m > ${conf}_${loop}.level 2>&1 # rmcdhf
-log_with_timestamp "✅ 能级数据文件生成完成"
+# 生成能级数据文件
+safe_grasp_execute "rlevels_rmcdhf" "${conf}_${loop}.level" "" bash -c "rlevels ${conf}_${loop}.m > ${conf}_${loop}.level"
 
 else
 log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
 cp ../${rwfnestimate_file} ${conf}_${loop}.w
 
 # rci
-log_with_timestamp "执行 rci_mpi..."
-mpirun -np ${processor} rci_mpi 2>&1 <<EOF
-y
+input_commands="y
 ${conf}_${loop}
 y
 y
@@ -173,24 +252,34 @@ n
 n
 y
 5
-${cal_levels}
-EOF
+${cal_levels}"
+safe_grasp_execute "rci_mpi" "${conf}_${loop}.cm" "$input_commands" mpirun -np ${processor} rci_mpi
 
 ### jj2lsj rci
-log_with_timestamp "执行 jj2lsj (rci)..."
-jj2lsj 2>&1 << EOF
-${conf}_${loop}
+input_commands="${conf}_${loop}
 y
 y
-y
-EOF
-log_with_timestamp "✅ jj2lsj 完成"
+y"
+safe_grasp_execute "jj2lsj_rci" "${conf}_${loop}.lsj.lbl" "$input_commands" jj2lsj
 
-log_with_timestamp "生成能级数据文件..."
-rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level 2>&1 # rci
-log_with_timestamp "✅ 能级数据文件生成完成"
+# 生成能级数据文件
+safe_grasp_execute "rlevels_rci" "${conf}_${loop}.level" "" bash -c "rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level"
 
 fi
+
+# 清理临时文件夹
+if [ -d "mpi_tmp" ]; then
+    log_with_timestamp "发现临时文件夹 mpi_tmp，正在清理..."
+    rm -rf mpi_tmp
+    if [ $? -eq 0 ]; then
+        log_with_timestamp "✅ 临时文件夹 mpi_tmp 清理完成"
+    else
+        log_with_timestamp "⚠️ 临时文件夹 mpi_tmp 清理失败"
+    fi
+else
+    log_with_timestamp "未发现临时文件夹 mpi_tmp"
+fi
+
 log_with_timestamp "返回上级目录..."
 cd ..
 

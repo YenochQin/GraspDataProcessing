@@ -34,3 +34,6 @@ random_state = 42
 [model_params.class_weight]
 0 = 1
 1 = 3
+
+[cpu_config]
+pytorch_threads = 32
