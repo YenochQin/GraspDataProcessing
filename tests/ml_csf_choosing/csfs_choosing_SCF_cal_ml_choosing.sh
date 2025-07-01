@@ -84,9 +84,12 @@ safe_grasp_execute() {
     fi
     
     # 确保退出码是数字
-    if [ -z "$exit_code" ] || ! [ "$exit_code" -eq "$exit_code" ] 2>/dev/null; then
+    if [ -z "$exit_code" ]; then
         exit_code=1
         log_with_timestamp "⚠️ 无法获取 $program_name 的退出码，假设为失败"
+    elif ! [[ "$exit_code" =~ ^[0-9]+$ ]]; then
+        exit_code=1
+        log_with_timestamp "⚠️ $program_name 的退出码不是数字，假设为失败"
     fi
     
     # 检查退出码
@@ -220,10 +223,10 @@ ${cal_levels}
 ${orbital_params}
 
 100"
-safe_grasp_execute "rmcdhf_mem_mpi" "${conf}_${loop}.m" "$input_commands" mpirun -np ${processor} rmcdhf_mem_mpi
+safe_grasp_execute "rmcdhf_mem_mpi" "rwfn.out rmix.out rmcdhf.sum rmcdhf.log" "$input_commands" mpirun -np ${processor} rmcdhf_mem_mpi
 
 ### rsave
-safe_grasp_execute "rsave" "${conf}_${loop}.w" "" rsave ${conf}_${loop}
+safe_grasp_execute "rsave" "${conf}_${loop}.w ${conf}_${loop}.m" "" rsave ${conf}_${loop}
 
 cp ${conf}_${loop}.w ..
 
