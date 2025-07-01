@@ -257,11 +257,11 @@ class ANNClassifier:
         Returns:
             预测标签
         """
-        predictions = self.predict_probability(X)
+        predictions = self.predict_proba(X)
         predictions = predictions[:, 1] > 0.5
         return predictions
     
-    def predict_probability(self, X: np.ndarray) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
         预测概率
         

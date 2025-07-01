@@ -133,6 +133,13 @@ def main(config):
         # 模型推理 - 仅对未选择的CSF进行推理（借鉴ann3_proba.py的高效策略）
         logger.info("模型推理")
         start_time = time.time()
+
+        # 验证字典并安全获取当前计算的CSF索引
+        if not caled_csfs_indices_dict:
+            raise ValueError("caled_csfs_indices_dict为空，无法获取当前计算的CSF索引")
+        
+        if 0 not in caled_csfs_indices_dict:
+            raise KeyError(f"caled_csfs_indices_dict中缺少键0，可用键: {list(caled_csfs_indices_dict.keys())}")
         
         # 获取未选择的CSF索引
         total_csfs_count = len(raw_csfs_descriptors)
@@ -143,7 +150,7 @@ def main(config):
         # 仅对未选择的CSF进行预测
         X_unselected_for_prediction = raw_csfs_descriptors[unselected_indices]
         y_unselected_prediction = model.predict(X_unselected_for_prediction)
-        y_unselected_probability = model.predict_probability(X_unselected_for_prediction)[:, 1]
+        y_unselected_probability = model.predict_proba(X_unselected_for_prediction)[:, 1]
         
         eval_time = time.time() - start_time
         logger.info(f"模型推理时间: {eval_time:.4f}秒")
@@ -152,7 +159,7 @@ def main(config):
         # 为绘图准备当前计算CSF的预测概率
         # 对当前计算的CSF也进行预测（用于绘图和分析）
         X_current_calc = raw_csfs_descriptors[current_calc_indices]
-        y_current_calc_probability = model.predict_probability(X_current_calc)[:, 1]
+        y_current_calc_probability = model.predict_proba(X_current_calc)[:, 1]
         logger.info(f"当前计算CSF数量: {len(current_calc_indices)}")
         logger.info(f"当前计算CSF预测概率维度: {y_current_calc_probability.shape}")
         
@@ -255,6 +262,13 @@ def main(config):
             if previous_important_indices_path.exists():
                 try:
                     previous_important_indices_dict = gdp.csfs_index_load(previous_important_indices_path)
+                    # 验证字典结构
+                    if not previous_important_indices_dict:
+                        raise ValueError("previous_important_indices_dict为空")
+                    
+                    if 0 not in previous_important_indices_dict:
+                        raise KeyError(f"previous_important_indices_dict中缺少键0，可用键: {list(previous_important_indices_dict.keys())}")
+                    
                     previous_important_indices = previous_important_indices_dict[0]
                     
                     # 标准组态留存率计算：交集/上轮重要组态数

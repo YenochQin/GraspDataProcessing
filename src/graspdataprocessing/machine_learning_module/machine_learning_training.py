@@ -158,10 +158,10 @@ def train_model(
     # Model evaluation
     logger.info("             预测与评估")
     y_prediction = model.predict(X_test)
-    y_probability = model.predict_probability(X_test)[:, 1]
+    y_probability = model.predict_proba(X_test)[:, 1]
     y_prediction_train = model.predict(X_train)
-    y_probability_train = model.predict_probability(X_train)[:, 1]
-    y_probability_all = model.predict_probability(X)
+    y_probability_train = model.predict_proba(X_train)[:, 1]
+    y_probability_all = model.predict_proba(X)[:, 1]
     
     # 诊断预测概率分布
     logger.info(f"预测概率统计 - 最小值:{y_probability.min():.4f}, 最大值:{y_probability.max():.4f}, 平均值:{y_probability.mean():.4f}")
@@ -259,13 +259,13 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_unselected, config
     eval_time = time.time() - start_time
     
     # 预测概率
-    y_probability = model.predict_probability(X_test)[:, 1]
+    y_probability = model.predict_proba(X_test)[:, 1]
     y_prediction_train = model.predict(X_train)
-    y_probability_train = model.predict_probability(X_train)[:, 1]
-    y_probability_other = model.predict_probability(X_unselected)[:, 1]
+    y_probability_train = model.predict_proba(X_train)[:, 1]
+    y_probability_other = model.predict_proba(X_unselected)[:, 1]
     
     # 生成完整数据集的概率用于分析
-    y_probability_all = model.predict_probability(np.vstack([X_train, X_test]))
+    y_probability_all = model.predict_proba(np.vstack([X_train, X_test]))[:, 1]
     
     # 评估指标计算
     f1, roc_auc, accuracy, precision, recall = ANNClassifier.model_evaluation(
@@ -677,12 +677,12 @@ def save_and_plot_results(
         saved_files['train_data'] = str(train_file)
         
         # 保存其他数据预测结果到results目录
-        other_file = results_dir / f"{file_name}_other_predictionictions.csv"
+        other_file = results_dir / f"{file_name}_other_predictions.csv"
         pd.DataFrame({
             "y_prediction": evaluation_results['predictions']['y_prediction_other'],
             "y_proba": evaluation_results['probabilities']['y_probability_other']
         }).to_csv(other_file, index=False)
-        saved_files['other_predictionictions'] = str(other_file)
+        saved_files['other_predictions'] = str(other_file)
         
         if logger:
             logger.info(f"预测数据已保存到: {test_data_dir} 和 {results_dir}")
@@ -737,12 +737,18 @@ def save_and_plot_results(
                         logger.info(f"已调整为相同长度: {min_len}")
             elif caled_csfs_indices_dict is not None:
                 # 回退到原有逻辑（从全局概率中提取对应部分）
-                current_cal_indices = caled_csfs_indices_dict[0]
-                y_prob_current_cal = y_prob_all[current_cal_indices]
-                
-                if logger:
-                    logger.info(f"使用索引提取 - 混合系数数量: {len(cal_mix_coeff_list)}, 对应概率数量: {len(y_prob_current_cal)}")
-                    logger.info(f"当前计算CSF索引范围: {current_cal_indices.min()}-{current_cal_indices.max()}")
+                if 0 not in caled_csfs_indices_dict:
+                    if logger:
+                        logger.warning(f"caled_csfs_indices_dict中缺少键0，可用键: {list(caled_csfs_indices_dict.keys())}，使用全部概率数据")
+                    y_prob_current_cal = y_prob_all
+                    if logger:
+                        logger.info(f"使用全部概率数据 - 混合系数数量: {len(cal_mix_coeff_list)}, 概率数量: {len(y_prob_current_cal)}")
+                else:
+                    current_cal_indices = caled_csfs_indices_dict[0]
+                    y_prob_current_cal = y_prob_all[current_cal_indices]
+                    if logger:
+                        logger.info(f"使用索引提取 - 混合系数数量: {len(cal_mix_coeff_list)}, 对应概率数量: {len(y_prob_current_cal)}")
+                        logger.info(f"当前计算CSF索引范围: {current_cal_indices.min()}-{current_cal_indices.max()}")
             else:
                 # 如果没有提供任何信息，使用原有逻辑（可能有问题）
                 y_prob_current_cal = y_prob_all
@@ -869,10 +875,18 @@ def calculate_dynamic_chosen_ratio(
         if current_important_path.exists():
             with open(current_important_path, 'rb') as f:
                 current_important_dict = pickle.load(f)
-            current_important_indices = current_important_dict[0]
-            current_important_count = len(current_important_indices)
-            important_ratio_in_calculation = current_important_count / current_selected_count
-            logger.info(f"             当前重要组态占计算比例: {important_ratio_in_calculation:.4f}")
+            # 验证字典结构
+            if not current_important_dict:
+                logger.warning(f"             当前重要组态字典为空: {current_important_path}")
+                current_important_indices = None
+            elif 0 not in current_important_dict:
+                logger.warning(f"             当前重要组态字典中缺少键0，可用键: {list(current_important_dict.keys())}")
+                current_important_indices = None
+            else:
+                current_important_indices = current_important_dict[0]
+                current_important_count = len(current_important_indices)
+                important_ratio_in_calculation = current_important_count / current_selected_count
+                logger.info(f"             当前重要组态占计算比例: {important_ratio_in_calculation:.4f}")
         else:
             logger.warning(f"             未找到当前重要组态文件: {current_important_path}")
             logger.warning(f"             使用默认重要组态占比: {important_ratio_in_calculation}")
@@ -883,7 +897,15 @@ def calculate_dynamic_chosen_ratio(
             if prev_important_path.exists():
                 with open(prev_important_path, 'rb') as f:
                     prev_important_dict = pickle.load(f)
-                previous_important_indices = prev_important_dict[0]
+                # 验证字典结构
+                if not prev_important_dict:
+                    logger.warning(f"             前一轮重要组态字典为空: {prev_important_path}")
+                    previous_important_indices = None
+                elif 0 not in prev_important_dict:
+                    logger.warning(f"             前一轮重要组态字典中缺少键0，可用键: {list(prev_important_dict.keys())}")
+                    previous_important_indices = None
+                else:
+                    previous_important_indices = prev_important_dict[0]
                 
                 # 计算数据留存率（仅当两个文件都存在时）
                 if current_important_indices is not None:

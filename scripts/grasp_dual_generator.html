@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GRASP双文件生成器 - Config & Script</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .results-column {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .config-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .config-panel h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .spectral-term-input {
+            margin-bottom: 10px;
+        }
+
+        .spectral-term-input:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .output-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .output-panel h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #27ae60;
+        }
+
+        .output-content {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+            transform: translateY(-2px);
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        /* Placeholder样式 */
+        input::placeholder, textarea::placeholder {
+            color: rgba(136, 136, 136, 0.6);
+            font-style: italic;
+            opacity: 1;
+        }
+        
+        input::-webkit-input-placeholder, textarea::-webkit-input-placeholder {
+            color: rgba(136, 136, 136, 0.6);
+            font-style: italic;
+        }
+        
+        input::-moz-placeholder, textarea::-moz-placeholder {
+            color: rgba(136, 136, 136, 0.6);
+            font-style: italic;
+            opacity: 1;
+        }
+        
+        input:-ms-input-placeholder, textarea:-ms-input-placeholder {
+            color: rgba(136, 136, 136, 0.6);
+            font-style: italic;
+        }
+        
+        input:focus::placeholder, textarea:focus::placeholder {
+            color: rgba(136, 136, 136, 0.3);
+            transition: color 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .results-column {
+                grid-template-rows: auto auto;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 GRASP双文件生成器</h1>
+            <p>同时生成config.toml和计算脚本的完整解决方案</p>
+        </div>
+
+        <div class="main-content">
+            <div class="config-panel">
+                <h2>⚙️ 配置参数</h2>
+                
+
+
+                <div class="section">
+                    <h3>📋 基本信息</h3>
+                    <div class="form-group">
+                        <label for="atom">原子符号 *</label>
+                        <input type="text" id="atom" placeholder="例如: GdI">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="conf">组态名称 *</label>
+                        <input type="text" id="conf" placeholder="例如: cv4odd1as3_odd4">
+                        <div class="help-text">电子关联+奇偶宇称+活性空间_能级数</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="spectral_term">光谱项 *</label>
+                        <div id="spectral-terms-container">
+                            <input type="text" class="spectral-term-input" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D" oninput="handleSpectralTermInput(this)">
+                        </div>
+                        <div class="help-text">输入光谱项后会自动生成新的输入框</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>📁 路径和文件</h3>
+                    <div class="form-group">
+                        <label for="root_path">根路径 *</label>
+                        <input type="text" id="root_path" placeholder="例如: /home/workstation3/caldata/GdI/cvodd1/as3_odd4">
+                        <div class="help-text">计算target_pool_file的根目录</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="selected_csfs">初筛CSFs文件名 *</label>
+                        <input type="text" id="selected_csfs" placeholder="例如: mJ-1-90chosenas3_odd4">
+                        <div class="help-text">初筛的CSFs组态文件名（不含扩展名）</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="conda_path">Conda路径 *</label>
+                        <input type="text" id="conda_path" placeholder="例如: /home/workstation3/AppFiles/miniconda3">
+                        <div class="help-text">conda的安装位置</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>🔧 计算参数</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="chosen_ratio">CSFs选择比例</label>
+                            <input type="number" id="chosen_ratio" step="0.01" min="0.01" max="1.0" placeholder="例如: 0.09">
+                            <div class="help-text">初始CSFs选择比例</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cutoff_value">截断值</label>
+                            <input type="number" id="cutoff_value" step="1e-12" min="1e-12" max="1e-6" placeholder="例如: 1e-09">
+                            <div class="help-text">混合系数截断值</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="active_space">活性空间轨道</label>
+                            <input type="text" id="active_space" placeholder="例如: 10s,9p,8d,7f,6g">
+                            <div class="help-text">活性空间轨道定义</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cal_levels">计算能级</label>
+                            <input type="text" id="cal_levels" placeholder="例如: 1-4">
+                            <div class="help-text">计算的能级范围</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>🤖 机器学习参数</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="n_estimators">随机森林树数</label>
+                            <input type="number" id="n_estimators" min="100" max="5000" placeholder="例如: 1000">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="random_state">随机种子</label>
+                            <input type="number" id="random_state" placeholder="例如: 42">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="class_weight_0">负样本权重</label>
+                            <input type="number" id="class_weight_0" min="0.1" max="10" step="0.1" placeholder="例如: 1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="class_weight_1">正样本权重</label>
+                            <input type="number" id="class_weight_1" min="0.1" max="10" step="0.1" placeholder="例如: 3">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>⚡ SLURM设置</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="partition">SLURM分区</label>
+                            <input type="text" id="partition" placeholder="例如: work3">
+                            <div class="help-text">使用sinfo获得可用分区</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tasks_per_node">每节点任务数</label>
+                            <input type="number" id="tasks_per_node" min="1" max="128" placeholder="例如: 46">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="conda_env">Conda环境名</label>
+                        <input type="text" id="conda_env" placeholder="例如: grasp-env">
+                        <div class="help-text">Python环境名称</div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="generateFiles()">🔄 生成文件</button>
+                    <button class="btn btn-secondary" onclick="resetForm()">🔄 重置表单</button>
+                </div>
+            </div>
+
+            <div class="results-column">
+                <div class="output-panel">
+                    <h2>📄 Config.toml</h2>
+                    <div class="button-group">
+                        <button class="btn btn-success" onclick="downloadFile('config')">💾 下载Config</button>
+                        <button class="btn btn-secondary" onclick="copyToClipboard('config')">📋 复制</button>
+                    </div>
+                    <div class="output-content" id="config-output">
+# 请填写左侧参数后，配置文件将在这里生成
+                    </div>
+                </div>
+
+                <div class="output-panel">
+                    <h2>📜 Shell脚本</h2>
+                    <div class="button-group">
+                        <button class="btn btn-warning" onclick="downloadFile('script')">💾 下载脚本</button>
+                        <button class="btn btn-secondary" onclick="copyToClipboard('script')">📋 复制</button>
+                    </div>
+                    <div class="output-content" id="script-output">
+# 请填写左侧参数后，Shell脚本将在这里生成
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🔬 GRASP双文件生成器 | 基于机器学习的原子结构计算 | 作者：秦毅 (YenochQin)</p>
+        </div>
+    </div>
+
+    <script>
+
+
+        // 处理光谱项输入
+        function handleSpectralTermInput(input) {
+            // 如果输入框有内容且是最后一个输入框，则添加新的输入框
+            if (input.value.trim() !== '' && input === document.querySelector('.spectral-term-input:last-child')) {
+                addSpectralTermInput();
+            }
+            
+            // 延迟触发文件生成，避免输入过程中频繁更新
+            clearTimeout(window.spectralTermTimeout);
+            window.spectralTermTimeout = setTimeout(() => {
+                generateFiles();
+            }, 300);
+        }
+
+        // 添加新的光谱项输入框
+        function addSpectralTermInput() {
+            const container = document.getElementById('spectral-terms-container');
+            const newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.className = 'spectral-term-input';
+            newInput.placeholder = '继续输入下一个光谱项';
+            newInput.oninput = function() { handleSpectralTermInput(this); };
+            container.appendChild(newInput);
+        }
+
+        // 获取所有光谱项
+        function getSpectralTerms() {
+            const inputs = document.querySelectorAll('.spectral-term-input');
+            const terms = [];
+            inputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    terms.push(input.value.trim());
+                }
+            });
+            return terms;
+        }
+
+        // 生成配置文件和脚本
+        function generateFiles() {
+            const config = getFormData();
+            
+            // 检查必填字段
+            const missingFields = [];
+            if (!config.atom) missingFields.push('原子符号');
+            if (!config.conf) missingFields.push('组态名称');
+            if (config.spectral_terms.length === 0) missingFields.push('光谱项');
+            if (!config.root_path) missingFields.push('根路径');
+            if (!config.selected_csfs) missingFields.push('初筛CSFs文件名');
+            
+            if (missingFields.length > 0) {
+                document.getElementById('config-output').textContent = '# 请先填写必填字段：' + missingFields.join(', ');
+                document.getElementById('script-output').textContent = '# 请先填写必填字段：' + missingFields.join(', ');
+                return;
+            }
+            
+            // 生成合成参数
+            const jobName = config.atom + 'oddImlci' + config.conf.split('_').pop();
+            const loop1RwfnFile = `mJ-1-90chosen${config.conf.split('_').pop()}.w`;
+            const rwfnEstimateFile = `${config.conf}_1.w`;
+            
+            // 生成config.toml
+            const configContent = generateConfigToml(config);
+            document.getElementById('config-output').textContent = configContent;
+            
+            // 生成shell脚本
+            const scriptContent = generateShellScript(config, jobName, loop1RwfnFile, rwfnEstimateFile);
+            document.getElementById('script-output').textContent = scriptContent;
+        }
+
+        // 获取表单数据
+        function getFormData() {
+            return {
+                atom: document.getElementById('atom').value,
+                conf: document.getElementById('conf').value,
+                spectral_terms: getSpectralTerms(),
+                root_path: document.getElementById('root_path').value,
+                selected_csfs: document.getElementById('selected_csfs').value,
+                conda_path: document.getElementById('conda_path').value || '/home/workstation3/AppFiles/miniconda3',
+                chosen_ratio: document.getElementById('chosen_ratio').value || '0.09',
+                cutoff_value: document.getElementById('cutoff_value').value || '1e-09',
+                active_space: document.getElementById('active_space').value || '10s,9p,8d,7f,6g',
+                cal_levels: document.getElementById('cal_levels').value || '1-4',
+                n_estimators: document.getElementById('n_estimators').value || '1000',
+                random_state: document.getElementById('random_state').value || '42',
+                class_weight_0: document.getElementById('class_weight_0').value || '1',
+                class_weight_1: document.getElementById('class_weight_1').value || '3',
+                partition: document.getElementById('partition').value || 'work3',
+                tasks_per_node: document.getElementById('tasks_per_node').value || '46',
+                conda_env: document.getElementById('conda_env').value || 'grasp-env'
+            };
+        }
+
+        // 生成config.toml内容
+        function generateConfigToml(config) {
+            let spectralTermsString;
+            if (config.spectral_terms.length === 0) {
+                spectralTermsString = '';
+            } else {
+                spectralTermsString = config.spectral_terms.map(term => `    "${term}"`).join(',\n');
+            }
+            
+            return `atom = "${config.atom}"
+conf = "${config.conf}"
+spetral_term = [
+${spectralTermsString},
+]
+continue_cal = true
+cal_loop_num = 1
+cal_error_num = 0
+difference = 0
+cutoff_value = ${config.cutoff_value}
+chosen_ratio = ${config.chosen_ratio}
+expansion_ratio = 2
+target_pool_file = "${config.conf}.c"
+root_path = "${config.root_path}"
+selected_csfs_file = "${config.selected_csfs}.c"
+selected_csfs_mix_file = "${config.selected_csfs}.cm"
+
+# 收敛性检查参数
+std_threshold = 1e-5  # 标准差阈值
+csfs_num_relative_std_threshold = 1e-3  # 相对标准差阈值
+
+# ML策略配置参数 
+[ml_config]
+expansion_ratio = 2  # 扩展比例：下次计算组态数 = expansion_ratio × 重要组态数
+high_prob_percentile = 95  # 高概率阈值分位数：用于识别高质量组态
+overfitting_threshold = 0.1  # 过拟合检测阈值：训练F1 - 测试F1 > 此值时警告
+underfitting_threshold = -0.05  # 欠拟合检测阈值：训练F1 - 测试F1 < 此值时警告
+
+[model_params]
+n_estimators = ${config.n_estimators}
+random_state = ${config.random_state}
+
+[model_params.class_weight]
+0 = ${config.class_weight_0}
+1 = ${config.class_weight_1}`;
+        }
+
+        // 生成shell脚本内容
+        function generateShellScript(config, jobName, loop1RwfnFile, rwfnEstimateFile) {
+            return `#!/bin/zsh
+#SBATCH -J ${jobName}
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=${config.tasks_per_node}
+#SBATCH -p ${config.partition}
+#SBATCH --output=%j_%x.log
+#SBATCH --error=%j_%x.log
+. /usr/share/Modules/init/zsh
+
+# 添加时间戳函数
+log_with_timestamp() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+log_with_timestamp "========== 开始执行 sbatch 脚本 =========="
+log_with_timestamp "作业名: \${SLURM_JOB_NAME:-未设置}"
+log_with_timestamp "作业编号: \${SLURM_JOB_ID:-未设置}"
+
+###########################################
+# mpi run CPU core
+processor=${config.tasks_per_node}
+###########################################
+## module load
+log_with_timestamp "加载必要的模块..."
+module load mpi/openmpi-x86_64-gcc
+module load openblas/0.3.28-gcc-11.4.1
+module load grasp/grasp_openblas
+###########################################
+# ⚠️ 关键修改：确保正确加载 Conda（zsh 需要手动初始化）
+log_with_timestamp "初始化 Conda 环境..."
+source ${config.conda_path}/etc/profile.d/conda.sh  || {
+    log_with_timestamp "❌ 加载 Conda 失败！请检查路径是否正确。"
+    exit 1
+}
+conda activate ${config.conda_env} || {
+    log_with_timestamp "❌ 激活环境失败！请确认环境名是否正确。"
+    exit 1
+}
+log_with_timestamp "✅ Conda 环境激活成功"
+###########################################
+## configuration
+atom=${config.atom}
+conf="${config.conf}"
+loop1_rwfn_file="${loop1RwfnFile}"
+rwfnestimate_file=${rwfnEstimateFile}
+Active_space="${config.active_space}"
+cal_levels="${config.cal_levels}"
+log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
+###########################################
+# 检查 Python 路径
+log_with_timestamp "检查 Python 环境..."
+which python
+python --version
+###########################################
+while true
+do
+###########################################
+log_with_timestamp "获取循环计数..."
+loop=$(csfs_ml_choosing_config_load.py get cal_loop_num 2>&1)
+log_with_timestamp "当前循环: $loop"
+
+if [ $loop -eq 1 ]; then
+    # 初始化必要csfs文件数据
+    log_with_timestamp "================初始化必要csfs文件数据================"
+    # python initial_csfs.py 
+fi
+###########################################
+log_with_timestamp "检查计算状态..."
+cal_status=$(csfs_ml_choosing_config_load.py get continue_cal 2>&1)
+log_with_timestamp "计算状态: $cal_status"
+
+if [[ "$cal_status" == "false" ]]; then
+    log_with_timestamp "================计算终止================"
+    break
+fi
+###########################################
+## 组态选择处理
+log_with_timestamp "================执行组态选择================"
+python choosing_csfs.py 2>&1
+if [ $? -ne 0 ]; then
+    log_with_timestamp "❌ 组态选择失败!"
+    exit 1
+fi
+log_with_timestamp "✅ 组态选择完成"
+###########################################
+## grasp calculation routine
+
+log_with_timestamp "进入计算目录: \${conf}_\${loop}"
+cd \${conf}_\${loop}
+
+log_with_timestamp "创建磁盘空间..."
+mkdisks \${processor} caltmp 2>&1
+
+### rcsf
+log_with_timestamp "准备 rcsf 输入文件..."
+cp \${conf}_\${loop}.c rcsf.inp # rmcdhf
+cp ../isodata .
+
+if [ $loop -eq 1 ]; then
+log_with_timestamp "================第一次循环，使用\${loop1_rwfn_file}================"
+cp ../\${loop1_rwfn_file} \${conf}.w
+orbital_params=\${Active_space}
+
+### rangular
+log_with_timestamp "执行 rangular_mpi..."
+mpirun -np \${processor} rangular_mpi 2>&1 <<EOF
+y
+EOF
+log_with_timestamp "✅ rangular_mpi 完成"
+
+### rwfnestimate
+log_with_timestamp "执行 rwfnestimate (第一次循环)..."
+rwfnestimate 2>&1 << EOF
+y
+1
+\${conf}.w
+*
+2
+*
+3
+*
+EOF
+log_with_timestamp "✅ rwfnestimate 完成"
+
+### rmcdhf
+log_with_timestamp "执行 rmcdhf_mem_mpi..."
+mpirun -np \${processor} rmcdhf_mem_mpi 2>&1 <<EOF
+y
+\${cal_levels}
+5
+\${orbital_params}
+
+100
+EOF
+log_with_timestamp "✅ rmcdhf_mem_mpi 完成"
+
+### rsave
+log_with_timestamp "执行 rsave..."
+rsave \${conf}_\${loop} 2>&1
+log_with_timestamp "✅ rsave 完成"
+
+cp \${conf}_\${loop}.w ..
+
+### jj2lsj rmcdhf
+log_with_timestamp "执行 jj2lsj (rmcdhf)..."
+jj2lsj 2>&1 << EOF
+\${conf}_\${loop}
+n
+y
+y
+EOF
+log_with_timestamp "✅ jj2lsj 完成"
+
+log_with_timestamp "生成能级数据文件..."
+rlevels \${conf}_\${loop}.m > \${conf}_\${loop}.level 2>&1 # rmcdhf
+log_with_timestamp "✅ 能级数据文件生成完成"
+
+else
+log_with_timestamp "================第\${loop}次循环，使用\${rwfnestimate_file}================"
+cp ../\${rwfnestimate_file} \${conf}_\${loop}.w
+
+# rci
+log_with_timestamp "执行 rci_mpi..."
+mpirun -np \${processor} rci_mpi 2>&1 <<EOF
+y
+\${conf}_\${loop}
+y
+y
+1.d-6
+y
+n
+n
+y
+5
+\${cal_levels}
+EOF
+
+### jj2lsj rci
+log_with_timestamp "执行 jj2lsj (rci)..."
+jj2lsj 2>&1 << EOF
+\${conf}_\${loop}
+y
+y
+y
+EOF
+log_with_timestamp "✅ jj2lsj 完成"
+
+log_with_timestamp "生成能级数据文件..."
+rlevels \${conf}_\${loop}.cm > \${conf}_\${loop}.level 2>&1 # rci
+log_with_timestamp "✅ 能级数据文件生成完成"
+
+fi
+
+log_with_timestamp "返回上级目录..."
+cd ..
+
+## 机器学习训练
+log_with_timestamp "================执行机器学习训练================"
+python train.py 2>&1
+if [ $? -ne 0 ]; then
+    log_with_timestamp "❌ 机器学习训练失败!"
+    exit 1
+fi
+log_with_timestamp "✅ 机器学习训练完成"
+
+log_with_timestamp "循环 $loop 完成，准备下一次迭代..."
+done
+
+log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
+        }
+
+        // 重置表单
+        function resetForm() {
+            document.querySelectorAll('input, select, textarea').forEach(element => {
+                element.value = '';
+            });
+            
+            // 重置光谱项输入框
+            const container = document.getElementById('spectral-terms-container');
+            container.innerHTML = '<input type="text" class="spectral-term-input" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D" oninput="handleSpectralTermInput(this)">';
+            
+            // 清空输出内容
+            document.getElementById('config-output').textContent = '# 请填写左侧参数后，配置文件将在这里生成';
+            document.getElementById('script-output').textContent = '# 请填写左侧参数后，Shell脚本将在这里生成';
+        }
+
+        // 下载文件
+        function downloadFile(type) {
+            let content, filename;
+            
+            if (type === 'config') {
+                content = document.getElementById('config-output').textContent;
+                filename = 'config.toml';
+            } else if (type === 'script') {
+                content = document.getElementById('script-output').textContent;
+                filename = 'csfs_choosing_SCF_cal_ml_choosing.sh';
+            }
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(type) {
+            const content = document.getElementById(type + '-output').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                alert('内容已复制到剪贴板！');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制内容。');
+            });
+        }
+
+        // 页面加载时显示提示信息
+        window.onload = function() {
+            document.getElementById('config-output').textContent = '# 请填写左侧参数后，配置文件将在这里生成';
+            document.getElementById('script-output').textContent = '# 请填写左侧参数后，Shell脚本将在这里生成';
+        };
+
+        // 实时更新
+        document.addEventListener('input', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+                // 对于光谱项输入框，已经在handleSpectralTermInput中处理了
+                if (!e.target.classList.contains('spectral-term-input')) {
+                    generateFiles();
+                }
+            }
+        });
+    </script>
+</body>
+</html> 
