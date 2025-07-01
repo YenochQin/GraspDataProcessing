@@ -50,8 +50,35 @@ csfs_ml_choosing_config_load set continue_cal false -f /path/to/config.toml
 
 import sys
 import argparse
-import toml
 from pathlib import Path
+
+# 使用Python标准库的TOML支持
+try:
+    import tomllib  # Python 3.11+
+    def load_toml(file_path):
+        with open(file_path, 'rb') as f:
+            return tomllib.load(f)
+    def dump_toml(data, file_path):
+        # tomllib只支持读取，写入需要使用toml库
+        try:
+            import toml
+            with open(file_path, 'w') as f:
+                toml.dump(data, f)
+        except ImportError:
+            raise ImportError("写入TOML文件需要安装toml库: pip install toml")
+except ImportError:
+    # 备用方案：使用toml库
+    try:
+        import toml
+        def load_toml(file_path):
+            return toml.load(file_path)
+        def dump_toml(data, file_path):
+            with open(file_path, 'w') as f:
+                toml.dump(data, f)
+    except ImportError:
+        print("错误: 需要安装toml库支持TOML文件操作", file=sys.stderr)
+        print("请运行: pip install toml", file=sys.stderr)
+        sys.exit(1)
 
 def get_config_value(key, config_file="config.toml"):
     """从TOML配置文件中读取指定键的值"""
@@ -61,7 +88,7 @@ def get_config_value(key, config_file="config.toml"):
             print(f"错误: 配置文件 {config_file} 不存在", file=sys.stderr)
             sys.exit(1)
         
-        config = toml.load(config_path)
+        config = load_toml(config_path)
         
         # 支持嵌套键，如 "model_params.n_estimators"
         keys = key.split('.')
@@ -92,7 +119,7 @@ def set_config_value(key, value, config_file="config.toml"):
             print(f"错误: 配置文件 {config_file} 不存在", file=sys.stderr)
             sys.exit(1)
         
-        config = toml.load(config_path)
+        config = load_toml(config_path)
         
         # 支持嵌套键
         keys = key.split('.')
@@ -108,8 +135,7 @@ def set_config_value(key, value, config_file="config.toml"):
         current[keys[-1]] = value
         
         # 保存配置
-        with open(config_path, 'w') as f:
-            toml.dump(config, f)
+        dump_toml(config, config_path)
         
         print(f"✅ 已设置 {key} = {value}")
         

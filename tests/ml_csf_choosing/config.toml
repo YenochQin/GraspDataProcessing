@@ -1,31 +1,26 @@
 atom = "GdI"
 conf = "cv4odd1as3_odd1"
-spetral_term = [
-    "5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D",
-]
+spetral_term = [ "5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D",]
 continue_cal = true
 cal_loop_num = 12
 cal_error_num = 0
 cal_method = "rci"
 difference = 0
-cutoff_value = 1e-09
+cutoff_value = 1e-9
 chosen_ratio = 0.09
 expansion_ratio = 2
 target_pool_file = "cv4odd1as3_odd1.c"
 root_path = "/home/workstation3/caldata/GdI/cvodd1/as3_odd1"
 selected_csfs_file = "mJ-1-90chosenas3_odd1.c"
 selected_csfs_mix_file = "mJ-1-90chosenas3_odd1.cm"
+std_threshold = 1e-5
+csfs_num_relative_std_threshold = 0.001
 
-# 收敛性检查参数
-std_threshold = 1e-5  # 标准差阈值
-csfs_num_relative_std_threshold = 1e-3  # 相对标准差阈值
-
-# ML策略配置参数 
 [ml_config]
-expansion_ratio = 2  # 扩展比例：下次计算组态数 = expansion_ratio × 重要组态数
-high_prob_percentile = 95  # 高概率阈值分位数：用于识别高质量组态
-overfitting_threshold = 0.1  # 过拟合检测阈值：训练F1 - 测试F1 > 此值时警告
-underfitting_threshold = -0.05  # 欠拟合检测阈值：训练F1 - 测试F1 < 此值时警告
+expansion_ratio = 2
+high_prob_percentile = 95
+overfitting_threshold = 0.1
+underfitting_threshold = -0.05
 
 [model_params]
 n_estimators = 1000

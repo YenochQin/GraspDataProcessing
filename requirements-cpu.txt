@@ -9,9 +9,9 @@ tqdm>=4.66.4
 
 # PyTorch CPU版本 (更轻量，启动更快)
 --find-links https://download.pytorch.org/whl/cpu
-torch>=2.0.0+cpu
-torchvision>=0.15.0+cpu
-torchaudio>=2.0.0+cpu
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
 
 # 机器学习库
 scikit-learn>=1.3.0
@@ -31,3 +31,4 @@ bitarray>=2.0.0
 
 # 配置文件处理
 pyyaml>=6.0
+toml>=0.10.2
