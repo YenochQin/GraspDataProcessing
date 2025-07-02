@@ -239,7 +239,7 @@ module load grasp/grasp_openblas
 ###########################################
 # ⚠️ 关键修改：确保正确加载 Conda（zsh 需要手动初始化）
 log_with_timestamp "初始化 Conda 环境..."
-source /home/workstation3/AppFiles/miniconda3/etc/profile.d/conda.sh  || {
+source /opt/miniconda3/etc/profile.d/conda.sh  || {
     log_with_timestamp "❌ 加载 Conda 失败！请检查路径是否正确。"
     exit 1
 }
@@ -263,6 +263,11 @@ log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
 log_with_timestamp "检查 Python 环境..."
 which python
 python --version
+###########################################
+log_with_timestamp "获取计算目录..."
+cal_dir=${PWD}
+csfs_ml_choosing_config_load.py set root_path ${cal_dir} 2>&1
+log_with_timestamp "计算目录: $cal_dir"
 ###########################################
 while true
 do
