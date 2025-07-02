@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
+#!/opt/miniconda3/envs/grasp-env/bin/python
 # -*- coding: utf-8 -*-
-#!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 '''
 @Id :csfs_ml_choosing_config_load.py
@@ -14,6 +13,12 @@ GRASP数据处理工具包
 """
 
 '''
+### 设置shebang 指向python环境
+将本文件的第一行修改为：用户python环境路径
+在激活的conda环境中执行：
+which python
+将输出结果复制到本文件的第一行'!'后
+
 ### 修改本文件为可执行程序
 chmod +x csfs_ml_choosing_config_load.py
 
@@ -52,33 +57,54 @@ import sys
 import argparse
 from pathlib import Path
 
-# 使用Python标准库的TOML支持
+# 使用多层级TOML库支持，提供最大兼容性
+TOML_SUPPORT = None
+
+# 尝试不同的TOML库，按优先级排序
 try:
-    import tomllib  # Python 3.11+
+    # 方案1: Python 3.11+ 标准库 tomllib (读) + toml (写)
+    import tomllib
+    import toml
     def load_toml(file_path):
         with open(file_path, 'rb') as f:
             return tomllib.load(f)
     def dump_toml(data, file_path):
-        # tomllib只支持读取，写入需要使用toml库
-        try:
-            import toml
-            with open(file_path, 'w') as f:
-                toml.dump(data, f)
-        except ImportError:
-            raise ImportError("写入TOML文件需要安装toml库: pip install toml")
+        with open(file_path, 'w') as f:
+            toml.dump(data, f)
+    TOML_SUPPORT = "tomllib+toml"
 except ImportError:
-    # 备用方案：使用toml库
     try:
+        # 方案2: 使用toml库
         import toml
         def load_toml(file_path):
             return toml.load(file_path)
         def dump_toml(data, file_path):
             with open(file_path, 'w') as f:
                 toml.dump(data, f)
+        TOML_SUPPORT = "toml"
     except ImportError:
-        print("错误: 需要安装toml库支持TOML文件操作", file=sys.stderr)
-        print("请运行: pip install toml", file=sys.stderr)
-        sys.exit(1)
+        try:
+            # 方案3: 使用tomli (读) + tomli_w (写)
+            import tomli
+            import tomli_w
+            def load_toml(file_path):
+                with open(file_path, 'rb') as f:
+                    return tomli.load(f)
+            def dump_toml(data, file_path):
+                with open(file_path, 'wb') as f:
+                    tomli_w.dump(data, f)
+            TOML_SUPPORT = "tomli+tomli_w"
+        except ImportError:
+            print("错误: 需要安装TOML库支持TOML文件操作", file=sys.stderr)
+            print("请选择以下任一方案安装:", file=sys.stderr)
+            print("  方案1: pip install toml", file=sys.stderr)
+            print("  方案2: pip install tomli tomli-w", file=sys.stderr)
+            print("  方案3: 升级到Python 3.11+并安装: pip install toml", file=sys.stderr)
+            sys.exit(1)
+
+# 输出调试信息（可选，仅在详细模式下显示）
+# if __debug__:
+#     print(f"调试: 使用TOML支持方案: {TOML_SUPPORT}", file=sys.stderr)
 
 def get_config_value(key, config_file="config.toml"):
     """从TOML配置文件中读取指定键的值"""
