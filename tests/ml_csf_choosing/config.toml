@@ -13,7 +13,7 @@ target_pool_file = "cv4odd1as3_odd1.c"
 root_path = "/home/workstation3/caldata/GdI/cvodd1/as3_odd1"
 selected_csfs_file = "mJ-1-90chosenas3_odd1.c"
 selected_csfs_mix_file = "mJ-1-90chosenas3_odd1.cm"
-std_threshold = 1e-5
+energy_std_threshold = 1e-5
 csfs_num_relative_std_threshold = 0.001
 
 [ml_config]

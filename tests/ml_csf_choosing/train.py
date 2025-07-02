@@ -81,6 +81,19 @@ def main(config):
         logger.info("耦合正确")
         logger.info("************************************************")
 
+        # 先检查收敛性，如果已收敛则跳过机器学习训练
+        should_continue = True
+        if config.cal_loop_num >= 3:
+            logger.info("开始检查收敛性...")
+            should_continue = gdp.check_grasp_cal_convergence(config, logger)
+            logger.info(f"检查收敛性结果: {'继续计算' if should_continue else '已收敛，停止计算'}")
+            
+            if not should_continue:
+                logger.info("************************************************")
+                logger.info("计算已收敛，跳过机器学习训练，停止计算")
+                gdp.update_config(config_file_path, {'continue_cal': False})
+                return
+
         # 提取特征
         logger.info("数据预处理")
         # 获取是否包含错误能级负样本的配置
@@ -390,21 +403,10 @@ def main(config):
             logger=logger
         )
         
-        # 数据保存完成后，检查收敛性
-        should_continue = True
-        if config.cal_loop_num >= 3:
-            logger.info("数据已保存，开始检查收敛性...")
-            should_continue = gdp.check_grasp_cal_convergence(config, logger)
-            logger.info(f"检查收敛性结果: {'继续计算' if should_continue else '已收敛，停止计算'}")
-        
-        if should_continue:
-            gdp.update_config(config_file_path, {'continue_cal': True})
-            gdp.update_config(config_file_path, {'cal_error_num': 0})
-            gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
-        else:
-            logger.info("************************************************")
-            logger.info("计算收敛，停止计算")
-            gdp.update_config(config_file_path, {'continue_cal': False})
+        # 数据保存完成，更新配置继续下一轮计算
+        gdp.update_config(config_file_path, {'continue_cal': True})
+        gdp.update_config(config_file_path, {'cal_error_num': 0})
+        gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
         
         # ============ 取消动态选择率修改 ============
         # 注释掉原有的动态选择率计算，保持chosen_ratio不变
