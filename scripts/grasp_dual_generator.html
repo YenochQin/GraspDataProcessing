@@ -710,6 +710,43 @@ log_with_timestamp() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
+# 根据程序名确定期望的输出文件
+get_expected_files() {
+    local program_name="$1"
+    local conf="$2" 
+    local loop="$3"
+    
+    case "$program_name" in
+        "mkdisks")
+            echo "disks"
+            ;;
+        "rangular_mpi")
+            echo ""  # 没有文件输出
+            ;;
+        "rwfnestimate")
+            echo "rwfn.inp"
+            ;;
+        "rmcdhf_mem_mpi")
+            echo "rwfn.out rmix.out"
+            ;;
+        "rsave")
+            echo "\${conf}_\${loop}.w \${conf}_\${loop}.c \${conf}_\${loop}.m \${conf}_\${loop}.sum \${conf}_\${loop}.alog \${conf}_\${loop}.log"
+            ;;
+        "jj2lsj"*|"jj2lsj_rmcdhf"|"jj2lsj_rci")
+            echo "\${conf}_\${loop}.lsj.lbl"
+            ;;
+        "rci_mpi")
+            echo "\${conf}_\${loop}.cm"
+            ;;
+        "rlevels"*|"rlevels_rmcdhf"|"rlevels_rci")
+            echo "\${conf}_\${loop}.level"
+            ;;
+        *)
+            echo ""  # 未知程序，不检查文件
+            ;;
+    esac
+}
+
 # GRASP程序错误检查函数
 check_grasp_errors() {
     local program_name="$1"
@@ -741,17 +778,80 @@ check_grasp_errors() {
     
     # 检查是否有预期的输出文件
     if [ -n "$expected_files" ]; then
-        for file in $expected_files; do
-            if [ ! -f "$file" ]; then
-                log_with_timestamp "❌ $program_name 未生成预期文件: $file"
-                return 1
-            fi
-            # 检查文件是否为空
-            if [ ! -s "$file" ]; then
-                log_with_timestamp "❌ $program_name 生成的文件为空: $file"
-                return 1
+        log_with_timestamp "📁 当前工作目录: $(pwd)"
+        log_with_timestamp "📋 检查预期文件: $expected_files"
+        
+        # 对于 MPI 程序，等待一段时间确保文件完全写入
+        if [[ "$program_name" == *"_mpi" ]]; then
+            log_with_timestamp "⏱️ MPI程序检测，等待3秒确保文件写入完成..."
+            sleep 3
+        fi
+        
+        # 使用重试机制检查文件
+        local max_retries=5
+        local retry_count=0
+        local all_files_exist=false
+        
+        # 使用 zsh 兼容的方法分割文件名
+        local files_array
+        files_array=(\\$\\{=expected_files\\})  # zsh 语法：使用 \\$\\{=var\\} 来分割字符串
+        log_with_timestamp "🔍 文件数组内容: \\$\\{#files_array[@]\\} 个文件"
+        local index=1
+        for file in "\\$\\{files_array[@]\\}"; do
+            log_with_timestamp "  [$index]: '$file'"
+            ((index++))
+        done
+        
+        while [ $retry_count -lt $max_retries ] && [ "$all_files_exist" = false ]; do
+            all_files_exist=true
+            local missing_files=""
+            
+            # 使用 zsh 兼容的数组遍历
+            for file in "\\$\\{files_array[@]\\}"; do
+                log_with_timestamp "🔍 检查文件: '$file'"
+                
+                if [ ! -f "$file" ]; then
+                    missing_files="$missing_files $file"
+                    all_files_exist=false
+                elif [ ! -s "$file" ]; then
+                    log_with_timestamp "❌ $program_name 生成的文件为空: $file"
+                    all_files_exist=false
+                    break
+                fi
+            done
+            
+            if [ "$all_files_exist" = false ]; then
+                retry_count=$((retry_count + 1))
+                if [ $retry_count -lt $max_retries ]; then
+                    log_with_timestamp "⏳ 第 $retry_count 次重试，等待文件生成... 缺失文件:$missing_files"
+                    sleep 2
+                else
+                    log_with_timestamp "❌ $program_name 未生成预期文件:$missing_files"
+                    log_with_timestamp "📂 当前目录内容："
+                    ls -la
+                    log_with_timestamp "🔍 详细检查文件情况："
+                    for file in "\\$\\{files_array[@]\\}"; do
+                        log_with_timestamp "检查文件: $file"
+                        if [ -e "$file" ]; then
+                            log_with_timestamp "  - 文件存在但可能有问题"
+                            log_with_timestamp "  - 文件大小: $(du -h "$file" 2>/dev/null || echo "无法获取大小")"
+                            log_with_timestamp "  - 文件权限: $(ls -l "$file" 2>/dev/null || echo "无法获取权限")"
+                        else
+                            log_with_timestamp "  - 文件不存在"
+                            # 查找类似的文件名
+                            local basename=$(basename "$file")
+                            local similar_files=$(ls -1 | grep -i "\\$\\{basename%.*\\}" 2>/dev/null || echo "无相似文件")
+                            log_with_timestamp "  - 相似文件: $similar_files"
+                        fi
+                    done
+                    return 1
+                fi
             fi
         done
+        
+        if [ "$all_files_exist" = true ]; then
+            log_with_timestamp "✅ 所有预期文件检查通过: $expected_files"
+        fi
     fi
     
     return 0
@@ -760,11 +860,21 @@ check_grasp_errors() {
 # 安全执行GRASP程序的函数
 safe_grasp_execute() {
     local program_name="$1"
-    local expected_files="$2"
-    local input_commands="$3"
-    shift 3
+    local input_commands="$2"
+    shift 2
     
     log_with_timestamp "执行 $program_name..."
+    
+    # 动态获取期望的文件列表
+    local expected_files=""
+    if [[ "$program_name" == "rsave" ]]; then
+        # 对于 rsave，我们需要从上下文获取 conf 和 loop 变量
+        expected_files=$(get_expected_files "$program_name" "$conf" "$loop")
+    else
+        expected_files=$(get_expected_files "$program_name" "$conf" "$loop")
+    fi
+    
+    log_with_timestamp "🎯 根据程序 $program_name 自动确定期望文件: $expected_files"
     
     # 创建临时日志文件
     local temp_log="/tmp/\${program_name}_\${SLURM_JOB_ID}_$$.log"
@@ -885,7 +995,7 @@ log_with_timestamp "✅ 组态选择完成"
 log_with_timestamp "进入计算目录: \${conf}_\${loop}"
 cd \${conf}_\${loop}
 
-safe_grasp_execute "mkdisks" "" "" mkdisks \${processor} caltmp
+safe_grasp_execute "mkdisks" "" mkdisks \${processor} caltmp
 
 ### rcsf
 log_with_timestamp "准备 rcsf 输入文件..."
@@ -898,7 +1008,7 @@ cp ../\${loop1_rwfn_file} \${conf}.w
 orbital_params=\${Active_space}
 
 ### rangular
-safe_grasp_execute "rangular_mpi" "" "y" mpirun -np \${processor} rangular_mpi
+safe_grasp_execute "rangular_mpi" "y" mpirun -np \${processor} rangular_mpi
 
 ### rwfnestimate
 input_commands="y
@@ -909,7 +1019,7 @@ input_commands="y
 *
 3
 *"
-safe_grasp_execute "rwfnestimate" "rwfn.inp" "\$input_commands" rwfnestimate
+safe_grasp_execute "rwfnestimate" "\$input_commands" rwfnestimate
 
 ### rmcdhf
 input_commands="y
@@ -918,10 +1028,10 @@ input_commands="y
 \${orbital_params}
 
 100"
-safe_grasp_execute "rmcdhf_mem_mpi" "rwfn.out rmix.out rmcdhf.sum rmcdhf.log" "\$input_commands" mpirun -np \${processor} rmcdhf_mem_mpi
+safe_grasp_execute "rmcdhf_mem_mpi" "\$input_commands" mpirun -np \${processor} rmcdhf_mem_mpi
 
 ### rsave
-safe_grasp_execute "rsave" "\${conf}_\${loop}.w \${conf}_\${loop}.m" "" rsave \${conf}_\${loop}
+safe_grasp_execute "rsave" "" rsave \${conf}_\${loop}
 
 cp \${conf}_\${loop}.w ..
 
@@ -930,10 +1040,10 @@ input_commands="\${conf}_\${loop}
 n
 y
 y"
-safe_grasp_execute "jj2lsj_rmcdhf" "\${conf}_\${loop}.lsj.lbl" "\$input_commands" jj2lsj
+safe_grasp_execute "jj2lsj_rmcdhf" "\$input_commands" jj2lsj
 
 # 生成能级数据文件
-safe_grasp_execute "rlevels_rmcdhf" "\${conf}_\${loop}.level" "" bash -c "rlevels \${conf}_\${loop}.m > \${conf}_\${loop}.level"
+safe_grasp_execute "rlevels_rmcdhf" "" bash -c "rlevels \${conf}_\${loop}.m > \${conf}_\${loop}.level"
 
 else
 log_with_timestamp "================第\${loop}次循环，使用\${rwfnestimate_file}================"
@@ -951,17 +1061,17 @@ n
 y
 5
 \${cal_levels}"
-safe_grasp_execute "rci_mpi" "\${conf}_\${loop}.cm" "\$input_commands" mpirun -np \${processor} rci_mpi
+safe_grasp_execute "rci_mpi" "\$input_commands" mpirun -np \${processor} rci_mpi
 
 ### jj2lsj rci
 input_commands="\${conf}_\${loop}
 y
 y
 y"
-safe_grasp_execute "jj2lsj_rci" "\${conf}_\${loop}.lsj.lbl" "\$input_commands" jj2lsj
+safe_grasp_execute "jj2lsj_rci" "\$input_commands" jj2lsj
 
 # 生成能级数据文件
-safe_grasp_execute "rlevels_rci" "\${conf}_\${loop}.level" "" bash -c "rlevels \${conf}_\${loop}.cm > \${conf}_\${loop}.level"
+safe_grasp_execute "rlevels_rci" "" bash -c "rlevels \${conf}_\${loop}.cm > \${conf}_\${loop}.level"
 
 fi
 
