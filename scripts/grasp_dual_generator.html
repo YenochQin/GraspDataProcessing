@@ -339,6 +339,12 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="grasp_data_processing_root">GraspDataProcessing根路径 *</label>
+                        <input type="text" id="grasp_data_processing_root" placeholder="例如: /home/workstation3/AppFiles/GraspDataProcessing">
+                        <div class="help-text">GraspDataProcessing项目的根目录路径</div>
+                    </div>
+
+                    <div class="form-group">
                         <label for="conda_path">Conda路径 *</label>
                         <input type="text" id="conda_path" placeholder="例如: /home/workstation3/AppFiles/miniconda3">
                         <div class="help-text">conda的安装位置</div>
@@ -631,6 +637,7 @@
             if (config.modules.length === 0) missingFields.push('环境模块');
             if (!config.root_path) missingFields.push('根路径');
             if (!config.selected_csfs) missingFields.push('初筛CSFs文件名');
+            if (!config.grasp_data_processing_root) missingFields.push('GraspDataProcessing根路径');
             if (!config.atomic_number) missingFields.push('原子序数');
             if (!config.mass_number) missingFields.push('质量数');
             
@@ -663,6 +670,7 @@
                 modules: getModules(),
                 root_path: document.getElementById('root_path').value,
                 selected_csfs: document.getElementById('selected_csfs').value,
+                grasp_data_processing_root: document.getElementById('grasp_data_processing_root').value,
                 conda_path: document.getElementById('conda_path').value || '/home/workstation3/AppFiles/miniconda3',
                 chosen_ratio: document.getElementById('chosen_ratio').value || '0.09',
                 cutoff_value: document.getElementById('cutoff_value').value || '1e-09',
@@ -1017,6 +1025,20 @@ log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
 log_with_timestamp "检查 Python 环境..."
 which python
 python --version
+
+# 自动设置 GraspDataProcessing 包路径
+GRASP_DATA_PROCESSING_ROOT="${config.grasp_data_processing_root}"
+export PYTHONPATH="\${GRASP_DATA_PROCESSING_ROOT}/src:\${PYTHONPATH}"
+log_with_timestamp "设置 PYTHONPATH: $PYTHONPATH"
+###########################################
+log_with_timestamp "获取计算目录..."
+cal_dir=\${PWD}
+csfs_ml_choosing_config_load.py set root_path \${cal_dir} 2>&1
+log_with_timestamp "计算目录: $cal_dir"
+###########################################
+log_with_timestamp "复制python文件到计算目录..."
+cp \${GRASP_DATA_PROCESSING_ROOT}/tests/ml_csf_choosing/*.py \${cal_dir}
+log_with_timestamp "✅ 复制python文件到计算目录完成"
 ###########################################
 while true
 do

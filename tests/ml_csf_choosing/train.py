@@ -25,7 +25,6 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-sys.path.append('/home/workstation3/AppFiles/GraspDataProcessing/src')
 try:
     import graspdataprocessing as gdp
 except ImportError:

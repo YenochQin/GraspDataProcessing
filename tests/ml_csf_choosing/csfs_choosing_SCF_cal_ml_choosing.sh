@@ -269,16 +269,19 @@ log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
 log_with_timestamp "检查 Python 环境..."
 which python
 python --version
-
 # 自动设置 GraspDataProcessing 包路径
-GRASP_DATA_PROCESSING_ROOT="${cal_dir}/../../../src"
-export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}:${PYTHONPATH}"
+GRASP_DATA_PROCESSING_ROOT="D:\PythonProjects\GraspDataProcessing"
+export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}\src:${PYTHONPATH}"
 log_with_timestamp "设置 PYTHONPATH: $PYTHONPATH"
 ###########################################
 log_with_timestamp "获取计算目录..."
 cal_dir=${PWD}
 csfs_ml_choosing_config_load.py set root_path ${cal_dir} 2>&1
 log_with_timestamp "计算目录: $cal_dir"
+###########################################
+log_with_timestamp "复制python文件到计算目录..."
+cp ${GRASP_DATA_PROCESSING_ROOT}/tests/ml_csf_choosing/*.py ${cal_dir}
+log_with_timestamp "✅ 复制python文件到计算目录完成"
 ###########################################
 log_with_timestamp "设置原子核参数..."
 input_commands="64
