@@ -13,7 +13,7 @@ import sys
 import numpy as np
 import math
 
-sys.path.append('/home/workstation3/AppFiles/GraspDataProcessing/src')
+# 路径通过 sbatch 脚本中的 PYTHONPATH 环境变量自动设置
 try:
     import graspdataprocessing as gdp
 except ImportError:

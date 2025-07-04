@@ -269,6 +269,11 @@ log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
 log_with_timestamp "检查 Python 环境..."
 which python
 python --version
+
+# 自动设置 GraspDataProcessing 包路径
+GRASP_DATA_PROCESSING_ROOT="${cal_dir}/../../../src"
+export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}:${PYTHONPATH}"
+log_with_timestamp "设置 PYTHONPATH: $PYTHONPATH"
 ###########################################
 log_with_timestamp "获取计算目录..."
 cal_dir=${PWD}
