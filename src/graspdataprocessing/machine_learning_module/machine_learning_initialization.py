@@ -114,11 +114,11 @@ def load_data_files(config, logger) -> tuple:
     rmix_file_data = rmix_file_load.data_file_process()
     logger.info(f"加载 *.m 文件数据: {rmix_file_path}")
     
-    # 加载初始 CSFs 文件
+    # # 加载初始 CSFs 文件
     target_pool_file_path = config.root_path / f'{config.conf}'
-    target_pool_binary_file_path = target_pool_file_path.with_suffix('.pkl.gz')
-    target_pool_csfs_data = load_csfs_binary(target_pool_binary_file_path)
-    logger.info(f"加载初始 CSFs 文件: {target_pool_binary_file_path}")
+    # target_pool_binary_file_path = target_pool_file_path.with_suffix('.pkl.gz')
+    # target_pool_csfs_data = load_csfs_binary(target_pool_binary_file_path)
+    # logger.info(f"加载初始 CSFs 文件: {target_pool_binary_file_path}")
     
     # 加载初始 CSFs 描述符文件
     result = load_descriptors_with_multi_block(target_pool_file_path, 'npy')
@@ -139,11 +139,12 @@ def load_data_files(config, logger) -> tuple:
     logger.info(f"加载本轮选择的 CSFs 的索引文件: {caled_csfs_indices_file_path}")
     
     # 加载本轮未选择的CSFs的索引文件
-    unselected_csfs_indices_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}_unselected_indices.pkl'
-    unselected_csfs_indices_dict = csfs_index_load(unselected_csfs_indices_file_path)
-    logger.info(f"加载本轮选择的 CSFs 的索引文件: {unselected_csfs_indices_file_path}")
+    # unselected_csfs_indices_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}_unselected_indices.pkl'
+    # unselected_csfs_indices_dict = csfs_index_load(unselected_csfs_indices_file_path)
+    # logger.info(f"加载本轮选择的 CSFs 的索引文件: {unselected_csfs_indices_file_path}")
 
-    return energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict, unselected_csfs_indices_dict
+    # return energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict, unselected_csfs_indices_dict
+    return energy_level_data_pd, rmix_file_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict
 
 def check_configuration_coupling(config, energy_level_data_pd, logger):
     """检查组态耦合是否正确"""

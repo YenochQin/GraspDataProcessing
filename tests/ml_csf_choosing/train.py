@@ -53,7 +53,14 @@ def main(config):
 
     try:
         # 加载数据文件
-        energy_level_data_pd, rmix_file_data, target_pool_csfs_data, raw_csfs_descriptors, cal_csfs_data, caled_csfs_indices_dict, unselected_csfs_indices_dict = gdp.load_data_files(config, logger)
+        # 分步骤获取返回值以提高可读性
+        data_files_result = gdp.load_data_files(config, logger)
+        
+        (energy_level_data_pd, 
+         rmix_file_data, 
+         raw_csfs_descriptors, 
+         cal_csfs_data, 
+         caled_csfs_indices_dict) = data_files_result
         
         # 检查组态耦合
         cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
@@ -85,7 +92,12 @@ def main(config):
         should_continue = True
         if config.cal_loop_num >= 3:
             logger.info("开始检查收敛性...")
-            should_continue = gdp.check_grasp_cal_convergence(config, logger)
+            # 获取当前轮的CSFs数量（从已加载的数据中获取）
+            current_calculation_csfs = cal_csfs_data.CSFs_block_length[0]
+            logger.info(f"当前轮CSFs数量: {current_calculation_csfs}")
+            
+            # 传递当前轮CSFs数量给收敛性检查函数
+            should_continue = gdp.check_grasp_cal_convergence(config, logger, current_calculation_csfs)
             logger.info(f"检查收敛性结果: {'继续计算' if should_continue else '已收敛，停止计算'}")
             
             if not should_continue:

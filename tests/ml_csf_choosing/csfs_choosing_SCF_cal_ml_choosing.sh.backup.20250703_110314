@@ -34,17 +34,14 @@ get_expected_files() {
         "rsave")
             echo "${conf}_${loop}.w ${conf}_${loop}.c ${conf}_${loop}.m ${conf}_${loop}.sum ${conf}_${loop}.alog ${conf}_${loop}.log"
             ;;
-        "jj2lsj")
+        "jj2lsj"*|"jj2lsj_rmcdhf"|"jj2lsj_rci")
             echo "${conf}_${loop}.lsj.lbl"
             ;;
         "rci_mpi")
             echo "${conf}_${loop}.cm"
             ;;
-        "rlevels")
+        "rlevels"*|"rlevels_rmcdhf"|"rlevels_rci")
             echo "${conf}_${loop}.level"
-            ;;
-        "rnucleus")
-            echo "isodata"
             ;;
         *)
             echo ""  # 未知程序，不检查文件
@@ -274,17 +271,6 @@ log_with_timestamp "获取计算目录..."
 cal_dir=${PWD}
 csfs_ml_choosing_config_load.py set root_path ${cal_dir} 2>&1
 log_with_timestamp "计算目录: $cal_dir"
-###########################################
-log_with_timestamp "设置原子核参数..."
-input_commands="64
-157
-n
-157.25
-1
-1
-1"
-safe_grasp_execute "rnucleus" "$input_commands" rnucleus
-log_with_timestamp "✅ 原子核参数设置完成"
 ###########################################
 while true
 do

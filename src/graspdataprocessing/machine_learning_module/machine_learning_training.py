@@ -330,7 +330,7 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, X_unselected, config
         }
     }
 
-def check_grasp_cal_convergence(config, logger):
+def check_grasp_cal_convergence(config, logger, current_calculation_csfs=None):
     """
     检查GRASP计算的收敛性
     
@@ -342,6 +342,7 @@ def check_grasp_cal_convergence(config, logger):
     Args:
         config: 配置对象
         logger: 日志记录器
+        current_calculation_csfs: 当前轮的CSFs数量（可选，如果提供则不从文件读取）
         
     Returns:
         bool: True表示继续计算，False表示已收敛停止计算
@@ -366,36 +367,71 @@ def check_grasp_cal_convergence(config, logger):
             logger.warning("无法读取完整的3轮能级数据，继续计算")
             return True
         
-        # 读取组态数量数据从iteration_results.csv
+        # 读取组态数量数据
         iteration_results_path = config.root_path / 'results' / 'iteration_results.csv'
         csfs_num = []  # 存储每轮的组态数量
         
-        if iteration_results_path.exists():
-            try:
-                iteration_df = pd.read_csv(iteration_results_path)
-                # 获取最近3轮的组态数量
-                for i in range(3):
-                    loop_num = config.cal_loop_num - 2 + i
-                    # 查找对应轮次的数据
-                    loop_data = iteration_df[iteration_df['iteration'] == loop_num]
-                    if not loop_data.empty:
-                        current_count = loop_data['current_calculation_count'].iloc[0]
-                        csfs_num.append(current_count)
-                        logger.info(f"读取第{loop_num}轮组态数量: {current_count}")
-                    else:
-                        logger.warning(f"在iteration_results.csv中未找到第{loop_num}轮的数据")
-                        return True  # 数据不完整，继续计算
-                
-                if len(csfs_num) < 3:
-                    logger.warning("无法读取完整的3轮组态数量数据，继续计算")
-                    return True
+        # 如果提供了当前轮的CSFs数量，则优先使用
+        if current_calculation_csfs is not None:
+            # 从iteration_results.csv读取前两轮的数据，使用传入的当前轮数据
+            if iteration_results_path.exists():
+                try:
+                    iteration_df = pd.read_csv(iteration_results_path)
+                    # 获取前两轮的组态数量
+                    for i in range(2):  # 只读取前两轮
+                        loop_num = config.cal_loop_num - 2 + i
+                        # 查找对应轮次的数据
+                        loop_data = iteration_df[iteration_df['iteration'] == loop_num]
+                        if not loop_data.empty:
+                            current_count = loop_data['current_calculation_count'].iloc[0]
+                            csfs_num.append(current_count)
+                            logger.info(f"读取第{loop_num}轮组态数量: {current_count}")
+                        else:
+                            logger.warning(f"在iteration_results.csv中未找到第{loop_num}轮的数据")
+                            return True  # 数据不完整，继续计算
                     
-            except Exception as e:
-                logger.warning(f"读取iteration_results.csv文件出错: {e}")
+                    # 添加当前轮的CSFs数量
+                    csfs_num.append(current_calculation_csfs)
+                    logger.info(f"读取第{config.cal_loop_num}轮组态数量: {current_calculation_csfs}")
+                    
+                    if len(csfs_num) < 3:
+                        logger.warning("无法读取完整的3轮组态数量数据，继续计算")
+                        return True
+                        
+                except Exception as e:
+                    logger.warning(f"读取iteration_results.csv文件出错: {e}")
+                    return True
+            else:
+                logger.warning(f"未找到iteration_results.csv文件: {iteration_results_path}")
                 return True
         else:
-            logger.warning(f"未找到iteration_results.csv文件: {iteration_results_path}")
-            return True
+            # 原有逻辑：从iteration_results.csv读取所有3轮数据
+            if iteration_results_path.exists():
+                try:
+                    iteration_df = pd.read_csv(iteration_results_path)
+                    # 获取最近3轮的组态数量
+                    for i in range(3):
+                        loop_num = config.cal_loop_num - 2 + i
+                        # 查找对应轮次的数据
+                        loop_data = iteration_df[iteration_df['iteration'] == loop_num]
+                        if not loop_data.empty:
+                            current_count = loop_data['current_calculation_count'].iloc[0]
+                            csfs_num.append(current_count)
+                            logger.info(f"读取第{loop_num}轮组态数量: {current_count}")
+                        else:
+                            logger.warning(f"在iteration_results.csv中未找到第{loop_num}轮的数据")
+                            return True  # 数据不完整，继续计算
+                    
+                    if len(csfs_num) < 3:
+                        logger.warning("无法读取完整的3轮组态数量数据，继续计算")
+                        return True
+                        
+                except Exception as e:
+                    logger.warning(f"读取iteration_results.csv文件出错: {e}")
+                    return True
+            else:
+                logger.warning(f"未找到iteration_results.csv文件: {iteration_results_path}")
+                return True
         
         # === 1. 能级标准差计算 ===
         # 获取所有configuration
@@ -908,7 +944,7 @@ def calculate_dynamic_chosen_ratio(
                     previous_important_indices = prev_important_dict[0]
                 
                 # 计算数据留存率（仅当两个文件都存在时）
-                if current_important_indices is not None:
+                if current_important_indices is not None and previous_important_indices is not None:
                     intersection = np.intersect1d(current_important_indices, previous_important_indices)
                     data_retention_rate = len(intersection) / current_selected_count
                     logger.info(f"             数据留存率: {data_retention_rate:.4f}")
@@ -916,7 +952,7 @@ def calculate_dynamic_chosen_ratio(
                     logger.info(f"             - 上次重要组态数: {len(previous_important_indices)}")
                     logger.info(f"             - 交集组态数: {len(intersection)}")
                 else:
-                    logger.warning(f"             无法计算留存率：缺少当前重要组态数据")
+                    logger.warning(f"             无法计算留存率：缺少重要组态数据")
             else:
                 logger.warning(f"             未找到前一轮重要组态文件: {prev_important_path}")
         else:

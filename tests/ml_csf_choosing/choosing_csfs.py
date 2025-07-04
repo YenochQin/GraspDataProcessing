@@ -287,7 +287,7 @@ def perform_csfs_selection(config):
         selection_method = "initial_selected"
         logger.info("第一轮选择，使用基础selected indices")
         
-        # 处理第一轮initial_selected数量过多的情况
+        # 第一轮initial_selected数量过多的情况
         total_target_pool = sum(len(target_pool_csfs_data.CSFs_block_data[block]) 
         for block in range(target_pool_csfs_data.block_num))
         total_target_chosen = math.ceil(total_target_pool * config.chosen_ratio)
@@ -305,6 +305,36 @@ def perform_csfs_selection(config):
             
             selected_csfs_indices_dict = truncated_indices_dict
             logger.info("✅ 完成initial_selected截断处理")
+    elif config.cal_error_num > 0 and config.continue_cal:
+        # 错误重试模式：使用上一轮重要组态进行随机选择
+        selected_csfs_indices_dict = load_previous_chosen_indices(config, logger)
+        if selected_csfs_indices_dict is None:
+            # 如果找不到上一轮重要组态，使用空字典
+            selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
+            logger.warning("未找到上一轮重要组态，使用空字典")
+        
+        selection_method = "error_retry_important"
+        logger.info(f"⚠️ 错误重试模式，错误次数: {config.cal_error_num}")
+        logger.info("🔄 使用上一轮重要组态作为selected进行随机选择")
+        
+        # 如果上一轮重要组态数量过多，也需要截断处理
+        total_target_pool = sum(len(target_pool_csfs_data.CSFs_block_data[block]) 
+                               for block in range(target_pool_csfs_data.block_num))
+        total_target_chosen = math.ceil(total_target_pool * config.chosen_ratio)
+        
+        # 检查selected数量
+        total_selected = sum(len(selected_csfs_indices_dict.get(block, [])) 
+                            for block in range(target_pool_csfs_data.block_num))
+        
+        if total_selected > total_target_chosen:
+            logger.warning(f"⚠️ 上一轮重要组态数量过多: {total_selected} > 目标数量: {total_target_chosen}")
+            logger.info(f"🔧 使用cutoff_value={config.cutoff_value}进行截断处理")
+            
+            # 对每个块进行截断处理
+            truncated_indices_dict = truncate_initial_selected_with_weights(config, logger, selected_csfs_indices_dict, target_pool_csfs_data)
+            
+            selected_csfs_indices_dict = truncated_indices_dict
+            logger.info("✅ 完成重要组态截断处理")
     else:
         # 后续轮次：优先级顺序
         # 1. 优先使用ML最终选择的索引（train.py生成的final_chosen_indices）

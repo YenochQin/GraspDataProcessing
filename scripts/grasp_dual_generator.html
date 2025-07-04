@@ -377,6 +377,51 @@
                 </div>
 
                 <div class="section">
+                    <h3>⚛️ 原子核参数</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="atomic_number">原子序数 *</label>
+                            <input type="number" id="atomic_number" min="1" max="118" placeholder="例如: 64">
+                            <div class="help-text">原子的质子数</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mass_number">质量数 *</label>
+                            <input type="number" id="mass_number" min="1" max="300" placeholder="例如: 157">
+                            <div class="help-text">原子核的质量数</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="atomic_mass">原子质量</label>
+                            <input type="number" id="atomic_mass" step="0.01" min="1" max="300" placeholder="例如: 157.25">
+                            <div class="help-text">中性原子的质量 (amu)</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="nuclear_spin">核自旋量子数</label>
+                            <input type="number" id="nuclear_spin" step="0.5" min="0" max="10" placeholder="例如: 1">
+                            <div class="help-text">核自旋量子数 I (单位: ℏ/2π)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nuclear_dipole">核偶极矩</label>
+                            <input type="number" id="nuclear_dipole" step="0.1" placeholder="例如: 1">
+                            <div class="help-text">核偶极矩 (单位: 核磁子)</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="nuclear_quadrupole">核四极矩</label>
+                            <input type="number" id="nuclear_quadrupole" step="0.1" placeholder="例如: 1">
+                            <div class="help-text">核四极矩 (单位: barn)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
                     <h3>🤖 机器学习参数</h3>
                     <div class="form-row">
                         <div class="form-group">
@@ -586,6 +631,8 @@
             if (config.modules.length === 0) missingFields.push('环境模块');
             if (!config.root_path) missingFields.push('根路径');
             if (!config.selected_csfs) missingFields.push('初筛CSFs文件名');
+            if (!config.atomic_number) missingFields.push('原子序数');
+            if (!config.mass_number) missingFields.push('质量数');
             
             if (missingFields.length > 0) {
                 document.getElementById('config-output').textContent = '# 请先填写必填字段：' + missingFields.join(', ');
@@ -621,6 +668,12 @@
                 cutoff_value: document.getElementById('cutoff_value').value || '1e-09',
                 active_space: document.getElementById('active_space').value || '10s,9p,8d,7f,6g',
                 cal_levels: document.getElementById('cal_levels').value || '1-4',
+                atomic_number: document.getElementById('atomic_number').value,
+                mass_number: document.getElementById('mass_number').value,
+                atomic_mass: document.getElementById('atomic_mass').value || document.getElementById('mass_number').value,
+                nuclear_spin: document.getElementById('nuclear_spin').value || '1',
+                nuclear_dipole: document.getElementById('nuclear_dipole').value || '1',
+                nuclear_quadrupole: document.getElementById('nuclear_quadrupole').value || '1',
                 n_estimators: document.getElementById('n_estimators').value || '1000',
                 random_state: document.getElementById('random_state').value || '42',
                 class_weight_0: document.getElementById('class_weight_0').value || '1',
@@ -726,20 +779,23 @@ get_expected_files() {
         "rwfnestimate")
             echo "rwfn.inp"
             ;;
-        "rmcdhf_mem_mpi")
+        "rmcdhf_mem_mpi"|"rmcdhf_mpi")
             echo "rwfn.out rmix.out"
             ;;
         "rsave")
-            echo "\${conf}_\${loop}.w \${conf}_\${loop}.c \${conf}_\${loop}.m \${conf}_\${loop}.sum \${conf}_\${loop}.alog \${conf}_\${loop}.log"
+            echo "$conf_$loop.w $conf_$loop.c $conf_$loop.m $conf_$loop.sum $conf_$loop.alog $conf_$loop.log"
             ;;
-        "jj2lsj"*|"jj2lsj_rmcdhf"|"jj2lsj_rci")
-            echo "\${conf}_\${loop}.lsj.lbl"
+        "jj2lsj"")
+            echo "$conf_$loop.lsj.lbl"
             ;;
         "rci_mpi")
-            echo "\${conf}_\${loop}.cm"
+            echo "$conf_$loop.cm"
             ;;
-        "rlevels"*|"rlevels_rmcdhf"|"rlevels_rci")
-            echo "\${conf}_\${loop}.level"
+        "rlevels")
+            echo "$conf_$loop.level"
+            ;;
+        "rnucleus")
+            echo "isodata"
             ;;
         *)
             echo ""  # 未知程序，不检查文件
@@ -792,22 +848,25 @@ check_grasp_errors() {
         local retry_count=0
         local all_files_exist=false
         
-        # 使用 zsh 兼容的方法分割文件名
-        local files_array
-        files_array=(\\$\\{=expected_files\\})  # zsh 语法：使用 \\$\\{=var\\} 来分割字符串
-        log_with_timestamp "🔍 文件数组内容: \\$\\{#files_array[@]\\} 个文件"
+        # 简化的文件处理：直接使用字符串，避免数组
+        local file_count=0
+        for file in $expected_files; do
+            file_count=$((file_count + 1))
+        done
+        
+        log_with_timestamp "🔍 预期文件数量: $file_count 个"
         local index=1
-        for file in "\\$\\{files_array[@]\\}"; do
+        for file in $expected_files; do
             log_with_timestamp "  [$index]: '$file'"
-            ((index++))
+            index=$((index + 1))
         done
         
         while [ $retry_count -lt $max_retries ] && [ "$all_files_exist" = false ]; do
             all_files_exist=true
             local missing_files=""
             
-            # 使用 zsh 兼容的数组遍历
-            for file in "\\$\\{files_array[@]\\}"; do
+            # 简单的文件检查循环（不使用数组）
+            for file in $expected_files; do
                 log_with_timestamp "🔍 检查文件: '$file'"
                 
                 if [ ! -f "$file" ]; then
@@ -830,7 +889,7 @@ check_grasp_errors() {
                     log_with_timestamp "📂 当前目录内容："
                     ls -la
                     log_with_timestamp "🔍 详细检查文件情况："
-                    for file in "\\$\\{files_array[@]\\}"; do
+                    for file in $expected_files; do
                         log_with_timestamp "检查文件: $file"
                         if [ -e "$file" ]; then
                             log_with_timestamp "  - 文件存在但可能有问题"
@@ -840,7 +899,7 @@ check_grasp_errors() {
                             log_with_timestamp "  - 文件不存在"
                             # 查找类似的文件名
                             local basename=$(basename "$file")
-                            local similar_files=$(ls -1 | grep -i "\\$\\{basename%.*\\}" 2>/dev/null || echo "无相似文件")
+                            local similar_files=$(ls -1 | grep -i "\${basename%.*}" 2>/dev/null || echo "无相似文件")
                             log_with_timestamp "  - 相似文件: $similar_files"
                         fi
                     done
@@ -1006,6 +1065,18 @@ if [ $loop -eq 1 ]; then
 log_with_timestamp "================第一次循环，使用\${loop1_rwfn_file}================"
 cp ../\${loop1_rwfn_file} \${conf}.w
 orbital_params=\${Active_space}
+
+### rnucleus - 设置原子核参数
+log_with_timestamp "设置原子核参数..."
+input_commands="${config.atomic_number}
+${config.mass_number}
+n
+${config.atomic_mass}
+${config.nuclear_spin}
+${config.nuclear_dipole}
+${config.nuclear_quadrupole}"
+safe_grasp_execute "rnucleus" "\$input_commands" rnucleus
+log_with_timestamp "✅ 原子核参数设置完成"
 
 ### rangular
 safe_grasp_execute "rangular_mpi" "y" mpirun -np \${processor} rangular_mpi
