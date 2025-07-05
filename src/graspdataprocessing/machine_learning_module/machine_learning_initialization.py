@@ -105,10 +105,12 @@ def load_data_files(config, logger) -> tuple:
     
     # 加载rmix文件
     # 根据计算轮次确定文件后缀
-    if config.cal_loop_num == 1:
+    if config.cal_method == 'rmcdhf':
         rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.m'
-    else:
+    elif config.cal_method == 'rci':
         rmix_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.cm'
+    else:
+        raise ValueError(f"不支持的计算方法: {config.cal_method}")
     
     rmix_file_load = GraspFileLoad.from_filepath(str(rmix_file_path), 'mix')
     rmix_file_data = rmix_file_load.data_file_process()

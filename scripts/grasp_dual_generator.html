@@ -659,8 +659,8 @@
             }
             
             // 生成合成参数
-            const jobName = config.atom + 'oddImlci' + config.conf.split('_').pop();
-            const loop1RwfnFile = `mJ-1-90chosen${config.conf.split('_').pop()}.w`;
+            const jobName = config.atom + '_ml_' + config.conf;
+            const loop1RwfnFile = `${config.selected_csfs}.w`;
             const rwfnEstimateFile = `${config.conf}_1.w`;
             
             // 生成config.toml
@@ -802,16 +802,16 @@ get_expected_files() {
             echo "rwfn.out rmix.out"
             ;;
         "rsave")
-            echo "$conf_$loop.w $conf_$loop.c $conf_$loop.m $conf_$loop.sum $conf_$loop.alog $conf_$loop.log"
+            echo "\${conf}_\${loop}.w \${conf}_\${loop}.c \${conf}_\${loop}.m \${conf}_\${loop}.sum \${conf}_\${loop}.alog \${conf}_\${loop}.log"
             ;;
-        "jj2lsj"")
-            echo "$conf_$loop.lsj.lbl"
+        "jj2lsj")
+            echo "\${conf}_\${loop}.lsj.lbl"
             ;;
         "rci_mpi")
-            echo "$conf_$loop.cm"
+            echo "\${conf}_\${loop}.cm"
             ;;
         "rlevels")
-            echo "$conf_$loop.level"
+            echo "\${conf}_\${loop}.level"
             ;;
         "rnucleus")
             echo "isodata"
@@ -867,15 +867,29 @@ check_grasp_errors() {
         local retry_count=0
         local all_files_exist=false
         
-        # 简化的文件处理：直接使用字符串，避免数组
-        local file_count=0
-        for file in $expected_files; do
-            file_count=$((file_count + 1))
-        done
+        # 将文件列表转换为数组进行处理
+        local files_array
+        if [[ -n "\${ZSH_VERSION:-}" ]]; then
+            # zsh 下使用特殊语法
+            files_array=(\${=expected_files})
+        else
+            # bash 下直接分割
+            files_array=(\$expected_files)
+        fi
+        local file_count=\${#files_array[@]}
+        
+        # 如果分割失败，尝试使用 read 命令
+        if [ \$file_count -eq 1 ] && [[ "\$expected_files" == *" "* ]]; then
+            log_with_timestamp "⚠️ 检测到文件列表可能未正确分割，尝试使用read命令..."
+            files_array=()
+            local IFS=' '
+            read -r -a files_array <<< "\$expected_files"
+            file_count=\${#files_array[@]}
+        fi
         
         log_with_timestamp "🔍 预期文件数量: $file_count 个"
         local index=1
-        for file in $expected_files; do
+        for file in "\${files_array[@]}"; do
             log_with_timestamp "  [$index]: '$file'"
             index=$((index + 1))
         done
@@ -884,8 +898,8 @@ check_grasp_errors() {
             all_files_exist=true
             local missing_files=""
             
-            # 简单的文件检查循环（不使用数组）
-            for file in $expected_files; do
+            # 使用数组进行文件检查
+            for file in "\${files_array[@]}"; do
                 log_with_timestamp "🔍 检查文件: '$file'"
                 
                 if [ ! -f "$file" ]; then
@@ -908,7 +922,7 @@ check_grasp_errors() {
                     log_with_timestamp "📂 当前目录内容："
                     ls -la
                     log_with_timestamp "🔍 详细检查文件情况："
-                    for file in $expected_files; do
+                    for file in "\${files_array[@]}"; do
                         log_with_timestamp "检查文件: $file"
                         if [ -e "$file" ]; then
                             log_with_timestamp "  - 文件存在但可能有问题"
@@ -1098,7 +1112,7 @@ if [ $loop -eq 1 ]; then
 log_with_timestamp "================第一次循环，使用\${loop1_rwfn_file}================"
 cp ../\${loop1_rwfn_file} \${conf}.w
 orbital_params=\${Active_space}
-
+cal_method='rmcdhf'
 ### rnucleus - 设置原子核参数
 log_with_timestamp "设置原子核参数..."
 input_commands="${config.atomic_number}
@@ -1152,7 +1166,7 @@ safe_grasp_execute "rlevels_rmcdhf" "" bash -c "rlevels \${conf}_\${loop}.m > \$
 else
 log_with_timestamp "================第\${loop}次循环，使用\${rwfnestimate_file}================"
 cp ../\${rwfnestimate_file} \${conf}_\${loop}.w
-
+cal_method='rci'
 # rci
 input_commands="y
 \${conf}_\${loop}
@@ -1194,7 +1208,7 @@ fi
 
 log_with_timestamp "返回上级目录..."
 cd ..
-
+csfs_ml_choosing_config_load.py set cal_method \${cal_method} 2>&1
 ## 机器学习训练
 log_with_timestamp "================执行机器学习训练================"
 python train.py 2>&1
