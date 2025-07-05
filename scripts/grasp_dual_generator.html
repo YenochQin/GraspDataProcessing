@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GRASP双文件生成器 - Config & Script</title>
+    <title>GDP_ml_CSFS_choosing_Config_Script_generator</title>
     <style>
         * {
             margin: 0;
@@ -52,7 +52,7 @@
 
         .results-column {
             display: grid;
-            grid-template-rows: 1fr 1fr;
+            grid-template-rows: auto 1fr 1fr;
             gap: 20px;
         }
 
@@ -233,8 +233,6 @@
             margin-top: 5px;
         }
 
-
-
         .footer {
             text-align: center;
             padding: 20px;
@@ -292,8 +290,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔬 GRASP双文件生成器</h1>
-            <p>同时生成config.toml和计算脚本的完整解决方案</p>
+            <h1>🔬 GraspDataProcessing machine learning CSFs choosing </h1>
+            <p>Config.toml & SbatchScript  generator</p>
+            <div id="config-status" style="margin-top: 10px; font-size: 14px; color: rgba(255,255,255,0.8);"></div>
         </div>
 
         <div class="main-content">
@@ -320,7 +319,7 @@
                         <div id="spectral-terms-container">
                             <input type="text" class="spectral-term-input" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D" oninput="handleSpectralTermInput(this)">
                         </div>
-                        <div class="help-text">输入光谱项后会自动生成新的输入框</div>
+                        <div class="help-text">rlevels 获得的能级组态，一个框输入一个能级。</div>
                     </div>
                 </div>
 
@@ -329,25 +328,25 @@
                     <div class="form-group">
                         <label for="root_path">根路径 *</label>
                         <input type="text" id="root_path" placeholder="例如: /home/workstation3/caldata/GdI/cvodd1/as3_odd4">
-                        <div class="help-text">计算target_pool_file的根目录</div>
+                        <div class="help-text">计算目标CSFs的根目录，计算结果会保存在这个目录下</div>
                     </div>
                     
                     <div class="form-group">
                         <label for="selected_csfs">初筛CSFs文件名 *</label>
                         <input type="text" id="selected_csfs" placeholder="例如: mJ-1-90chosenas3_odd4">
-                        <div class="help-text">初筛的CSFs组态文件名（不含扩展名）</div>
+                        <div class="help-text">初筛的CSFs组态文件名（不含扩展名，最好包含.c, .w, .[c]m文件，一般使用上一个活性空间的结果）</div>
                     </div>
 
                     <div class="form-group">
                         <label for="grasp_data_processing_root">GraspDataProcessing根路径 *</label>
                         <input type="text" id="grasp_data_processing_root" placeholder="例如: /home/workstation3/AppFiles/GraspDataProcessing">
-                        <div class="help-text">GraspDataProcessing项目的根目录路径</div>
+                        <div class="help-text">GraspDataProcessing库的根目录路径</div>
                     </div>
 
                     <div class="form-group">
                         <label for="conda_path">Conda路径 *</label>
                         <input type="text" id="conda_path" placeholder="例如: /home/workstation3/AppFiles/miniconda3">
-                        <div class="help-text">conda的安装位置</div>
+                        <div class="help-text">conda的安装位置（注意是根目录，不是bin目录）</div>
                     </div>
                 </div>
 
@@ -519,6 +518,15 @@
             </div>
 
             <div class="results-column">
+                <!-- 配置管理面板 -->
+                <div class="config-panel" style="margin-bottom: 20px;">
+                    <h2>💾 配置管理</h2>
+                    <div class="button-group">
+                        <button class="btn btn-success" onclick="saveConfig()">💾 保存配置</button>
+                        <button class="btn btn-warning" onclick="loadConfigFromFile()">📂 加载配置</button>
+                    </div>
+                </div>
+
                 <div class="output-panel">
                     <h2>📄 Config.toml</h2>
                     <div class="button-group">
@@ -544,9 +552,12 @@
         </div>
 
         <div class="footer">
-            <p>🔬 GRASP双文件生成器 | 基于机器学习的原子结构计算 | 作者：秦毅 (YenochQin)</p>
+            <p>🔬 GraspDataProcessing machine learning CSFS choosing Config & Script  generator | 秦毅 (Yenoch Qin)</p>
         </div>
     </div>
+
+    <!-- 隐藏的文件输入框用于加载配置 -->
+    <input type="file" id="config-file-input" accept=".json,.toml" style="display: none;" onchange="handleConfigFileLoad(event)">
 
     <script>
 
@@ -749,7 +760,7 @@ random_state = ${config.random_state}
         function generateModuleLoads(config) {
             if (!config.modules || config.modules.length === 0) {
                 // 如果没有指定模块，使用默认的模块
-                return `module load mpi/openmpi-x86_64`;
+                return `module load mpi/openmpi-x86_64-gcc`;
             }
             
             return config.modules.map(module => `module load ${module}`).join('\n');
@@ -1252,12 +1263,6 @@ log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
             });
         }
 
-        // 页面加载时显示提示信息
-        window.onload = function() {
-            document.getElementById('config-output').textContent = '# 请填写左侧参数后，配置文件将在这里生成';
-            document.getElementById('script-output').textContent = '# 请填写左侧参数后，Shell脚本将在这里生成';
-        };
-
         // 实时更新
         document.addEventListener('input', function(e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
@@ -1267,6 +1272,153 @@ log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
                 }
             }
         });
+
+        // 页面加载时显示提示信息
+        window.onload = function() {
+            document.getElementById('config-output').textContent = '# 请填写左侧参数后，配置文件将在这里生成';
+            document.getElementById('script-output').textContent = '# 请填写左侧参数后，Shell脚本将在这里生成';
+        };
+
+        // ============ 配置暂存机制 ============
+        
+        // 保存配置到文件
+        function saveConfig() {
+            const config = getFormData();
+            const configData = {
+                version: "1.0",
+                timestamp: new Date().toISOString(),
+                config: config
+            };
+            
+            const configJson = JSON.stringify(configData, null, 2);
+            const blob = new Blob([configJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `grasp_config_${config.atom || 'unnamed'}_${config.conf || 'unnamed'}_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            updateConfigStatus('配置已保存到文件', 'success');
+        }
+        
+        // 加载配置文件
+        function loadConfigFromFile() {
+            document.getElementById('config-file-input').click();
+        }
+        
+        // 处理配置文件加载
+        function handleConfigFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const configData = JSON.parse(e.target.result);
+                    
+                    // 验证配置数据格式
+                    if (!configData.config) {
+                        throw new Error('配置文件格式无效：缺少config字段');
+                    }
+                    
+                    // 填充表单
+                    fillFormWithConfig(configData.config);
+                    
+                    // 重新生成文件
+                    generateFiles();
+                    
+                    updateConfigStatus(`配置文件加载成功 (${configData.version || '未知版本'})`, 'success');
+                    
+                } catch (error) {
+                    alert('配置文件加载失败：' + error.message);
+                    console.error('配置加载错误：', error);
+                }
+            };
+            reader.readAsText(file);
+            
+            // 清空文件输入框，允许重复选择相同文件
+            event.target.value = '';
+        }
+        
+        // 用配置数据填充表单
+        function fillFormWithConfig(config) {
+            // 填充基本字段
+            const simpleFields = [
+                'atom', 'conf', 'root_path', 'selected_csfs', 'grasp_data_processing_root',
+                'conda_path', 'chosen_ratio', 'cutoff_value', 'active_space', 'cal_levels',
+                'atomic_number', 'mass_number', 'atomic_mass', 'nuclear_spin', 'nuclear_dipole',
+                'nuclear_quadrupole', 'n_estimators', 'random_state', 'class_weight_0',
+                'class_weight_1', 'pytorch_threads', 'std_threshold', 'csfs_num_relative_std_threshold',
+                'partition', 'tasks_per_node', 'conda_env'
+            ];
+            
+            simpleFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element && config[field] !== undefined) {
+                    element.value = config[field];
+                }
+            });
+            
+            // 处理光谱项数组
+            if (config.spectral_terms && Array.isArray(config.spectral_terms)) {
+                const container = document.getElementById('spectral-terms-container');
+                container.innerHTML = '';
+                
+                config.spectral_terms.forEach((term, index) => {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'spectral-term-input';
+                    input.placeholder = index === 0 ? '例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D' : '继续输入下一个光谱项';
+                    input.value = term;
+                    input.oninput = function() { handleSpectralTermInput(this); };
+                    container.appendChild(input);
+                });
+                
+                // 添加一个空的输入框用于继续输入
+                addSpectralTermInput();
+            }
+            
+            // 处理模块数组
+            if (config.modules && Array.isArray(config.modules)) {
+                const container = document.getElementById('modules-container');
+                container.innerHTML = '';
+                
+                config.modules.forEach((module, index) => {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'module-input';
+                    input.placeholder = index === 0 ? '例如: mpi/openmpi-x86_64-gcc' : '继续输入下一个模块';
+                    input.value = module;
+                    input.oninput = function() { handleModuleInput(this); };
+                    container.appendChild(input);
+                });
+                
+                // 添加一个空的输入框用于继续输入
+                addModuleInput();
+            }
+        }
+        
+        // 更新配置状态显示
+        function updateConfigStatus(message, type = 'info') {
+            const statusElement = document.getElementById('config-status');
+            const icons = {
+                success: '✅',
+                warning: '⚠️',
+                error: '❌',
+                info: 'ℹ️'
+            };
+            
+            if (statusElement) {
+                statusElement.innerHTML = `${icons[type] || icons.info} ${message}`;
+                // 3秒后清除状态
+                setTimeout(() => {
+                    statusElement.innerHTML = '';
+                }, 3000);
+            }
+        }
     </script>
 </body>
 </html> 
