@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-07-05T17:08:27.723Z",
+  "config": {
+    "atom": "Gd_I",
+    "conf": "cv5even2_j2as3",
+    "spectral_terms": [
+      "5s(2).4d(10)1S0_1S.5p(6).6s_2S.4f(7)8S0_9S.5d_1D.6p_1F",
+      "5s(2).4d(10)1S0_1S.5p(6).6s_2S.4f(7)8S0_7S.5d_8D.6p_9F",
+      "5s(2).4d(10)1S0_1S.5p(6).6s_2S.4f(7)8S0_9S.5d_1D.6p_9D",
+      "5s(2).4d(10)1S0_1S.5p(6).6s_2S.4f(7)8S0_7S.5d_8D.6p_7D"
+    ],
+    "modules": [
+      "mpi/openmpi-x86_64",
+      "grasp/grasp_openblas"
+    ],
+    "root_path": "/home/computer-0-2/4thdd/GdI/cv5even2/j2/as3",
+    "selected_csfs": "even2cvIas2_even1",
+    "grasp_data_processing_root": "/home/computer-0-2/AppFiles/GraspDataProcessing",
+    "conda_path": "/home/computer-0-2/AppFiles/miniconda3",
+    "chosen_ratio": "0.1",
+    "cutoff_value": "1e-09",
+    "active_space": "9s,8p,7d,6f,5g",
+    "cal_levels": "1-4",
+    "atomic_number": "64",
+    "mass_number": "157",
+    "atomic_mass": "157",
+    "nuclear_spin": "1",
+    "nuclear_dipole": "1",
+    "nuclear_quadrupole": "1",
+    "n_estimators": "1000",
+    "random_state": "42",
+    "class_weight_0": "1",
+    "class_weight_1": "3",
+    "pytorch_threads": "12",
+    "std_threshold": "2e-5",
+    "csfs_num_relative_std_threshold": "2e-3",
+    "partition": "batch",
+    "tasks_per_node": "46",
+    "conda_env": "grasp-env"
+  }
+}
