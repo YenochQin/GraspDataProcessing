@@ -6,7 +6,6 @@
 """
 
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import warnings
 
 def configure_matplotlib_for_publication():
@@ -83,6 +82,7 @@ def disable_font_warnings():
         
         # 设置matplotlib日志级别
         import logging
+        import matplotlib
         mpl_logger = logging.getLogger('matplotlib')
         mpl_logger.setLevel(logging.ERROR)
         

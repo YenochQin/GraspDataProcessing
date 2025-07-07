@@ -5,13 +5,11 @@
 @date :2024/08/02 20:38:24
 @author :YenochQin (秦毅)
 '''
-import re
 import random
-from typing import Dict, Tuple, List, TYPE_CHECKING
+from typing import Dict, Tuple, List
 from collections import Counter, defaultdict
 import math
 import numpy as np
-import pickle
 from tqdm import tqdm
 
 # if TYPE_CHECKING:
@@ -27,8 +25,8 @@ from .CSFs_compress_extract import CSF_item_2_dict
     {   
         'CSFs_block_data': List[
                                 blocks[
-                                       block_csfs[CSF_item[csf_1], CSF_item[csf_2], ...]]
-                                       ]
+                                        block_csfs[CSF_item[csf_1], CSF_item[csf_2], ...]]
+                                        ]
                                 ],
         'CSFs_block_j_value',
         'CSFs_block_length': List[length of each block],
