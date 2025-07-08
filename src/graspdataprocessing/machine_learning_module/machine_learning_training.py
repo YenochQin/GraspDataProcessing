@@ -457,8 +457,8 @@ def check_grasp_cal_convergence(config, logger, current_calculation_csfs=None):
                 std_deviations.append(energy_std)
                 
                 logger.debug(f"Configuration {config_name}: "
-                           f"能级值={energy_values}, "
-                           f"标准差={energy_std:.5e}")
+                            f"能级值={energy_values}, "
+                            f"标准差={energy_std:.5e}")
         
         # 计算所有能级的平均标准差
         avg_energy_std = np.mean(std_deviations)
@@ -505,8 +505,13 @@ def check_grasp_cal_convergence(config, logger, current_calculation_csfs=None):
         logger.error(f"收敛检查过程中出错: {e}")
         return True  # 出错时继续计算
 
-def save_iteration_results(config, training_time, eval_time, execution_time, 
-                          evaluation_results, selection_results, logger):
+def save_iteration_results(config, 
+                        training_time, 
+                        eval_time, 
+                        execution_time, 
+                        evaluation_results, 
+                        selection_results, 
+                        logger):
     """
     保存迭代结果到CSV文件
     
@@ -844,12 +849,26 @@ def _plot_probability_distribution(y_probability, y_true, save_path):
     pos_probability = y_probability[y_true == 1]
     neg_probability = y_probability[y_true == 0]
     
-    plt.hist(neg_probability, bins=50, alpha=0.7, label=f'Negative samples (n={len(neg_probability)})', 
-             color='lightcoral', density=True)
-    plt.hist(pos_probability, bins=50, alpha=0.7, label=f'Positive samples (n={len(pos_probability)})', 
-             color='lightblue', density=True)
+    plt.hist(
+            neg_probability, 
+            bins=50, 
+            alpha=0.7, 
+            label=f'Negative samples (n={len(neg_probability)})', 
+            color='lightcoral', 
+            density=True)
+    plt.hist(
+            pos_probability, 
+            bins=50, 
+            alpha=0.7, 
+            label=f'Positive samples (n={len(pos_probability)})', 
+            color='lightblue', density=True)
     
-    plt.axvline(x=0.5, color='red', linestyle='--', alpha=0.8, label='Classification threshold (0.5)')
+    plt.axvline(
+                x=0.5, 
+                color='red', 
+                linestyle='--', 
+                alpha=0.8, 
+                label='Classification threshold (0.5)')
     
     plt.xlabel('Predicted Probability')
     plt.ylabel('Density')
