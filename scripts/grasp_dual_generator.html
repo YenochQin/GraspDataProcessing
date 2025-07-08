@@ -1065,6 +1065,18 @@ log_with_timestamp "复制python文件到计算目录..."
 cp \${GRASP_DATA_PROCESSING_ROOT}/tests/ml_csf_choosing/*.py \${cal_dir}
 log_with_timestamp "✅ 复制python文件到计算目录完成"
 ###########################################
+### rnucleus - 设置原子核参数
+log_with_timestamp "设置原子核参数..."
+input_commands="${config.atomic_number}
+${config.mass_number}
+n
+${config.atomic_mass}
+${config.nuclear_spin}
+${config.nuclear_dipole}
+${config.nuclear_quadrupole}"
+safe_grasp_execute "rnucleus" "\$input_commands" rnucleus
+log_with_timestamp "✅ 原子核参数设置完成"
+###########################################
 while true
 do
 ###########################################
@@ -1113,17 +1125,6 @@ log_with_timestamp "================第一次循环，使用\${loop1_rwfn_file}=
 cp ../\${loop1_rwfn_file} \${conf}.w
 orbital_params=\${Active_space}
 cal_method='rmcdhf'
-### rnucleus - 设置原子核参数
-log_with_timestamp "设置原子核参数..."
-input_commands="${config.atomic_number}
-${config.mass_number}
-n
-${config.atomic_mass}
-${config.nuclear_spin}
-${config.nuclear_dipole}
-${config.nuclear_quadrupole}"
-safe_grasp_execute "rnucleus" "\$input_commands" rnucleus
-log_with_timestamp "✅ 原子核参数设置完成"
 
 ### rangular
 safe_grasp_execute "rangular_mpi" "y" mpirun -np \${processor} rangular_mpi
