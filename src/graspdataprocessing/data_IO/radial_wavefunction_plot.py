@@ -9,7 +9,7 @@
 import numpy as np
 import pandas as pd
 
-from ..data_IO.grasp_raw_data_load import GraspFileLoad
+from .grasp_raw_data_load import GraspFileLoad
 from matplotlib import pyplot as plt
 
 class RadialWavefunctionPlot:

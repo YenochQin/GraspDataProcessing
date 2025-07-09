@@ -457,8 +457,8 @@ def check_grasp_cal_convergence(config, logger, current_calculation_csfs=None):
                 std_deviations.append(energy_std)
                 
                 logger.debug(f"Configuration {config_name}: "
-                           f"能级值={energy_values}, "
-                           f"标准差={energy_std:.5e}")
+                            f"能级值={energy_values}, "
+                            f"标准差={energy_std:.5e}")
         
         # 计算所有能级的平均标准差
         avg_energy_std = np.mean(std_deviations)
@@ -505,8 +505,14 @@ def check_grasp_cal_convergence(config, logger, current_calculation_csfs=None):
         logger.error(f"收敛检查过程中出错: {e}")
         return True  # 出错时继续计算
 
-def save_iteration_results(config, training_time, eval_time, execution_time, 
-                          evaluation_results, selection_results, logger):
+def save_iteration_results(
+                            config, 
+                            training_time, 
+                            eval_time, 
+                            execution_time, 
+                            evaluation_results, 
+                            selection_results, 
+                            logger):
     """
     保存迭代结果到CSV文件
     
