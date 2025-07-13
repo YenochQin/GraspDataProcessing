@@ -604,7 +604,17 @@ cd ${conf}_${loop}
 # mkdisks步骤
 if check_step_should_run "mkdisks" "$loop"; then
     if ! check_step_completed "mkdisks" "$loop" "$conf"; then
-        safe_grasp_execute "mkdisks" "" mkdisks ${processor} caltmp
+        # 读取mpi_tmp_path配置参数
+        mpi_tmp_path=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get mpi_tmp_path 2>&1)
+        
+        # 检查是否成功读取到参数
+        if [[ -n "$mpi_tmp_path" && "$mpi_tmp_path" != "null" && ! "$mpi_tmp_path" =~ ^ERROR: ]]; then
+            log_with_timestamp "使用配置的mpi_tmp路径: $mpi_tmp_path"
+            safe_grasp_execute "mkdisks" "" mkdisks ${processor} "$mpi_tmp_path"
+        else
+            log_with_timestamp "未配置mpi_tmp_path或读取失败，使用默认路径（当前目录）"
+            safe_grasp_execute "mkdisks" "" mkdisks ${processor}
+        fi
     fi
     
     # 检查是否应该在此步骤后停止

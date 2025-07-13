@@ -16,6 +16,10 @@ selected_csfs_mix_file = "mJ-1-90chosenas3_odd1.cm"
 energy_std_threshold = 1e-5
 csfs_num_relative_std_threshold = 0.001
 
+# GRASP计算参数
+tasks_per_node = 46
+mpi_tmp_path = "/home/workstation3/caltmp"  # MPI临时文件存储路径，如果不设置则使用当前目录
+
 [ml_config]
 expansion_ratio = 2
 high_prob_percentile = 95
