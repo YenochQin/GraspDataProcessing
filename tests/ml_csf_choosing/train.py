@@ -53,36 +53,14 @@ def main(config):
     try:
         # 加载数据文件
         # 分步骤获取返回值以提高可读性
-        data_files_result, load_status = gdp.load_data_files(config, logger)
-        
-        if not load_status['success']:
-            logger.error(f"数据文件加载失败: {load_status['error']}")
-            if 'failed_files' in load_status:
-                logger.error(f"失败文件: {load_status['failed_files']}")
-            raise Exception(load_status['error'])
-        
-        logger.info(f"数据文件加载成功: {load_status['message']}")
-        if 'loaded_files' in load_status:
-            logger.info(f"已加载文件: {load_status['loaded_files']}")
-        
         (energy_level_data_pd, 
          rmix_file_data, 
          raw_csfs_descriptors, 
          cal_csfs_data, 
-         caled_csfs_indices_dict) = data_files_result
+         caled_csfs_indices_dict) = gdp.load_data_files(config, logger)
         
         # 检查组态耦合
-        coupling_result, coupling_status = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
-        
-        if not coupling_status['success']:
-            logger.error(f"组态耦合检查失败: {coupling_status['error']}")
-            raise Exception(coupling_status['error'])
-        
-        logger.info(f"组态耦合检查成功: {coupling_status['message']}")
-        if 'coupling_details' in coupling_status:
-            logger.info(f"耦合详情: {coupling_status['coupling_details']}")
-        
-        cal_result, asfs_position = coupling_result
+        cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
         logger.info("************************************************")
 
     except Exception as e:
@@ -116,18 +94,9 @@ def main(config):
             logger.info(f"当前轮CSFs数量: {current_calculation_csfs}")
             
             # 传递当前轮CSFs数量给收敛性检查函数
-            convergence_result, convergence_status = gdp.check_grasp_cal_convergence(config, logger, current_calculation_csfs)
+            should_continue = gdp.check_grasp_cal_convergence(config, logger, current_calculation_csfs)
             
-            if not convergence_status['success']:
-                logger.error(f"收敛性检查失败: {convergence_status['error']}")
-                raise Exception(convergence_status['error'])
-            
-            should_continue = convergence_result
-            logger.info(f"收敛性检查结果: {convergence_status['message']}")
             logger.info(f"检查收敛性结果: {'继续计算' if should_continue else '已收敛，停止计算'}")
-            
-            if 'convergence_details' in convergence_status:
-                logger.info(f"收敛详情: {convergence_status['convergence_details']}")
             
             if not should_continue:
                 logger.info("************************************************")
@@ -140,59 +109,21 @@ def main(config):
         # 获取是否包含错误能级负样本的配置
         include_wrong_level_negatives = getattr(config, 'ml_config', {}).get('include_wrong_level_negatives', True)
         
-        descriptors_result, descriptors_status = gdp.generate_chosen_csfs_descriptors(
+        caled_csfs_descriptors = gdp.generate_chosen_csfs_descriptors(
             config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, asfs_position, logger, include_wrong_level_negatives
         )
         
-        if not descriptors_status['success']:
-            logger.error(f"CSFs描述符生成失败: {descriptors_status['error']}")
-            raise Exception(descriptors_status['error'])
-        
-        logger.info(f"CSFs描述符生成成功: {descriptors_status['message']}")
-        if 'descriptor_details' in descriptors_status:
-            logger.info(f"描述符详情: {descriptors_status['descriptor_details']}")
-        
-        caled_csfs_descriptors = descriptors_result
-        
-        unselected_result, unselected_status = gdp.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
-        
-        if not unselected_status['success']:
-            logger.error(f"未选择CSFs描述符获取失败: {unselected_status['error']}")
-            raise Exception(unselected_status['error'])
-        
-        logger.info(f"未选择CSFs描述符获取成功: {unselected_status['message']}")
-        
-        unselected_csfs_descriptors = unselected_result
+        unselected_csfs_descriptors = gdp.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
         X_unselected = unselected_csfs_descriptors.copy()
         logger.info("特征提取完成")
 
         # 训练模型
-        training_result, training_status = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, asfs_position, logger)
-        
-        if not training_status['success']:
-            logger.error(f"模型训练失败: {training_status['error']}")
-            if 'training_details' in training_status:
-                logger.error(f"训练详情: {training_status['training_details']}")
-            raise Exception(training_status['error'])
-        
-        logger.info(f"模型训练成功: {training_status['message']}")
-        if 'training_metrics' in training_status:
-            logger.info(f"训练指标: {training_status['training_metrics']}")
-        
-        model, X_train, X_test, y_train, y_test, training_time = training_result
+        model, X_train, X_test, y_train, y_test, training_time = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, asfs_position, logger)
 
         # 评估模型
-        evaluation_results, evaluation_status = gdp.evaluate_model(
+        evaluation_results = gdp.evaluate_model(
             model, X_train, X_test, y_train, y_test, X_unselected, config, logger
         )
-        
-        if not evaluation_status['success']:
-            logger.error(f"模型评估失败: {evaluation_status['error']}")
-            raise Exception(evaluation_status['error'])
-        
-        logger.info(f"模型评估成功: {evaluation_status['message']}")
-        if 'evaluation_details' in evaluation_status:
-            logger.info(f"评估详情: {evaluation_status['evaluation_details']}")
 
         # 详细的模型评估 - 借鉴ann3_proba.py的评估方式
         test_metrics = evaluation_results['test_metrics']
@@ -260,7 +191,7 @@ def main(config):
         logger.info(f"当前计算CSF预测概率维度: {y_current_calc_probability.shape}")
         
         # 使用标准化的保存和绘图函数
-        saved_files, save_status = gdp.save_and_plot_results(
+        saved_files = gdp.save_and_plot_results(
             evaluation_results=evaluation_results,
             model=model,
             config=config,
@@ -273,17 +204,6 @@ def main(config):
             plot_curves=True,
             logger=logger
         )
-        
-        if not save_status['success']:
-            logger.error(f"结果保存失败: {save_status['error']}")
-            if 'failed_saves' in save_status:
-                logger.error(f"失败的保存操作: {save_status['failed_saves']}")
-            raise Exception(save_status['error'])
-        
-        logger.info(f"预测结果与模型保存成功: {save_status['message']}")
-        logger.info(f"保存的文件: {list(saved_files.keys())}")
-        if 'save_details' in save_status:
-            logger.info(f"保存详情: {save_status['save_details']}")
 
         # 基于混合系数选择重要组态（已验证重要组态）
         csfs_above_threshold_indices = np.where(np.any(rmix_file_data.mix_coefficient_List[0][asfs_position]**2 >= np.float64(config.cutoff_value), axis = 0))[0]
@@ -485,7 +405,7 @@ def main(config):
         # 计算总执行时间
         total_execution_time = time.time() - execution_time
         
-        iteration_save_result, iteration_save_status = gdp.save_iteration_results(
+        gdp.save_iteration_results(
             config=config,
             training_time=training_time,
             eval_time=eval_time,
@@ -494,16 +414,6 @@ def main(config):
             selection_results=selection_results,
             logger=logger
         )
-        
-        if not iteration_save_status['success']:
-            logger.error(f"迭代结果保存失败: {iteration_save_status['error']}")
-            if 'save_failures' in iteration_save_status:
-                logger.error(f"保存失败项: {iteration_save_status['save_failures']}")
-            raise Exception(iteration_save_status['error'])
-        
-        logger.info(f"迭代结果保存成功: {iteration_save_status['message']}")
-        if 'saved_items' in iteration_save_status:
-            logger.info(f"已保存项目: {iteration_save_status['saved_items']}")
         
         # 数据保存完成，更新配置继续下一轮计算
         gdp.update_config(config_file_path, {'continue_cal': True})
@@ -530,15 +440,7 @@ def main(config):
 
     else:
         logger.info("************************************************")
-        error_handling_result, error_handling_status = gdp.handle_calculation_error(config, logger)
-        
-        if not error_handling_status['success']:
-            logger.error(f"计算错误处理失败: {error_handling_status['error']}")
-            raise Exception(error_handling_status['error'])
-        
-        logger.info(f"计算错误处理完成: {error_handling_status['message']}")
-        if 'error_actions' in error_handling_status:
-            logger.info(f"错误处理动作: {error_handling_status['error_actions']}")
+        gdp.handle_calculation_error(config, logger)
 
 
 if __name__ == "__main__":
