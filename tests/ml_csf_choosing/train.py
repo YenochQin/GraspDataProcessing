@@ -45,16 +45,7 @@ def main(config):
     gdp.setup_directories(config)
 
     # 验证初始文件
-    validation_result = gdp.validate_initial_files(config, logger)
-    if not validation_result['success']:
-        logger.error(f"初始文件验证失败: {validation_result['error']}")
-        if 'missing_files' in validation_result:
-            logger.error(f"缺失文件: {validation_result['missing_files']}")
-        raise FileNotFoundError(validation_result['error'])
-    else:
-        logger.info(f"初始文件验证成功: {validation_result['message']}")
-        if 'validated_files' in validation_result:
-            logger.info(f"已验证文件: {validation_result['validated_files']}")
+    gdp.validate_initial_files(config, logger)
 
     logger.info(f"初始比例: {config.chosen_ratio}")
     logger.info(f"光谱项: {config.spetral_term}")
@@ -62,7 +53,7 @@ def main(config):
     try:
         # 加载数据文件
         # 分步骤获取返回值以提高可读性
-        data_files_result, load_status = gdp.load_data_files(config)
+        data_files_result, load_status = gdp.load_data_files(config, logger)
         
         if not load_status['success']:
             logger.error(f"数据文件加载失败: {load_status['error']}")
@@ -81,7 +72,7 @@ def main(config):
          caled_csfs_indices_dict) = data_files_result
         
         # 检查组态耦合
-        coupling_result, coupling_status = gdp.check_configuration_coupling(config, energy_level_data_pd)
+        coupling_result, coupling_status = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
         
         if not coupling_status['success']:
             logger.error(f"组态耦合检查失败: {coupling_status['error']}")
@@ -125,7 +116,7 @@ def main(config):
             logger.info(f"当前轮CSFs数量: {current_calculation_csfs}")
             
             # 传递当前轮CSFs数量给收敛性检查函数
-            convergence_result, convergence_status = gdp.check_grasp_cal_convergence(config, current_calculation_csfs)
+            convergence_result, convergence_status = gdp.check_grasp_cal_convergence(config, logger, current_calculation_csfs)
             
             if not convergence_status['success']:
                 logger.error(f"收敛性检查失败: {convergence_status['error']}")
@@ -150,7 +141,7 @@ def main(config):
         include_wrong_level_negatives = getattr(config, 'ml_config', {}).get('include_wrong_level_negatives', True)
         
         descriptors_result, descriptors_status = gdp.generate_chosen_csfs_descriptors(
-            config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, asfs_position, include_wrong_level_negatives
+            config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, asfs_position, logger, include_wrong_level_negatives
         )
         
         if not descriptors_status['success']:
@@ -176,7 +167,7 @@ def main(config):
         logger.info("特征提取完成")
 
         # 训练模型
-        training_result, training_status = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, asfs_position)
+        training_result, training_status = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, asfs_position, logger)
         
         if not training_status['success']:
             logger.error(f"模型训练失败: {training_status['error']}")
@@ -192,7 +183,7 @@ def main(config):
 
         # 评估模型
         evaluation_results, evaluation_status = gdp.evaluate_model(
-            model, X_train, X_test, y_train, y_test, X_unselected, config
+            model, X_train, X_test, y_train, y_test, X_unselected, config, logger
         )
         
         if not evaluation_status['success']:
@@ -279,7 +270,8 @@ def main(config):
             y_current_calc_probability=y_current_calc_probability,
             save_model=True,
             save_data=True,
-            plot_curves=True
+            plot_curves=True,
+            logger=logger
         )
         
         if not save_status['success']:
@@ -499,7 +491,8 @@ def main(config):
             eval_time=eval_time,
             execution_time=total_execution_time,
             evaluation_results=evaluation_results,
-            selection_results=selection_results
+            selection_results=selection_results,
+            logger=logger
         )
         
         if not iteration_save_status['success']:
@@ -537,7 +530,7 @@ def main(config):
 
     else:
         logger.info("************************************************")
-        error_handling_result, error_handling_status = gdp.handle_calculation_error(config)
+        error_handling_result, error_handling_status = gdp.handle_calculation_error(config, logger)
         
         if not error_handling_status['success']:
             logger.error(f"计算错误处理失败: {error_handling_status['error']}")
