@@ -26,7 +26,18 @@ def apply_batchnorm_fix():
     try:
         import torch.nn as nn
         
-        # 首先尝试导入
+        # 清理可能的模块缓存
+        import sys
+        modules_to_clear = []
+        for module_name in sys.modules:
+            if 'graspdataprocessing' in module_name:
+                modules_to_clear.append(module_name)
+        
+        for module_name in modules_to_clear:
+            print(f"清理模块缓存: {module_name}")
+            del sys.modules[module_name]
+        
+        # 重新导入
         from graspdataprocessing.machine_learning_module.ANN import ANNClassifier
         
         # 保存原始方法
@@ -34,6 +45,8 @@ def apply_batchnorm_fix():
         
         def patched_build_model(self):
             """修复的_build_model方法"""
+            print(f"🔧 使用修复后的_build_model方法 (hidden_size={self.hidden_size})")
+            
             model = nn.Sequential(
                 nn.Linear(self.input_size, self.hidden_size),
                 nn.LayerNorm(self.hidden_size),  # 使用LayerNorm替代BatchNorm1d
@@ -47,26 +60,49 @@ def apply_batchnorm_fix():
             ).to(self.device)
             
             self._initialize_weights(model)
+            
+            # 验证没有BatchNorm
+            has_batchnorm = any(isinstance(m, nn.BatchNorm1d) for m in model.modules())
+            if has_batchnorm:
+                raise RuntimeError("修复失败：模型中仍然包含BatchNorm1d")
+            
+            print(f"✅ 模型创建成功，使用LayerNorm，无BatchNorm1d")
             return model
         
         # 应用修复
         ANNClassifier._build_model = patched_build_model
         print("✅ BatchNorm修复已应用")
         
-        # 快速验证
+        # 测试修复（包括训练模式）
         test_classifier = ANNClassifier(input_size=245, output_size=2)
         test_model = test_classifier._build_model()
-        has_batchnorm = any(isinstance(m, nn.BatchNorm1d) for m in test_model.modules())
         
-        if not has_batchnorm:
-            print("✅ 修复验证成功，没有BatchNorm1d")
-            return True
-        else:
+        # 验证没有BatchNorm
+        has_batchnorm = any(isinstance(m, nn.BatchNorm1d) for m in test_model.modules())
+        has_layernorm = any(isinstance(m, nn.LayerNorm) for m in test_model.modules())
+        
+        print(f"修复验证: BatchNorm1d={has_batchnorm}, LayerNorm={has_layernorm}")
+        
+        if has_batchnorm:
             print("❌ 修复验证失败，仍有BatchNorm1d")
+            return False
+        
+        # 测试训练模式下的batch_size=1
+        import torch
+        test_input = torch.randn(1, 245)
+        test_model.train()  # 设为训练模式
+        try:
+            output = test_model(test_input)
+            print(f"✅ 训练模式batch_size=1测试通过: {test_input.shape} -> {output.shape}")
+            return True
+        except Exception as e:
+            print(f"❌ 训练模式batch_size=1测试失败: {e}")
             return False
             
     except Exception as e:
         print(f"❌ BatchNorm修复失败: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def main():
