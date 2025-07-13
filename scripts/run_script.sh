@@ -281,12 +281,12 @@ which csfs_ml_choosing_config_load.py
 ###########################################
 ## 从config.toml读取配置参数
 log_with_timestamp "从config.toml读取配置参数..."
-atom=$(csfs_ml_choosing_config_load.py get atom 2>&1)
-conf=$(csfs_ml_choosing_config_load.py get conf 2>&1)
-processor=$(csfs_ml_choosing_config_load.py get tasks_per_node 2>&1)
-Active_space=$(csfs_ml_choosing_config_load.py get active_space 2>&1)
-cal_levels=$(csfs_ml_choosing_config_load.py get cal_levels 2>&1)
-selected_csfs_file=$(csfs_ml_choosing_config_load.py get selected_csfs_file 2>&1)
+atom=$(python csfs_ml_choosing_config_load.py get atom 2>&1)
+conf=$(python csfs_ml_choosing_config_load.py get conf 2>&1)
+processor=$(python csfs_ml_choosing_config_load.py get tasks_per_node 2>&1)
+Active_space=$(python csfs_ml_choosing_config_load.py get active_space 2>&1)
+cal_levels=$(python csfs_ml_choosing_config_load.py get cal_levels 2>&1)
+selected_csfs_file=$(python csfs_ml_choosing_config_load.py get selected_csfs_file 2>&1)
 
 # 生成派生文件名
 loop1_rwfn_file=$(basename "$selected_csfs_file" .c).w
@@ -298,7 +298,7 @@ log_with_timestamp "初始波函数文件: $loop1_rwfn_file"
 ###########################################
 log_with_timestamp "获取计算目录..."
 cal_dir=${PWD}
-csfs_ml_choosing_config_load.py set root_path ${cal_dir} 2>&1
+python csfs_ml_choosing_config_load.py set root_path ${cal_dir} 2>&1
 log_with_timestamp "计算目录: $cal_dir"
 ###########################################
 log_with_timestamp "设置Python程序绝对路径..."
@@ -308,11 +308,11 @@ log_with_timestamp "✅ Python程序路径设置完成: $ML_PYTHON_DIR"
 ###########################################
 # 读取步骤控制参数
 log_with_timestamp "读取步骤控制配置..."
-enable_step_control=$(csfs_ml_choosing_config_load.py get step_control.enable_step_control 2>&1)
-target_loop=$(csfs_ml_choosing_config_load.py get step_control.target_loop 2>&1)
-start_step=$(csfs_ml_choosing_config_load.py get step_control.start_step 2>&1)
-end_step=$(csfs_ml_choosing_config_load.py get step_control.end_step 2>&1)
-skip_completed_steps=$(csfs_ml_choosing_config_load.py get step_control.skip_completed_steps 2>&1)
+enable_step_control=$(python csfs_ml_choosing_config_load.py get step_control.enable_step_control 2>&1)
+target_loop=$(python csfs_ml_choosing_config_load.py get step_control.target_loop 2>&1)
+start_step=$(python csfs_ml_choosing_config_load.py get step_control.start_step 2>&1)
+end_step=$(python csfs_ml_choosing_config_load.py get step_control.end_step 2>&1)
+skip_completed_steps=$(python csfs_ml_choosing_config_load.py get step_control.skip_completed_steps 2>&1)
 
 log_with_timestamp "步骤控制配置:"
 log_with_timestamp "  启用步骤控制: $enable_step_control"
@@ -528,12 +528,12 @@ check_step_completed() {
 ###########################################
 ### rnucleus - 设置原子核参数
 log_with_timestamp "设置原子核参数..."
-atomic_number=$(csfs_ml_choosing_config_load.py get atomic_number 2>&1)
-mass_number=$(csfs_ml_choosing_config_load.py get mass_number 2>&1)
-atomic_mass=$(csfs_ml_choosing_config_load.py get atomic_mass 2>&1)
-nuclear_spin=$(csfs_ml_choosing_config_load.py get nuclear_spin 2>&1)
-nuclear_dipole=$(csfs_ml_choosing_config_load.py get nuclear_dipole 2>&1)
-nuclear_quadrupole=$(csfs_ml_choosing_config_load.py get nuclear_quadrupole 2>&1)
+atomic_number=$(python csfs_ml_choosing_config_load.py get atomic_number 2>&1)
+mass_number=$(python csfs_ml_choosing_config_load.py get mass_number 2>&1)
+atomic_mass=$(python csfs_ml_choosing_config_load.py get atomic_mass 2>&1)
+nuclear_spin=$(python csfs_ml_choosing_config_load.py get nuclear_spin 2>&1)
+nuclear_dipole=$(python csfs_ml_choosing_config_load.py get nuclear_dipole 2>&1)
+nuclear_quadrupole=$(python csfs_ml_choosing_config_load.py get nuclear_quadrupole 2>&1)
 
 input_commands="$atomic_number
 $mass_number
@@ -549,7 +549,7 @@ while true
 do
 ###########################################
 log_with_timestamp "获取循环计数..."
-loop=$(csfs_ml_choosing_config_load.py get cal_loop_num 2>&1)
+loop=$(python csfs_ml_choosing_config_load.py get cal_loop_num 2>&1)
 log_with_timestamp "当前循环: $loop"
 
 if [ $loop -eq 1 ]; then
@@ -569,7 +569,7 @@ if [ $loop -eq 1 ]; then
 fi
 ###########################################
 log_with_timestamp "检查计算状态..."
-cal_status=$(csfs_ml_choosing_config_load.py get continue_cal 2>&1)
+cal_status=$(python csfs_ml_choosing_config_load.py get continue_cal 2>&1)
 log_with_timestamp "计算状态: $cal_status"
 
 if [[ "$cal_status" == "false" ]]; then
@@ -816,7 +816,7 @@ fi
 
 log_with_timestamp "返回上级目录..."
 cd ..
-csfs_ml_choosing_config_load.py set cal_method ${cal_method} 2>&1
+python csfs_ml_choosing_config_load.py set cal_method ${cal_method} 2>&1
 ## 机器学习训练
 if check_step_should_run "train" "$loop"; then
     log_with_timestamp "================执行机器学习训练================"
