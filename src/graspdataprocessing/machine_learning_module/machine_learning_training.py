@@ -116,7 +116,20 @@ def train_model(
     if not torch.cuda.is_available():
         # 获取系统CPU核心数
         cpu_count = os.cpu_count() or 4  # 如果无法获取则默认使用4核
-        optimal_threads = min(32, cpu_count)  # 最多使用8线程，不超过系统核心数
+        
+        # 从配置文件读取PyTorch线程数，如果未设置则使用默认值
+        config_threads = getattr(config, 'pytorch_threads', None)
+        if config_threads is not None:
+            try:
+                config_threads = int(config_threads)
+                optimal_threads = min(config_threads, cpu_count)  # 不超过系统核心数
+                logger.info(f"使用配置文件中的PyTorch线程数: {config_threads}")
+            except (ValueError, TypeError):
+                logger.warning(f"配置文件中的pytorch_threads值无效: {config_threads}，使用默认值")
+                optimal_threads = min(32, cpu_count)
+        else:
+            optimal_threads = min(32, cpu_count)  # 默认最多使用32线程
+            logger.info(f"配置文件中未设置pytorch_threads，使用默认值")
         
         # 设置PyTorch线程数
         torch.set_num_threads(optimal_threads)
@@ -128,7 +141,8 @@ def train_model(
         
         logger.info(f"启用CPU多线程优化:")
         logger.info(f"- 系统CPU核心数: {cpu_count}")
-        logger.info(f"- PyTorch线程数: {optimal_threads}")
+        logger.info(f"- 配置的线程数: {config_threads if config_threads else '未设置'}")
+        logger.info(f"- 实际PyTorch线程数: {optimal_threads}")
         logger.info(f"- 建议配置: max_epochs=150, batch_size=4096, hidden_size=96")
         
         # 调整训练参数用于CPU优化
