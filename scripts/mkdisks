@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# set -x
+rm disks
+processor=$1
+echo "the processor you input is $1"
+cat >>disks <<EOF
+'${PWD}'
+EOF
+dir=$2
+for ((i=1; i<=$1; i++)); do
+if [ $# -eq 1 ]; then
+cat >>disks <<EOF
+'${PWD}/mpi_tmp'
+EOF
+elif [ $# -eq 2 ]; then
+rm -rf /home/workstation2/caltmp/*
+cat >>disks <<EOF
+'/home/workstation2/caltmp/$2'
+EOF
+fi
+
+done

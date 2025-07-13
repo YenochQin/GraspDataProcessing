@@ -78,11 +78,11 @@ class ANNClassifier:
         """构建神经网络模型"""
         model = nn.Sequential(
             nn.Linear(self.input_size, self.hidden_size),
-            nn.BatchNorm1d(self.hidden_size),
+            nn.LayerNorm(self.hidden_size),  # LayerNorm works with any batch size
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(self.hidden_size, self.hidden_size // 2),
-            nn.BatchNorm1d(self.hidden_size // 2),
+            nn.LayerNorm(self.hidden_size // 2),  # LayerNorm works with any batch size
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(self.hidden_size // 2, self.output_size)

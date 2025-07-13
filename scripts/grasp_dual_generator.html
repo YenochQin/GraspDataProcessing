@@ -479,6 +479,77 @@
                 </div>
 
                 <div class="section">
+                    <h3>🎯 步骤级断点重启控制</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="enable_step_control">启用步骤控制</label>
+                            <select id="enable_step_control">
+                                <option value="false">否（正常执行）</option>
+                                <option value="true">是（启用步骤控制）</option>
+                            </select>
+                            <div class="help-text">是否启用步骤级精确控制功能</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target_loop">目标循环编号</label>
+                            <input type="number" id="target_loop" min="0" max="20" placeholder="例如: 0">
+                            <div class="help-text">0表示所有循环，>0表示仅在指定循环应用控制</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="start_step">起始步骤</label>
+                            <select id="start_step">
+                                <option value="auto">自动（从循环开始）</option>
+                                <option value="initial_csfs">initial_csfs（初始化CSFs数据）</option>
+                                <option value="choosing_csfs">choosing_csfs（组态选择）</option>
+                                <option value="mkdisks">mkdisks（创建计算磁盘）</option>
+                                <option value="rangular">rangular（角系数计算）</option>
+                                <option value="rwfnestimate">rwfnestimate（波函数估计）</option>
+                                <option value="rmcdhf">rmcdhf（自洽场计算）</option>
+                                <option value="rci">rci（组态相互作用计算）</option>
+                                <option value="rsave">rsave（保存计算结果）</option>
+                                <option value="jj2lsj">jj2lsj（jj到LSJ转换）</option>
+                                <option value="rlevels">rlevels（能级数据生成）</option>
+                                <option value="train">train（机器学习训练）</option>
+                            </select>
+                            <div class="help-text">从哪个步骤开始执行</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="end_step">结束步骤</label>
+                            <select id="end_step">
+                                <option value="auto">自动（执行到结束）</option>
+                                <option value="initial_csfs">initial_csfs（初始化CSFs数据）</option>
+                                <option value="choosing_csfs">choosing_csfs（组态选择）</option>
+                                <option value="mkdisks">mkdisks（创建计算磁盘）</option>
+                                <option value="rangular">rangular（角系数计算）</option>
+                                <option value="rwfnestimate">rwfnestimate（波函数估计）</option>
+                                <option value="rmcdhf">rmcdhf（自洽场计算）</option>
+                                <option value="rci">rci（组态相互作用计算）</option>
+                                <option value="rsave">rsave（保存计算结果）</option>
+                                <option value="jj2lsj">jj2lsj（jj到LSJ转换）</option>
+                                <option value="rlevels">rlevels（能级数据生成）</option>
+                                <option value="train">train（机器学习训练）</option>
+                            </select>
+                            <div class="help-text">在哪个步骤后停止执行</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="skip_completed_steps">跳过已完成步骤</label>
+                            <select id="skip_completed_steps">
+                                <option value="true">是（智能跳过）</option>
+                                <option value="false">否（强制重新执行）</option>
+                            </select>
+                            <div class="help-text">是否自动检测并跳过已完成的步骤</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
                     <h3>⚡ SLURM设置</h3>
                     <div class="form-row">
                         <div class="form-group">
@@ -700,6 +771,14 @@
                 pytorch_threads: document.getElementById('pytorch_threads').value || '32',
                 std_threshold: document.getElementById('std_threshold').value || '1e-5',
                 csfs_num_relative_std_threshold: document.getElementById('csfs_num_relative_std_threshold').value || '1e-3',
+                
+                // 步骤控制配置
+                enable_step_control: document.getElementById('enable_step_control').value || 'false',
+                target_loop: document.getElementById('target_loop').value || '0',
+                start_step: document.getElementById('start_step').value || 'auto',
+                end_step: document.getElementById('end_step').value || 'auto',
+                skip_completed_steps: document.getElementById('skip_completed_steps').value || 'true',
+                
                 partition: document.getElementById('partition').value || 'work3',
                 tasks_per_node: document.getElementById('tasks_per_node').value || '46',
                 conda_env: document.getElementById('conda_env').value || 'grasp-env'
@@ -731,21 +810,40 @@ target_pool_file = "${config.conf}.c"
 root_path = "${config.root_path}"
 selected_csfs_file = "${config.selected_csfs}.c"
 selected_csfs_mix_file = "${config.selected_csfs}.cm"
+energy_std_threshold = ${config.std_threshold}
+csfs_num_relative_std_threshold = ${config.csfs_num_relative_std_threshold}
+cal_method = "rmcdhf"
 
-# 收敛性检查参数
-std_threshold = ${config.std_threshold}  # 标准差阈值
-csfs_num_relative_std_threshold = ${config.csfs_num_relative_std_threshold}  # 相对标准差阈值
+# GRASP计算参数
+active_space = "${config.active_space}"
+cal_levels = "${config.cal_levels}"
+tasks_per_node = ${config.tasks_per_node}
 
-# CPU配置参数
+# 原子核参数
+atomic_number = ${config.atomic_number}
+mass_number = ${config.mass_number}
+atomic_mass = ${config.atomic_mass}
+nuclear_spin = ${config.nuclear_spin}
+nuclear_dipole = ${config.nuclear_dipole}
+nuclear_quadrupole = ${config.nuclear_quadrupole}
+
+# 步骤级断点重启控制
+[step_control]
+enable_step_control = ${config.enable_step_control}      # 是否启用步骤级控制
+target_loop = ${config.target_loop}                  # 目标循环编号（0表示使用当前cal_loop_num）
+start_step = "${config.start_step}"              # 起始步骤（auto/initial_csfs/choosing_csfs/mkdisks/rangular/rwfnestimate/rmcdhf/rsave/jj2lsj/rlevels/train）
+end_step = "${config.end_step}"                # 结束步骤（auto表示执行到最后）
+skip_completed_steps = ${config.skip_completed_steps}      # 是否跳过已完成的步骤
+
 [cpu_config]
 pytorch_threads = ${config.pytorch_threads}
 
-# ML策略配置参数 
 [ml_config]
-expansion_ratio = 2  # 扩展比例：下次计算组态数 = expansion_ratio × 重要组态数
-high_prob_percentile = 95  # 高概率阈值分位数：用于识别高质量组态
-overfitting_threshold = 0.1  # 过拟合检测阈值：训练F1 - 测试F1 > 此值时警告
-underfitting_threshold = -0.05  # 欠拟合检测阈值：训练F1 - 测试F1 < 此值时警告
+expansion_ratio = 2
+high_prob_percentile = 95
+overfitting_threshold = 0.1
+underfitting_threshold = -0.05
+include_wrong_level_negatives = true
 
 [model_params]
 n_estimators = ${config.n_estimators}
@@ -1018,9 +1116,6 @@ log_with_timestamp "作业名: \${SLURM_JOB_NAME:-未设置}"
 log_with_timestamp "作业编号: \${SLURM_JOB_ID:-未设置}"
 
 ###########################################
-# mpi run CPU core
-processor=${config.tasks_per_node}
-###########################################
 ## module load
 log_with_timestamp "加载必要的模块..."
 ${generateModuleLoads(config)}
@@ -1037,24 +1132,35 @@ conda activate ${config.conda_env} || {
 }
 log_with_timestamp "✅ Conda 环境激活成功"
 ###########################################
-## configuration
-atom=${config.atom}
-conf="${config.conf}"
-loop1_rwfn_file="${loop1RwfnFile}"
-rwfnestimate_file=${rwfnEstimateFile}
-Active_space="${config.active_space}"
-cal_levels="${config.cal_levels}"
-log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
+# 自动设置 GraspDataProcessing 包路径和工具脚本路径
+GRASP_DATA_PROCESSING_ROOT="${config.grasp_data_processing_root}"
+export PYTHONPATH="\${GRASP_DATA_PROCESSING_ROOT}/src:\${PYTHONPATH}"
+export PATH="\${GRASP_DATA_PROCESSING_ROOT}/scripts:\${PATH}"
+log_with_timestamp "设置 PYTHONPATH: \$PYTHONPATH"
+log_with_timestamp "设置 PATH: \$PATH"
 ###########################################
-# 检查 Python 路径
+# 检查 Python 路径和配置工具
 log_with_timestamp "检查 Python 环境..."
 which python
 python --version
+which csfs_ml_choosing_config_load.py
+###########################################
+## 从config.toml读取配置参数
+log_with_timestamp "从config.toml读取配置参数..."
+atom=\$(csfs_ml_choosing_config_load.py get atom 2>&1)
+conf=\$(csfs_ml_choosing_config_load.py get conf 2>&1)
+processor=\$(csfs_ml_choosing_config_load.py get tasks_per_node 2>&1)
+Active_space=\$(csfs_ml_choosing_config_load.py get active_space 2>&1)
+cal_levels=\$(csfs_ml_choosing_config_load.py get cal_levels 2>&1)
+selected_csfs_file=\$(csfs_ml_choosing_config_load.py get selected_csfs_file 2>&1)
 
-# 自动设置 GraspDataProcessing 包路径
-GRASP_DATA_PROCESSING_ROOT="${config.grasp_data_processing_root}"
-export PYTHONPATH="\${GRASP_DATA_PROCESSING_ROOT}/src:\${PYTHONPATH}"
-log_with_timestamp "设置 PYTHONPATH: $PYTHONPATH"
+# 生成派生文件名
+loop1_rwfn_file=\$(basename "\$selected_csfs_file" .c).w
+rwfnestimate_file="\${conf}_1.w"
+
+log_with_timestamp "配置参数: atom=\$atom, conf=\$conf, processor=\$processor"
+log_with_timestamp "活性空间: \$Active_space, 计算能级: \$cal_levels"
+log_with_timestamp "初始波函数文件: \$loop1_rwfn_file"
 ###########################################
 log_with_timestamp "获取计算目录..."
 cal_dir=\${PWD}
@@ -1067,13 +1173,20 @@ log_with_timestamp "✅ 复制python文件到计算目录完成"
 ###########################################
 ### rnucleus - 设置原子核参数
 log_with_timestamp "设置原子核参数..."
-input_commands="${config.atomic_number}
-${config.mass_number}
+atomic_number=\$(csfs_ml_choosing_config_load.py get atomic_number 2>&1)
+mass_number=\$(csfs_ml_choosing_config_load.py get mass_number 2>&1)
+atomic_mass=\$(csfs_ml_choosing_config_load.py get atomic_mass 2>&1)
+nuclear_spin=\$(csfs_ml_choosing_config_load.py get nuclear_spin 2>&1)
+nuclear_dipole=\$(csfs_ml_choosing_config_load.py get nuclear_dipole 2>&1)
+nuclear_quadrupole=\$(csfs_ml_choosing_config_load.py get nuclear_quadrupole 2>&1)
+
+input_commands="\$atomic_number
+\$mass_number
 n
-${config.atomic_mass}
-${config.nuclear_spin}
-${config.nuclear_dipole}
-${config.nuclear_quadrupole}"
+\$atomic_mass
+\$nuclear_spin
+\$nuclear_dipole
+\$nuclear_quadrupole"
 safe_grasp_execute "rnucleus" "\$input_commands" rnucleus
 log_with_timestamp "✅ 原子核参数设置完成"
 ###########################################

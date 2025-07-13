@@ -20,88 +20,124 @@ except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
 
-def load_target_pool_data(config, logger):
+def load_target_pool_data(config):
     """
     加载target_pool CSFs数据，从预处理文件中加载
     注意：预处理工作已在initial_csfs.py中完成
     
     Args:
         config: 配置对象
-        logger: 日志记录器
         
     Returns:
-        target_pool_csfs_data: 目标池CSFs数据对象
+        tuple: (target_pool_csfs_data, status_info)
     """
     root_path = Path(config.root_path)
     target_pool_binary_path = root_path / f"{config.conf}.pkl"
     
     if not target_pool_binary_path.exists():
-        logger.error(f"未找到预处理的CSFs数据文件: {target_pool_binary_path}")
-        logger.error("请先运行 initial_csfs.py 进行数据预处理")
-        raise FileNotFoundError(f"预处理文件不存在: {target_pool_binary_path}")
+        return None, {
+            'success': False,
+            'error': f"未找到预处理的CSFs数据文件: {target_pool_binary_path}",
+            'suggestion': "请先运行 initial_csfs.py 进行数据预处理",
+            'file_path': str(target_pool_binary_path)
+        }
     
-    # 加载CSFs数据
-    target_pool_csfs_data = gdp.load_csfs_binary(target_pool_binary_path)
-    logger.info(f"从二进制文件加载CSFs数据: {target_pool_binary_path}")
-    
-    return target_pool_csfs_data
+    try:
+        # 加载CSFs数据
+        target_pool_csfs_data = gdp.load_csfs_binary(target_pool_binary_path)
+        return target_pool_csfs_data, {
+            'success': True,
+            'message': f"从二进制文件加载CSFs数据",
+            'file_path': str(target_pool_binary_path)
+        }
+    except Exception as e:
+        return None, {
+            'success': False,
+            'error': f"加载CSFs数据时发生错误: {str(e)}",
+            'file_path': str(target_pool_binary_path)
+        }
 
-def load_selected_indices(config, logger, target_pool_csfs_data_block_num):
+def load_selected_indices(config, target_pool_csfs_data_block_num):
     """
     加载selected indices数据
     
     Args:
         config: 配置对象
-        logger: 日志记录器
-        target_pool_csfs_data: 目标池CSFs数据对象（用于获取block_num）
+        target_pool_csfs_data_block_num: 目标池CSFs数据块数量
         
     Returns:
-        dict: selected CSFs indices字典
+        tuple: (selected_csfs_indices_dict, status_info)
     """
     root_path = Path(config.root_path)
     selected_indices_path = root_path / f"{config.conf}_selected_indices.pkl"
     
     # 加载selected indices
     if selected_indices_path.exists():
-        selected_csfs_indices_dict = gdp.csfs_index_load(selected_indices_path)
-        logger.info(f"加载初筛CSFs indices: {selected_indices_path}")
+        try:
+            selected_csfs_indices_dict = gdp.csfs_index_load(selected_indices_path)
+            return selected_csfs_indices_dict, {
+                'success': True,
+                'message': f"加载初筛CSFs indices",
+                'file_path': str(selected_indices_path),
+                'found_existing': True
+            }
+        except Exception as e:
+            selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data_block_num)}
+            return selected_csfs_indices_dict, {
+                'success': False,
+                'error': f"加载indices文件失败: {str(e)}",
+                'file_path': str(selected_indices_path),
+                'fallback': True
+            }
     else:
         # 如果没有selected indices，创建空的
         selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data_block_num)}
-        logger.info("未找到初筛CSFs indices文件，使用空的indices")
-    
-    return selected_csfs_indices_dict
+        return selected_csfs_indices_dict, {
+            'success': True,
+            'message': "未找到初筛CSFs indices文件，使用空的indices",
+            'file_path': str(selected_indices_path),
+            'found_existing': False
+        }
 
-def truncate_initial_selected_with_weights(config, logger, selected_csfs_indices_dict, target_pool_csfs_data):
+def truncate_initial_selected_with_weights(config, selected_csfs_indices_dict, target_pool_csfs_data):
     """
     使用权重信息对initial_selected进行智能截断
     
     Args:
         config: 配置对象
-        logger: 日志记录器
         selected_csfs_indices_dict: 原始选择的indices字典
         target_pool_csfs_data: 目标池数据
         
     Returns:
-        dict: 截断后的indices字典
+        tuple: (truncated_indices_dict, status_info)
     """
     root_path = Path(config.root_path)
     mix_file_path = root_path / config.selected_csfs_mix_file
     
     # 尝试加载混合系数文件进行权重排序
     csf_weights = {}
+    weight_loading_info = {'loaded': False, 'error': None}
+    
     if mix_file_path.exists():
         try:
-            logger.info(f"🔍 加载混合系数文件进行权重排序: {mix_file_path}")
             # 这里可以添加加载混合系数文件的逻辑
             # mix_data = gdp.load_mix_coefficient_file(mix_file_path)
             # 暂时使用简单的方法：保持原有顺序作为权重
-            pass
+            weight_loading_info = {
+                'loaded': True, 
+                'file_path': str(mix_file_path),
+                'message': '加载混合系数文件进行权重排序'
+            }
         except Exception as e:
-            logger.warning(f"加载混合系数文件失败: {e}")
+            weight_loading_info = {
+                'loaded': False,
+                'error': f"加载混合系数文件失败: {e}",
+                'file_path': str(mix_file_path)
+            }
     
     truncated_indices_dict = {}
     random_selection_ratio = 0.1  # 固定10%的随机选择比例
+    truncation_details = []
     
     total_target_pool = sum(len(target_pool_csfs_data.CSFs_block_data[block]) 
                             for block in range(target_pool_csfs_data.block_num))
@@ -127,52 +163,91 @@ def truncate_initial_selected_with_weights(config, logger, selected_csfs_indices
                     reverse=True
                 )
                 truncated_indices = weighted_indices[:truncated_count]
-                logger.info(f"块{block}: 基于权重排序截断 {len(block_initial_selected)} -> {len(truncated_indices)}")
+                truncation_details.append({
+                    'block': block,
+                    'method': 'weight_based',
+                    'original_count': len(block_initial_selected),
+                    'truncated_count': len(truncated_indices),
+                    'random_space': random_selection_count
+                })
             else:
                 # 简单截断：保留前N个（假设按重要性排序）
                 truncated_indices = block_initial_selected[:truncated_count]
-                logger.info(f"块{block}: 简单截断 {len(block_initial_selected)} -> {len(truncated_indices)}")
+                truncation_details.append({
+                    'block': block,
+                    'method': 'simple',
+                    'original_count': len(block_initial_selected),
+                    'truncated_count': len(truncated_indices),
+                    'random_space': random_selection_count
+                })
             
-            logger.info(f"         预留随机选择空间: {random_selection_count}")
             truncated_indices_dict[block] = truncated_indices
         else:
             truncated_indices_dict[block] = block_initial_selected
+            truncation_details.append({
+                'block': block,
+                'method': 'no_truncation',
+                'original_count': len(block_initial_selected),
+                'truncated_count': len(block_initial_selected),
+                'random_space': 0
+            })
     
-    return truncated_indices_dict
+    status_info = {
+        'success': True,
+        'weight_loading': weight_loading_info,
+        'truncation_details': truncation_details,
+        'total_target_chosen': total_target_chosen,
+        'random_selection_ratio': random_selection_ratio
+    }
+    
+    return truncated_indices_dict, status_info
 
-def load_previous_chosen_indices(config, logger):
+def load_previous_chosen_indices(config):
     """
     加载前一轮选择的CSFs索引
     
     Args:
         config: 配置对象
-        logger: 日志记录器
         
     Returns:
-        dict: 前一轮选择的indices字典
+        tuple: (indices_dict, status_info)
     """
     root_path = Path(config.root_path)
     previous_indices_file = root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}_important_indices'
     
     if previous_indices_file.with_suffix('.pkl').exists():
-        final_chosen_indices_dict = gdp.csfs_index_load(previous_indices_file)
-        logger.info(f"✅ 加载上一轮计算重要的CSFs indices: {previous_indices_file}.pkl")
-        logger.info(f"📊 上一轮计算重要组态数量: {[len(indices) for indices in final_chosen_indices_dict.values()]}")
-        return final_chosen_indices_dict
+        try:
+            final_chosen_indices_dict = gdp.csfs_index_load(previous_indices_file)
+            counts = [len(indices) for indices in final_chosen_indices_dict.values()]
+            return final_chosen_indices_dict, {
+                'success': True,
+                'message': '加载上一轮计算重要的CSFs indices',
+                'file_path': str(previous_indices_file) + '.pkl',
+                'config_counts': counts
+            }
+        except Exception as e:
+            return None, {
+                'success': False,
+                'error': f'加载indices文件失败: {str(e)}',
+                'file_path': str(previous_indices_file) + '.pkl'
+            }
     else:
-        logger.info(f"📝 未找到上一轮计算的重要CSFs indices文件: {previous_indices_file}.pkl")
-        return None
+        return None, {
+            'success': False,
+            'message': '未找到上一轮计算的重要CSFs indices文件',
+            'file_path': str(previous_indices_file) + '.pkl',
+            'file_exists': False
+        }
 
-def load_ml_final_chosen_indices(config, logger):
+def load_ml_final_chosen_indices(config):
     """
     加载机器学习训练后生成的最终选择索引（优先级最高）
     
     Args:
         config: 配置对象
-        logger: 日志记录器
         
     Returns:
-        dict: 机器学习最终选择的indices字典，如果不存在则返回None
+        tuple: (indices_dict, status_info)
     """
     root_path = Path(config.root_path)
     
@@ -180,50 +255,78 @@ def load_ml_final_chosen_indices(config, logger):
     final_chosen_path = root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}_final_chosen_indices'
     
     if final_chosen_path.with_suffix('.pkl').exists():
-        final_chosen_indices_dict = gdp.csfs_index_load(final_chosen_path)
-        logger.info(f"✅ 加载ML最终选择的CSFs indices: {final_chosen_path}.pkl")
-        logger.info(f"📊 ML选择的组态数量: {[len(indices) for indices in final_chosen_indices_dict.values()]}")
-        return final_chosen_indices_dict
+        try:
+            final_chosen_indices_dict = gdp.csfs_index_load(final_chosen_path)
+            counts = [len(indices) for indices in final_chosen_indices_dict.values()]
+            return final_chosen_indices_dict, {
+                'success': True,
+                'message': '加载ML最终选择的CSFs indices',
+                'file_path': str(final_chosen_path) + '.pkl',
+                'config_counts': counts
+            }
+        except Exception as e:
+            return None, {
+                'success': False,
+                'error': f'加载ML indices文件失败: {str(e)}',
+                'file_path': str(final_chosen_path) + '.pkl'
+            }
     else:
-        logger.info(f"📝 未找到ML最终选择的indices文件: {final_chosen_path}.pkl")
-        return None
+        return None, {
+            'success': False,
+            'message': '未找到ML最终选择的indices文件',
+            'file_path': str(final_chosen_path) + '.pkl',
+            'file_exists': False
+        }
 
-def load_previous_ml_chosen_indices(config, logger):
+def load_previous_ml_chosen_indices(config):
     """
     加载前一轮计算后机器学习选择出的CSFs索引（备用选项）
     
     Args:
         config: 配置对象
-        logger: 日志记录器
         
     Returns:
-        dict: 前一轮选择的indices字典
+        tuple: (indices_dict, status_info)
     """
     root_path = Path(config.root_path)
     ml_results_path = root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}_final_chosen_indices'
     
     if ml_results_path.with_suffix('.pkl').exists():
-        selected_csfs_indices_dict = gdp.csfs_index_load(ml_results_path)
-        logger.info(f"加载机器学习选择的CSFs indices: {ml_results_path}.pkl")
-        return selected_csfs_indices_dict
+        try:
+            selected_csfs_indices_dict = gdp.csfs_index_load(ml_results_path)
+            return selected_csfs_indices_dict, {
+                'success': True,
+                'message': '加载机器学习选择的CSFs indices',
+                'file_path': str(ml_results_path) + '.pkl'
+            }
+        except Exception as e:
+            return {}, {
+                'success': False,
+                'error': f'加载ML indices文件失败: {str(e)}',
+                'file_path': str(ml_results_path) + '.pkl'
+            }
     else:
-        logger.warning(f"未找机器学习选择的CSFs indices文件: {ml_results_path}")
-        return {}
+        return {}, {
+            'success': False,
+            'message': '未找机器学习选择的CSFs indices文件',
+            'file_path': str(ml_results_path),
+            'file_exists': False
+        }
 
-def build_csfs_from_indices(target_pool_csfs_data, chosen_indices_dict, logger):
+def build_csfs_from_indices(target_pool_csfs_data, chosen_indices_dict):
     """
     直接从索引构建CSFs数据（类似ann3_proba.py的方式）
     
     Args:
         target_pool_csfs_data: 目标池CSFs数据
         chosen_indices_dict: 选择的索引字典
-        logger: 日志记录器
         
     Returns:
-        tuple: (chosen_csfs_dict, unselected_indices_dict)
+        tuple: (chosen_csfs_dict, unselected_indices_dict, status_info)
     """
     chosen_csfs_dict = {}
     unselected_indices_dict = {}
+    block_results = []
     
     for block in range(target_pool_csfs_data.block_num):
         if block in chosen_indices_dict and len(chosen_indices_dict[block]) > 0:
@@ -232,9 +335,9 @@ def build_csfs_from_indices(target_pool_csfs_data, chosen_indices_dict, logger):
             
             # 验证索引的有效性
             max_index = len(target_pool_csfs_data.CSFs_block_data[block]) - 1
+            invalid_indices = []
             if np.any(chosen_indices > max_index):
                 invalid_indices = chosen_indices[chosen_indices > max_index]
-                logger.warning(f"块{block}中发现无效索引: {invalid_indices}，最大有效索引: {max_index}")
                 chosen_indices = chosen_indices[chosen_indices <= max_index]
             
             # 构建选择的CSFs
@@ -244,14 +347,36 @@ def build_csfs_from_indices(target_pool_csfs_data, chosen_indices_dict, logger):
             all_indices = np.arange(len(target_pool_csfs_data.CSFs_block_data[block]))
             unselected_indices_dict[block] = np.setdiff1d(all_indices, chosen_indices).tolist()
             
-            logger.info(f"块{block}: 通过索引选择了{len(chosen_csfs_dict[block])}个CSFs，剩余{len(unselected_indices_dict[block])}个")
+            block_results.append({
+                'block': block,
+                'chosen_count': len(chosen_csfs_dict[block]),
+                'unselected_count': len(unselected_indices_dict[block]),
+                'invalid_indices': invalid_indices.tolist() if len(invalid_indices) > 0 else [],
+                'max_valid_index': max_index,
+                'has_indices': True
+            })
         else:
             # 如果没有指定索引，使用空列表
             chosen_csfs_dict[block] = []
             unselected_indices_dict[block] = list(range(len(target_pool_csfs_data.CSFs_block_data[block])))
-            logger.warning(f"块{block}: 没有指定索引，选择0个CSFs")
+            
+            block_results.append({
+                'block': block,
+                'chosen_count': 0,
+                'unselected_count': len(unselected_indices_dict[block]),
+                'invalid_indices': [],
+                'max_valid_index': len(target_pool_csfs_data.CSFs_block_data[block]) - 1,
+                'has_indices': False
+            })
     
-    return chosen_csfs_dict, unselected_indices_dict
+    status_info = {
+        'success': True,
+        'method': 'direct_index_build',
+        'block_results': block_results,
+        'total_blocks': target_pool_csfs_data.block_num
+    }
+    
+    return chosen_csfs_dict, unselected_indices_dict, status_info
 
 def perform_csfs_selection(config):
     """
@@ -264,8 +389,16 @@ def perform_csfs_selection(config):
         dict: 包含选择结果的字典
     """
     logger = gdp.setup_logging(config)
+    
     # 步骤1：加载目标池数据
-    target_pool_csfs_data = load_target_pool_data(config, logger)
+    target_pool_csfs_data, load_status = load_target_pool_data(config)
+    if not load_status['success']:
+        logger.error(load_status['error'])
+        if 'suggestion' in load_status:
+            logger.error(load_status['suggestion'])
+        raise FileNotFoundError(load_status['error'])
+    
+    logger.info(f"{load_status['message']}: {load_status['file_path']}")
     
     logger.info("CSFs选择程序启动")
     logger.info(f'计算循环次数: {config.cal_loop_num}')
@@ -283,7 +416,19 @@ def perform_csfs_selection(config):
     
     if config.cal_loop_num == 1:
         # 第一轮使用initial_selected_indices（来自selected_csfs_file或空）
-        selected_csfs_indices_dict = load_selected_indices(config, logger, target_pool_csfs_data.block_num)
+        selected_csfs_indices_dict, indices_status = load_selected_indices(config, target_pool_csfs_data.block_num)
+        
+        # 记录加载状态
+        if indices_status['success']:
+            if indices_status['found_existing']:
+                logger.info(f"{indices_status['message']}: {indices_status['file_path']}")
+            else:
+                logger.info(indices_status['message'])
+        else:
+            if 'fallback' in indices_status:
+                logger.warning(f"{indices_status['error']}，使用空的indices")
+            else:
+                logger.error(indices_status['error'])
         selection_method = "initial_selected"
         logger.info("第一轮选择，使用基础selected indices")
         
@@ -301,17 +446,35 @@ def perform_csfs_selection(config):
             logger.info(f"🔧 使用cutoff_value={config.cutoff_value}进行截断处理")
             
             # 对每个块进行截断处理
-            truncated_indices_dict = truncate_initial_selected_with_weights(config, logger, selected_csfs_indices_dict, target_pool_csfs_data)
+            truncated_indices_dict, truncate_status = truncate_initial_selected_with_weights(config, selected_csfs_indices_dict, target_pool_csfs_data)
+            
+            # 记录截断结果
+            if truncate_status['weight_loading']['loaded']:
+                logger.info(f"🔍 {truncate_status['weight_loading']['message']}: {truncate_status['weight_loading']['file_path']}")
+            elif 'error' in truncate_status['weight_loading']:
+                logger.warning(truncate_status['weight_loading']['error'])
+            
+            for detail in truncate_status['truncation_details']:
+                if detail['method'] == 'weight_based':
+                    logger.info(f"块{detail['block']}: 基于权重排序截断 {detail['original_count']} -> {detail['truncated_count']}")
+                elif detail['method'] == 'simple':
+                    logger.info(f"块{detail['block']}: 简单截断 {detail['original_count']} -> {detail['truncated_count']}")
+                if detail['random_space'] > 0:
+                    logger.info(f"         预留随机选择空间: {detail['random_space']}")
             
             selected_csfs_indices_dict = truncated_indices_dict
             logger.info("✅ 完成initial_selected截断处理")
     elif config.cal_error_num > 0 and config.continue_cal:
         # 错误重试模式：使用上一轮重要组态进行随机选择
-        selected_csfs_indices_dict = load_previous_chosen_indices(config, logger)
-        if selected_csfs_indices_dict is None:
+        selected_csfs_indices_dict, prev_status = load_previous_chosen_indices(config)
+        
+        if prev_status['success']:
+            logger.info(f"✅ {prev_status['message']}: {prev_status['file_path']}")
+            logger.info(f"📊 上一轮计算重要组态数量: {prev_status['config_counts']}")
+        else:
             # 如果找不到上一轮重要组态，使用空字典
             selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data.block_num)}
-            logger.warning("未找到上一轮重要组态，使用空字典")
+            logger.warning(f"{prev_status['message']}，使用空字典")
         
         selection_method = "error_retry_important"
         logger.info(f"⚠️ 错误重试模式，错误次数: {config.cal_error_num}")
@@ -331,30 +494,53 @@ def perform_csfs_selection(config):
             logger.info(f"🔧 使用cutoff_value={config.cutoff_value}进行截断处理")
             
             # 对每个块进行截断处理
-            truncated_indices_dict = truncate_initial_selected_with_weights(config, logger, selected_csfs_indices_dict, target_pool_csfs_data)
+            truncated_indices_dict, truncate_status = truncate_initial_selected_with_weights(config, selected_csfs_indices_dict, target_pool_csfs_data)
+            
+            # 记录截断结果
+            if truncate_status['weight_loading']['loaded']:
+                logger.info(f"🔍 {truncate_status['weight_loading']['message']}: {truncate_status['weight_loading']['file_path']}")
+            elif 'error' in truncate_status['weight_loading']:
+                logger.warning(truncate_status['weight_loading']['error'])
+                
+            for detail in truncate_status['truncation_details']:
+                if detail['method'] == 'weight_based':
+                    logger.info(f"块{detail['block']}: 基于权重排序截断 {detail['original_count']} -> {detail['truncated_count']}")
+                elif detail['method'] == 'simple':
+                    logger.info(f"块{detail['block']}: 简单截断 {detail['original_count']} -> {detail['truncated_count']}")
+                if detail['random_space'] > 0:
+                    logger.info(f"         预留随机选择空间: {detail['random_space']}")
             
             selected_csfs_indices_dict = truncated_indices_dict
             logger.info("✅ 完成重要组态截断处理")
     else:
         # 后续轮次：优先级顺序
         # 1. 优先使用ML最终选择的索引（train.py生成的final_chosen_indices）
-        ml_final_indices = load_ml_final_chosen_indices(config, logger)
-        if ml_final_indices is not None:
+        ml_final_indices, ml_final_status = load_ml_final_chosen_indices(config)
+        if ml_final_status['success']:
             selected_csfs_indices_dict = ml_final_indices
             selection_method = "ml_final_chosen"
+            logger.info(f"✅ {ml_final_status['message']}: {ml_final_status['file_path']}")
+            logger.info(f"📊 ML选择的组态数量: {ml_final_status['config_counts']}")
             logger.info("🎯 使用ML最终选择的索引（智能选择）")
         
         # 2. 如果没有ML最终选择，且计算继续，使用ML选择的索引
         elif config.continue_cal:
-            selected_csfs_indices_dict = load_previous_ml_chosen_indices(config, logger)
+            selected_csfs_indices_dict, ml_chosen_status = load_previous_ml_chosen_indices(config)
             selection_method = "ml_chosen"
-            logger.info("使用机器学习选择的CSFs indices")
+            if ml_chosen_status['success']:
+                logger.info(f"{ml_chosen_status['message']}: {ml_chosen_status['file_path']}")
+            else:
+                logger.warning(ml_chosen_status['message'])
         
         # 3. 如果计算不继续（出错），使用前一轮的chosen indices
         else:
-            selected_csfs_indices_dict = load_previous_chosen_indices(config, logger)
+            selected_csfs_indices_dict, prev_chosen_status = load_previous_chosen_indices(config)
             selection_method = "previous_chosen"
-            logger.info("使用前一轮选择的CSFs indices")
+            if prev_chosen_status['success']:
+                logger.info(f"{prev_chosen_status['message']}: {prev_chosen_status['file_path']}")
+                logger.info(f"📊 上一轮计算重要组态数量: {prev_chosen_status['config_counts']}")
+            else:
+                logger.warning(prev_chosen_status['message'])
         
         # 4. 如果以上都失败，使用空字典
         if selected_csfs_indices_dict is None:
@@ -372,9 +558,19 @@ def perform_csfs_selection(config):
     if use_direct_indices:
         # 方式1：直接使用索引构建CSFs
         logger.info("🔧 使用直接索引构建方式")
-        chosen_csfs_dict, unselected_indices_dict = build_csfs_from_indices(
-            target_pool_csfs_data, selected_csfs_indices_dict, logger
+        chosen_csfs_dict, unselected_indices_dict, build_status = build_csfs_from_indices(
+            target_pool_csfs_data, selected_csfs_indices_dict
         )
+        
+        # 记录构建结果
+        for block_result in build_status['block_results']:
+            if block_result['has_indices']:
+                if len(block_result['invalid_indices']) > 0:
+                    logger.warning(f"块{block_result['block']}中发现无效索引: {block_result['invalid_indices']}，最大有效索引: {block_result['max_valid_index']}")
+                logger.info(f"块{block_result['block']}: 通过索引选择了{block_result['chosen_count']}个CSFs，剩余{block_result['unselected_count']}个")
+            else:
+                logger.warning(f"块{block_result['block']}: 没有指定索引，选择0个CSFs")
+        
         chosen_csfs_indices_dict = selected_csfs_indices_dict
     else:
         # 方式2：传统的随机选择方式
@@ -398,22 +594,34 @@ def perform_csfs_selection(config):
     chosen_csfs_list = [value for key, value in chosen_csfs_dict.items()]
     chosen_csfs_file_path = cal_path / f'{config.conf}_{config.cal_loop_num}.c'
     
-    gdp.write_sorted_CSFs_to_cfile(
-        target_pool_csfs_data.subshell_info_raw,
-        chosen_csfs_list,
-        chosen_csfs_file_path
-    )
-    logger.info(f"CSFs选择完成，保存到文件: {chosen_csfs_file_path}")
+    try:
+        gdp.write_sorted_CSFs_to_cfile(
+            target_pool_csfs_data.subshell_info_raw,
+            chosen_csfs_list,
+            chosen_csfs_file_path
+        )
+        logger.info(f"CSFs选择完成，保存到文件: {chosen_csfs_file_path}")
+    except Exception as e:
+        logger.error(f"保存CSFs文件失败: {str(e)}")
+        raise
     
     # 步骤6：保存chosen indices
     chosen_indices_file = cal_path / f'{config.conf}_{config.cal_loop_num}_chosen_indices'
-    gdp.csfs_index_storange(chosen_csfs_indices_dict, chosen_indices_file)
-    logger.info(f"已选择CSFs的索引保存到: {chosen_indices_file}.pkl")
+    try:
+        gdp.csfs_index_storange(chosen_csfs_indices_dict, chosen_indices_file)
+        logger.info(f"已选择CSFs的索引保存到: {chosen_indices_file}.pkl")
+    except Exception as e:
+        logger.error(f"保存chosen indices失败: {str(e)}")
+        raise
     
     # 步骤7：保存unselected indices  
     unselected_indices_file = cal_path / f'{config.conf}_{config.cal_loop_num}_unselected_indices'
-    gdp.csfs_index_storange(unselected_indices_dict, unselected_indices_file)
-    logger.info(f"未选择CSFs的索引保存到: {unselected_indices_file}.pkl")
+    try:
+        gdp.csfs_index_storange(unselected_indices_dict, unselected_indices_file)
+        logger.info(f"未选择CSFs的索引保存到: {unselected_indices_file}.pkl")
+    except Exception as e:
+        logger.error(f"保存unselected indices失败: {str(e)}")
+        raise
     
     # 步骤8：统计信息
     total_chosen = sum(len(csfs) for csfs in chosen_csfs_dict.values())
