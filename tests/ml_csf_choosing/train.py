@@ -45,7 +45,7 @@ def main(config):
     gdp.setup_directories(config)
 
     # 验证初始文件
-    validation_result = gdp.validate_initial_files(config)
+    validation_result = gdp.validate_initial_files(config, logger)
     if not validation_result['success']:
         logger.error(f"初始文件验证失败: {validation_result['error']}")
         if 'missing_files' in validation_result:
