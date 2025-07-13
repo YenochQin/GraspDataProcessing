@@ -565,6 +565,12 @@
                     </div>
                     
                     <div class="form-group">
+                        <label for="mpi_tmp_path">MPI临时文件路径</label>
+                        <input type="text" id="mpi_tmp_path" placeholder="例如: /home/workstation3/caltmp">
+                        <div class="help-text">MPI计算临时文件存储路径，如果不设置则使用当前目录</div>
+                    </div>
+                    
+                    <div class="form-group">
                         <label for="conda_env">Conda环境名</label>
                         <input type="text" id="conda_env" placeholder="例如: grasp-env">
                         <div class="help-text">Python环境名称</div>
@@ -781,6 +787,7 @@
                 
                 partition: document.getElementById('partition').value || 'work3',
                 tasks_per_node: document.getElementById('tasks_per_node').value || '46',
+                mpi_tmp_path: document.getElementById('mpi_tmp_path').value,
                 conda_env: document.getElementById('conda_env').value || 'grasp-env'
             };
         }
@@ -818,6 +825,7 @@ cal_method = "rmcdhf"
 active_space = "${config.active_space}"
 cal_levels = "${config.cal_levels}"
 tasks_per_node = ${config.tasks_per_node}
+${config.mpi_tmp_path ? `mpi_tmp_path = "${config.mpi_tmp_path}"  # MPI临时文件存储路径，如果不设置则使用当前目录` : '# mpi_tmp_path = "/path/to/mpi/tmp"  # MPI临时文件存储路径，如果不设置则使用当前目录'}
 
 # 原子核参数
 atomic_number = ${config.atomic_number}
@@ -1154,6 +1162,10 @@ Active_space=\$(python "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_
 cal_levels=\$(python "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get cal_levels 2>&1)
 selected_csfs_file=\$(python "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get selected_csfs_file 2>&1)
 
+# 读取mpi_tmp_path配置参数（在进入子目录之前读取）
+mpi_tmp_path=\$(python "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get mpi_tmp_path 2>&1)
+log_with_timestamp "MPI临时文件路径配置: \$mpi_tmp_path"
+
 # 生成派生文件名
 loop1_rwfn_file=\$(basename "\$selected_csfs_file" .c).w
 rwfnestimate_file="\${conf}_1.w"
@@ -1334,7 +1346,14 @@ fi
 log_with_timestamp "进入计算目录: \${conf}_\${loop}"
 cd \${conf}_\${loop}
 
-safe_grasp_execute "mkdisks" "" mkdisks \${processor} caltmp
+# 使用循环外已读取的mpi_tmp_path配置参数
+if [[ -n "\$mpi_tmp_path" && "\$mpi_tmp_path" != "null" && ! "\$mpi_tmp_path" =~ ^ERROR: ]]; then
+    log_with_timestamp "使用配置的mpi_tmp路径: \$mpi_tmp_path"
+    safe_grasp_execute "mkdisks" "" mkdisks \${processor} "\$mpi_tmp_path"
+else
+    log_with_timestamp "未配置mpi_tmp_path或读取失败，使用默认路径（当前目录）"
+    safe_grasp_execute "mkdisks" "" mkdisks \${processor}
+fi
 
 ### rcsf
 log_with_timestamp "准备 rcsf 输入文件..."
@@ -1598,7 +1617,7 @@ log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
                 'atomic_number', 'mass_number', 'atomic_mass', 'nuclear_spin', 'nuclear_dipole',
                 'nuclear_quadrupole', 'n_estimators', 'random_state', 'class_weight_0',
                 'class_weight_1', 'pytorch_threads', 'std_threshold', 'csfs_num_relative_std_threshold',
-                'partition', 'tasks_per_node', 'conda_env'
+                'partition', 'tasks_per_node', 'mpi_tmp_path', 'conda_env'
             ];
             
             simpleFields.forEach(field => {
