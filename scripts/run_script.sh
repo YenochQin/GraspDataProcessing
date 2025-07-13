@@ -820,11 +820,26 @@ python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" s
 ## 机器学习训练
 if check_step_should_run "train" "$loop"; then
     log_with_timestamp "================执行机器学习训练================"
-    python "${ML_PYTHON_DIR}/train.py" 2>&1
-    if [ $? -ne 0 ]; then
-        log_with_timestamp "❌ 机器学习训练失败!"
+    
+    # 捕获输出和退出码
+    train_output=$(python "${ML_PYTHON_DIR}/train.py" 2>&1)
+    train_exit_code=$?
+    
+    # 显示输出
+    echo "$train_output"
+    
+    # 检查退出码
+    if [ $train_exit_code -ne 0 ]; then
+        log_with_timestamp "❌ 机器学习训练失败! 退出码: $train_exit_code"
         exit 1
     fi
+    
+    # 检查输出中是否包含错误信息
+    if echo "$train_output" | grep -q "程序执行失败"; then
+        log_with_timestamp "❌ 机器学习训练失败! 检测到错误消息"
+        exit 1
+    fi
+    
     log_with_timestamp "✅ 机器学习训练完成"
     
     # 检查是否应该在此步骤后停止
