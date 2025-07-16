@@ -33,6 +33,15 @@ random_state = 42
 [cpu_config]
 pytorch_threads = 32
 
+# 日志控制配置（可选）
+[logging_config]
+# 强制启用调试模式（即使在SLURM环境下也显示进度条）
+# force_debug_mode = false
+# 自定义日志级别：DEBUG, INFO, WARNING, ERROR
+# log_level = "INFO"
+# 是否显示阶段性总结
+# show_stage_summary = true
+
 [model_params.class_weight]
 0 = 1
 1 = 3

@@ -13,8 +13,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from tqdm import tqdm
-
+from ..utils.progress_manager import wrap_iterator, progress_range
 from ..data_IO.grasp_raw_data_load import GraspFileLoad
 from ..utils.tool_function import transition_dT_cal, doubleJ_to_J
 
@@ -87,7 +86,7 @@ class TransitionDataCollection:
                             ]
 
         self.trans_data_line_location()
-        for i in tqdm(range(len(self.transition_data_type_line_index))):
+        for i in progress_range(len(self.transition_data_type_line_index), desc="处理跃迁数据类型"):
             temp_transition_type = TransitionDataCollection.transition_type_check(self, self.transition_data_list[self.transition_data_type_line_index[i]])
             trans_data_block_step = 2  # 默认值
             if "E" in temp_transition_type:
@@ -95,7 +94,7 @@ class TransitionDataCollection:
             elif "M" in temp_transition_type:
                 trans_data_block_step = 1
             
-            for line in tqdm(range(self.trans_data_line_index[2*i], self.trans_data_line_index[2*i+1], trans_data_block_step), leave=False):
+            for line in wrap_iterator(range(self.trans_data_line_index[2*i], self.trans_data_line_index[2*i+1], trans_data_block_step), desc=f"处理数据块 {i+1}"):
                 if self.transition_data_list[line] == '':
                     break
                 temp_transition_data_dict = TransitionDataBlock(self.transition_data_list[line:line+trans_data_block_step], temp_transition_type).transition_data_block2dict()
@@ -190,7 +189,7 @@ class LSJTransitionDataCollection:
                         'transition_dT'
                         ]
         self.transition_block_index()
-        for i in tqdm(range(0,len(self.transition_block_index_list),2)):
+        for i in range(0, len(self.transition_block_index_list), 2):
             temp_transition_data_block = self.transition_data_list[self.transition_block_index_list[i]:self.transition_block_index_list[i+1]]
             temp_transition_data_dict = LSJTransitionDataBlock(temp_transition_data_block).transition_data_block2dict()
             if temp_transition_data_dict.get('line_strength_C') == 0 or temp_transition_data_dict.get('line_strength_B') == 0 or temp_transition_data_dict.get('line_strength_M') == 0:
@@ -454,7 +453,7 @@ def data_process(transition_df, level_df, data_file_info, Branching_Fraction=0.0
     transition_df['sum_A_B'] = np.float64(0)
     transition_df['sum_A_C'] = np.float64(0)
 
-    for lno in tqdm(range(2, len(level_df)+1, 1)):
+    for lno in wrap_iterator(range(2, len(level_df)+1), desc="计算跃迁率"):
         temp_sum_A_B = transition_df.loc[(transition_df['Upper_index'] == lno), 'transition_rate_B'].sum()
         temp_sum_A_C = transition_df.loc[(transition_df['Upper_index'] == lno), 'transition_rate_C'].sum()
         # print(temp_sum_A_B,temp_sum_A_C)

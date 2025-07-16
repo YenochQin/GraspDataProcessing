@@ -17,6 +17,8 @@ import tomllib
 import numpy as np
 import pandas as pd
 
+from ..utils.progress_manager import progress_context
+
 
 from ..utils.tool_function import *
 from ..utils.data_modules import *
@@ -181,8 +183,8 @@ def precompute_large_hash(
     large_hash = {}
     processed_csfs = 0
     
-    # 使用tqdm显示CSF级别的进度
-    with tqdm(total=total_csfs, desc="计算哈希映射", unit="CSFs") as pbar:
+    # 使用进度条显示CSF级别的进度
+    with progress_context(desc="计算哈希映射", total=total_csfs) as pbar:
         for block_idx, block_data in enumerate(large_data):
             # 显示当前处理的block信息
             pbar.set_postfix({

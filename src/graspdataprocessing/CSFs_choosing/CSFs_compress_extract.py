@@ -9,7 +9,7 @@ import random
 import re
 from typing import Dict, Tuple, List, Optional
 import numpy as np
-from tqdm import tqdm
+from ..utils.progress_manager import wrap_iterator
 
 from ..utils.tool_function import *
 from ..utils.data_modules import CSFs
@@ -619,7 +619,7 @@ def batch_process_csfs_to_descriptors(CSFs_file_data: CSFs,
     
     for block_idx, block in enumerate(CSFs_file_data.CSFs_block_data):
         # 遍历块中的每个CSF项
-        for csf_idx, csf_item in enumerate(tqdm(block)):
+        for csf_idx, csf_item in enumerate(wrap_iterator(block, desc=f"处理CSF块 {block_idx+1}")):
             try:
                 # 检查CSF项是否包含3行
                 if len(csf_item) != 3:
@@ -683,7 +683,7 @@ def batch_process_csfs_with_multi_block(CSFs_file_data: CSFs,
     
     for block_idx, block in enumerate(CSFs_file_data.CSFs_block_data):
         # 遍历块中的每个CSF项
-        for csf_idx, csf_item in enumerate(tqdm(block)):
+        for csf_idx, csf_item in enumerate(wrap_iterator(block, desc=f"处理多块CSF {block_idx+1}")):
             try:
                 # 检查CSF项是否包含3行
                 if len(csf_item) != 3:

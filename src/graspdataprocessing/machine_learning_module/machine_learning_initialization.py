@@ -17,20 +17,46 @@ from ..data_IO import GraspFileLoad, load_csfs_binary, load_descriptors, csfs_in
 from ..processing.ASF_data_collection import LevelsEnergyData
 from ..CSFs_choosing import batch_asfs_mix_square_above_threshold
 from ..utils.data_modules import MixCoefficientData
+from ..utils.environment_config import get_environment_config
 
 def setup_logging(config):
-    """配置日志系统"""
+    """配置日志系统，支持环境感知"""
+    env_config = get_environment_config()
+    log_config = env_config.get_logging_config()
+    
+    # 创建日志目录
     log_dir = config.root_path / "logs"
     log_dir.mkdir(exist_ok=True)
+    
+    # 配置日志级别
+    log_level = getattr(logging, log_config['level'])
+    
+    # 创建处理器列表
+    handlers = []
+    handlers.append(logging.FileHandler(log_dir / "machine_learning_training.log", encoding='utf-8'))
+    
+    # 在调试模式下添加控制台输出
+    if not env_config.is_production_mode:
+        handlers.append(logging.StreamHandler())
+    
+    # 配置日志
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_dir / "machine_learning_training.log", encoding='utf-8'),
-            logging.StreamHandler()
-        ]
+        level=log_level,
+        format=log_config['format'],
+        handlers=handlers,
+        force=True  # 强制重新配置
     )
-    return logging.getLogger(__name__)
+    
+    logger = logging.getLogger(__name__)
+    
+    # 输出环境信息
+    env_info = env_config.get_environment_info()
+    logger.info(f"🔧 环境配置 - SLURM: {env_info['is_slurm']}, 调试模式: {env_info['is_debug']}, 生产模式: {env_info['is_production']}")
+    
+    if env_info['slurm_job_id']:
+        logger.info(f"🔧 SLURM作业ID: {env_info['slurm_job_id']}")
+    
+    return logger
 
 def setup_directories(config):
     """创建必要的目录结构"""

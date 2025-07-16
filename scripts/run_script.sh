@@ -7,10 +7,11 @@
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
-# 添加时间戳函数
-log_with_timestamp() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-}
+# 加载公共函数库（消除重复代码）
+source "$(dirname "$0")/common_functions.sh"
+
+# 输出环境信息（使用新的环境感知功能）
+print_environment_info
 
 # 根据程序名确定期望的输出文件
 get_expected_files() {
@@ -559,8 +560,8 @@ log_with_timestamp "当前循环: $loop"
 if [ $loop -eq 1 ]; then
     # 初始化必要csfs文件数据
     if check_step_should_run "initial_csfs" "$loop"; then
-        log_with_timestamp "================初始化必要csfs文件数据================"
-        python "${ML_PYTHON_DIR}/initial_csfs.py"
+        log_stage "初始化必要csfs文件数据" "START"
+        run_python_with_env "${ML_PYTHON_DIR}/initial_csfs.py"
         
         # 检查是否应该在此步骤后停止
         if check_should_stop_after_step "initial_csfs"; then
@@ -583,8 +584,8 @@ fi
 ###########################################
 ## 组态选择处理
 if check_step_should_run "choosing_csfs" "$loop"; then
-    log_with_timestamp "================执行组态选择================"
-    python "${ML_PYTHON_DIR}/choosing_csfs.py" 2>&1
+    log_stage "执行组态选择" "START"
+    run_python_with_env "${ML_PYTHON_DIR}/choosing_csfs.py"
     if [ $? -ne 0 ]; then
         log_with_timestamp "❌ 组态选择失败!"
         exit 1
@@ -831,10 +832,10 @@ cd ..
 python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method ${cal_method} 2>&1
 ## 机器学习训练
 if check_step_should_run "train" "$loop"; then
-    log_with_timestamp "================执行机器学习训练================"
+    log_stage "执行机器学习训练" "START"
     
-    # 捕获输出和退出码
-    train_output=$(python "${ML_PYTHON_DIR}/train.py" 2>&1)
+    # 捕获输出和退出码（使用环境感知执行）
+    train_output=$(run_python_with_env "${ML_PYTHON_DIR}/train.py" 2>&1)
     train_exit_code=$?
     
     # 显示输出

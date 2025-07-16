@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, List, Optional, Union
 
-from tqdm import tqdm
 from .data_modules import CSFs
+from .progress_manager import wrap_iterator
 ######################################################################
 
 '''
@@ -168,7 +168,7 @@ def transition_data_level_location(transition_data_df : pd.DataFrame, level_df :
     transition_data_df['Lower_level_location'] = 0
     transition_data_df['Lower_level_location'] = transition_data_df['Lower_level_location'].astype('int')
 
-    for index, row in tqdm(transition_data_df.iterrows()):
+    for index, row in wrap_iterator(transition_data_df.iterrows(), desc="处理跃迁数据"):
 
         # print(row["Upper_loc"], row["Upper_J"], row["Upper_parity"])
         temp_upper_index = level_df[(level_df["Pos"] == row["Upper_loc"]) & (level_df["J"] == row["Upper_J"]) & (level_df["Parity"] == row["Upper_parity"])].index.values[0]

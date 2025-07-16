@@ -47,7 +47,17 @@ from .utils import (
     transition_dT_cal,
     read_fortran_record,
     chunk_string,
-    level_data_compare
+    level_data_compare,
+    get_environment_config,
+    is_slurm_environment,
+    is_debug_mode,
+    is_production_mode,
+    create_progress_bar,
+    wrap_iterator,
+    progress_range,
+    progress_context,
+    log_stage_start,
+    log_stage_end
 )
 
 from .CSFs_choosing import (
@@ -226,5 +236,17 @@ __all__ = [
     'handle_calculation_error',
     'get_unselected_descriptors',
     'save_and_plot_results',
-    'calculate_dynamic_chosen_ratio'
+    'calculate_dynamic_chosen_ratio',
+    
+    # 环境配置和进度管理
+    'get_environment_config',
+    'is_slurm_environment',
+    'is_debug_mode',
+    'is_production_mode',
+    'create_progress_bar',
+    'wrap_iterator',
+    'progress_range',
+    'progress_context',
+    'log_stage_start',
+    'log_stage_end'
 ]

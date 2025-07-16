@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import struct
-from tqdm import tqdm
+from ..utils.progress_manager import wrap_iterator
 
 from ..utils.tool_function import *
 from ..utils.data_modules import *
@@ -214,7 +214,7 @@ class GraspFileLoad:
             self.num_electron, self.total_num_configuration, self.NW, self.ncmin, self.nvecsiz, self.num_block = header_data
 
             print(f" nblock = {self.num_block},       ncftot =   {self.total_num_configuration},          nw =  {self.NW},            nelec =   {self.num_electron}")
-            for jblock in tqdm(range(1, self.num_block+1)):
+            for jblock in wrap_iterator(range(1, self.num_block+1), desc="处理数据块"):
                 print('cycle jblock =',jblock)
 
                 # Read block data: nb, ncfblk, nevblk, iatjp, iaspa
