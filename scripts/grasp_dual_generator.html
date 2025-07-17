@@ -896,10 +896,13 @@ random_state = ${config.random_state}
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
-###########################################
-# 加载公共函数库（包含日志优化功能）
+# 设置 GraspDataProcessing 根目录路径（便于脚本移动到其他目录使用）
 GRASP_DATA_PROCESSING_ROOT="${config.grasp_data_processing_root}"
-source "\${GRASP_DATA_PROCESSING_ROOT}/src/graspdataprocessing/utils/common_functions.sh"
+export PYTHONPATH="\${GRASP_DATA_PROCESSING_ROOT}/src:\${PYTHONPATH}"
+export PATH="\${GRASP_DATA_PROCESSING_ROOT}/scripts:\${PATH}"
+
+# 加载公共函数库（使用绝对路径，消除重复代码）
+source "\${GRASP_DATA_PROCESSING_ROOT}/scripts/common_functions.sh"
 
 log_with_timestamp "========== 开始执行 sbatch 脚本 =========="
 log_with_timestamp "作业名: \${SLURM_JOB_NAME:-未设置}"
@@ -921,11 +924,7 @@ conda activate ${config.conda_env} || {
     exit 1
 }
 log_with_timestamp "✅ Conda 环境激活成功"
-###########################################
-# 自动设置 GraspDataProcessing 包路径和工具脚本路径
-GRASP_DATA_PROCESSING_ROOT="${config.grasp_data_processing_root}"
-export PYTHONPATH="\${GRASP_DATA_PROCESSING_ROOT}/src:\${PYTHONPATH}"
-export PATH="\${GRASP_DATA_PROCESSING_ROOT}/scripts:\${PATH}"
+# GraspDataProcessing 包路径和工具脚本路径已在脚本开头设置
 log_with_timestamp "设置 PYTHONPATH: \$PYTHONPATH"
 log_with_timestamp "设置 PATH: \$PATH"
 ###########################################

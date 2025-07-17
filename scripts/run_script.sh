@@ -7,8 +7,13 @@
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
-# 加载公共函数库（消除重复代码）
-source "$(dirname "$0")/common_functions.sh"
+# 设置 GraspDataProcessing 根目录路径（便于脚本移动到其他目录使用）
+GRASP_DATA_PROCESSING_ROOT="/home/workstation3/AppFiles/GraspDataProcessing"
+export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}/src:${PYTHONPATH}"
+export PATH="${GRASP_DATA_PROCESSING_ROOT}/scripts:${PATH}"
+
+# 加载公共函数库（使用绝对路径，消除重复代码）
+source "${GRASP_DATA_PROCESSING_ROOT}/scripts/common_functions.sh"
 
 # 输出环境信息（使用新的环境感知功能）
 print_environment_info
@@ -267,10 +272,7 @@ conda activate grasp-env || {
 }
 log_with_timestamp "✅ Conda 环境激活成功"
 ###########################################
-# 自动设置 GraspDataProcessing 包路径和工具脚本路径
-GRASP_DATA_PROCESSING_ROOT="/home/workstation3/AppFiles/GraspDataProcessing"
-export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}/src:${PYTHONPATH}"
-export PATH="${GRASP_DATA_PROCESSING_ROOT}/scripts:${PATH}"
+# GraspDataProcessing 包路径和工具脚本路径已在脚本开头设置
 log_with_timestamp "设置 PYTHONPATH: $PYTHONPATH"
 log_with_timestamp "设置 PATH: $PATH"
 ###########################################

@@ -116,4 +116,44 @@ enable_production_mode = "auto"
 - ✅ 向后兼容（用户无感）
 - ✅ 自动化优化（无需手动配置）
 
-生成的文件将自动具备生产环境下的日志优化功能，极大改善SLURM作业的日志可读性。 
+生成的文件将自动具备生产环境下的日志优化功能，极大改善SLURM作业的日志可读性。
+
+## 补充改进：脚本移植性优化（2025-01-13）
+
+### 问题识别
+用户发现当`run_script.sh`被移动到其他目录时，相对路径引用`common_functions.sh`会失效：
+```bash
+# 原有问题：相对路径引用
+source "$(dirname "$0")/common_functions.sh"
+```
+
+### 解决方案
+1. **重构路径设置结构**
+   - 将`GRASP_DATA_PROCESSING_ROOT`设置移到脚本开头
+   - 在加载公共函数库前先设置所有路径变量
+
+2. **使用绝对路径引用**
+   ```bash
+   # 设置根路径（脚本开头）
+   GRASP_DATA_PROCESSING_ROOT="/home/workstation3/AppFiles/GraspDataProcessing"
+   export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}/src:${PYTHONPATH}"
+   export PATH="${GRASP_DATA_PROCESSING_ROOT}/scripts:${PATH}"
+   
+   # 使用绝对路径加载公共函数库
+   source "${GRASP_DATA_PROCESSING_ROOT}/scripts/common_functions.sh"
+   ```
+
+3. **同步HTML生成器**
+   - 修正`common_functions.sh`路径错误（从utils改为scripts目录）
+   - 在生成脚本开头设置所有路径变量
+   - 删除重复的路径设置代码
+
+### 修改文件
+- `run_script.sh` - 重构路径设置结构，提升移植性
+- `grasp_dual_generator.html` - 同步修改生成逻辑
+
+### 效果
+- ✅ 脚本具备完全移植性，可在任意目录运行
+- ✅ 消除相对路径依赖
+- ✅ 保持向后兼容性
+- ✅ 简化用户使用体验
