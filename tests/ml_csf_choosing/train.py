@@ -236,7 +236,7 @@ def main(config):
         logger.info(f"目标新增组态数：{expansion_ratio * current_important_count}")
         
         # 智能选择策略
-        target_new_csf_count = expansion_ratio * current_important_count
+        target_new_csf_count = math.ceil(expansion_ratio * current_important_count)
         if len(ml_predicted_important_local_indices) >= target_new_csf_count:
             # 情况1：ML预测的重要组态数量充足，按概率排序选择top-k
             logger.info(f"ML预测组态充足，按概率排序选择前{target_new_csf_count}个")
