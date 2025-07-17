@@ -949,15 +949,15 @@ if [ ! -f "\$config_file" ]; then
     exit 1
 fi
 
-atom=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atom -f "\${config_file}" 2>&1)
-conf=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get conf -f "\${config_file}" 2>&1)
-processor=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get tasks_per_node -f "\${config_file}" 2>&1)
-Active_space=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get active_space -f "\${config_file}" 2>&1)
-cal_levels=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get cal_levels -f "\${config_file}" 2>&1)
-selected_csfs_file=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get selected_csfs_file -f "\${config_file}" 2>&1)
+atom=\$(safe_get_config_value "\${config_file}" "atom" "原子符号")
+conf=\$(safe_get_config_value "\${config_file}" "conf" "组态名称")
+processor=\$(safe_get_config_value "\${config_file}" "tasks_per_node" "处理器核数")
+Active_space=\$(safe_get_config_value "\${config_file}" "active_space" "活性空间")
+cal_levels=\$(safe_get_config_value "\${config_file}" "cal_levels" "计算能级")
+selected_csfs_file=\$(safe_get_config_value "\${config_file}" "selected_csfs_file" "初筛CSFs文件")
 
 # 读取mpi_tmp_path配置参数（在进入子目录之前读取）
-mpi_tmp_path=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get mpi_tmp_path -f "\${config_file}" 2>&1)
+mpi_tmp_path=\$(safe_get_config_value "\${config_file}" "mpi_tmp_path" "MPI临时路径")
 log_with_timestamp "MPI临时文件路径配置: \$mpi_tmp_path"
 
 # 生成派生文件名
@@ -979,11 +979,11 @@ log_with_timestamp "✅ Python程序路径设置完成: \$ML_PYTHON_DIR"
 ###########################################
 # 读取步骤控制参数
 log_with_timestamp "读取步骤控制配置..."
-enable_step_control=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.enable_step_control -f "\${config_file}" 2>&1)
-target_loop=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.target_loop -f "\${config_file}" 2>&1)
-start_step=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.start_step -f "\${config_file}" 2>&1)
-end_step=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.end_step -f "\${config_file}" 2>&1)
-skip_completed_steps=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.skip_completed_steps -f "\${config_file}" 2>&1)
+enable_step_control=\$(safe_get_config_value "\${config_file}" "step_control.enable_step_control" "启用步骤控制")
+target_loop=\$(safe_get_config_value "\${config_file}" "step_control.target_loop" "目标循环")
+start_step=\$(safe_get_config_value "\${config_file}" "step_control.start_step" "起始步骤")
+end_step=\$(safe_get_config_value "\${config_file}" "step_control.end_step" "结束步骤")
+skip_completed_steps=\$(safe_get_config_value "\${config_file}" "step_control.skip_completed_steps" "跳过已完成步骤")
 
 log_with_timestamp "步骤控制配置:"
 log_with_timestamp "  启用步骤控制: \$enable_step_control"
@@ -1066,12 +1066,16 @@ check_should_stop_after_step() {
 ###########################################
 ### rnucleus - 设置原子核参数
 log_with_timestamp "设置原子核参数..."
-atomic_number=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atomic_number -f "\${config_file}" 2>&1)
-mass_number=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get mass_number -f "\${config_file}" 2>&1)
-atomic_mass=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atomic_mass -f "\${config_file}" 2>&1)
-nuclear_spin=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_spin -f "\${config_file}" 2>&1)
-nuclear_dipole=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_dipole -f "\${config_file}" 2>&1)
-nuclear_quadrupole=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_quadrupole -f "\${config_file}" 2>&1)
+atomic_number=\$(safe_get_config_value "\${config_file}" "atomic_number" "原子序数")
+mass_number=\$(safe_get_config_value "\${config_file}" "mass_number" "质量数")
+atomic_mass=\$(safe_get_config_value "\${config_file}" "atomic_mass" "原子质量")
+nuclear_spin=\$(safe_get_config_value "\${config_file}" "nuclear_spin" "核自旋量子数")
+nuclear_dipole=\$(safe_get_config_value "\${config_file}" "nuclear_dipole" "核偶极矩")
+nuclear_quadrupole=\$(safe_get_config_value "\${config_file}" "nuclear_quadrupole" "核四极矩")
+
+# 验证数值的有效性
+log_with_timestamp "原子核参数: Z=\$atomic_number, A=\$mass_number, 质量=\$atomic_mass"
+log_with_timestamp "核性质: I=\$nuclear_spin, μ=\$nuclear_dipole, Q=\$nuclear_quadrupole"
 
 input_commands="\$atomic_number
 \$mass_number
@@ -1138,7 +1142,7 @@ while true
 do
 ###########################################
 log_with_timestamp "获取循环计数..."
-loop=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get cal_loop_num -f "\${config_file}" 2>&1)
+loop=\$(safe_get_config_value "\${config_file}" "cal_loop_num" "循环计数")
 log_with_timestamp "当前循环: \$loop"
 
 if [ $loop -eq 1 ]; then
@@ -1158,7 +1162,7 @@ if [ $loop -eq 1 ]; then
 fi
 ###########################################
 log_with_timestamp "检查计算状态..."
-cal_status=\$(run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get continue_cal -f "\${config_file}" 2>&1)
+cal_status=\$(safe_get_config_value "\${config_file}" "continue_cal" "计算继续状态")
 log_with_timestamp "计算状态: \$cal_status"
 
 if [[ "$cal_status" == "false" ]]; then
@@ -1296,12 +1300,11 @@ cd ..
 run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method \${cal_method} -f "\${config_file}"
 ## 机器学习训练
 if check_step_should_run "train" "\$loop"; then
-    log_with_timestamp "================执行机器学习训练================"
+    log_stage "执行机器学习训练" "START"
+    
+    # 直接执行，让输出实时显示（run_python_with_env已包含错误处理）
     run_python_with_env "\${ML_PYTHON_DIR}/train.py"
-    if [ $? -ne 0 ]; then
-        log_with_timestamp "❌ 机器学习训练失败!"
-        exit 1
-    fi
+    
     log_with_timestamp "✅ 机器学习训练完成"
     
     # 检查是否应该在此步骤后停止
