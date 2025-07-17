@@ -15,9 +15,6 @@ export PATH="${GRASP_DATA_PROCESSING_ROOT}/scripts:${PATH}"
 # 加载公共函数库（使用绝对路径，消除重复代码）
 source "${GRASP_DATA_PROCESSING_ROOT}/scripts/common_functions.sh"
 
-# 输出环境信息（使用新的环境感知功能）
-print_environment_info
-
 # 根据程序名确定期望的输出文件
 get_expected_files() {
     local program_name="$1"
@@ -271,6 +268,10 @@ conda activate grasp-env || {
     exit 1
 }
 log_with_timestamp "✅ Conda 环境激活成功"
+
+# 输出环境信息（使用正确的Python版本）
+print_environment_info
+
 ###########################################
 # GraspDataProcessing 包路径和工具脚本路径已在脚本开头设置
 log_with_timestamp "设置 PYTHONPATH: $PYTHONPATH"
@@ -282,17 +283,26 @@ which python
 python --version
 which csfs_ml_choosing_config_load.py
 ###########################################
-## 从config.toml读取配置参数
+## 从config.toml读取配置参数（在计算根目录中）
 log_with_timestamp "从config.toml读取配置参数..."
-atom=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atom 2>&1)
-conf=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get conf 2>&1)
-processor=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get tasks_per_node 2>&1)
-Active_space=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get active_space 2>&1)
-cal_levels=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get cal_levels 2>&1)
-selected_csfs_file=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get selected_csfs_file 2>&1)
+cal_dir=${PWD}
+config_file="${cal_dir}/config.toml"
+
+# 检查配置文件是否存在
+if [ ! -f "$config_file" ]; then
+    log_error_with_timestamp "配置文件不存在: $config_file"
+    exit 1
+fi
+
+atom=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atom -f "${config_file}" 2>&1)
+conf=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get conf -f "${config_file}" 2>&1)
+processor=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get tasks_per_node -f "${config_file}" 2>&1)
+Active_space=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get active_space -f "${config_file}" 2>&1)
+cal_levels=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get cal_levels -f "${config_file}" 2>&1)
+selected_csfs_file=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get selected_csfs_file -f "${config_file}" 2>&1)
 
 # 读取mpi_tmp_path配置参数（在进入子目录之前读取）
-mpi_tmp_path=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get mpi_tmp_path 2>&1)
+mpi_tmp_path=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get mpi_tmp_path -f "${config_file}" 2>&1)
 log_with_timestamp "MPI临时文件路径配置: $mpi_tmp_path"
 
 # 生成派生文件名
@@ -302,10 +312,8 @@ rwfnestimate_file="${conf}_1.w"
 log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
 log_with_timestamp "活性空间: $Active_space, 计算能级: $cal_levels"
 log_with_timestamp "初始波函数文件: $loop1_rwfn_file"
-###########################################
-log_with_timestamp "获取计算目录..."
-cal_dir=${PWD}
-python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set root_path ${cal_dir} 2>&1
+# 更新配置文件中的root_path
+run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set root_path ${cal_dir} -f "${config_file}"
 log_with_timestamp "计算目录: $cal_dir"
 ###########################################
 log_with_timestamp "设置Python程序绝对路径..."
@@ -315,11 +323,11 @@ log_with_timestamp "✅ Python程序路径设置完成: $ML_PYTHON_DIR"
 ###########################################
 # 读取步骤控制参数
 log_with_timestamp "读取步骤控制配置..."
-enable_step_control=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.enable_step_control 2>&1)
-target_loop=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.target_loop 2>&1)
-start_step=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.start_step 2>&1)
-end_step=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.end_step 2>&1)
-skip_completed_steps=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.skip_completed_steps 2>&1)
+enable_step_control=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.enable_step_control -f "${config_file}" 2>&1)
+target_loop=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.target_loop -f "${config_file}" 2>&1)
+start_step=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.start_step -f "${config_file}" 2>&1)
+end_step=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.end_step -f "${config_file}" 2>&1)
+skip_completed_steps=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get step_control.skip_completed_steps -f "${config_file}" 2>&1)
 
 log_with_timestamp "步骤控制配置:"
 log_with_timestamp "  启用步骤控制: $enable_step_control"
@@ -535,12 +543,12 @@ check_step_completed() {
 ###########################################
 ### rnucleus - 设置原子核参数
 log_with_timestamp "设置原子核参数..."
-atomic_number=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atomic_number 2>&1)
-mass_number=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get mass_number 2>&1)
-atomic_mass=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atomic_mass 2>&1)
-nuclear_spin=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_spin 2>&1)
-nuclear_dipole=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_dipole 2>&1)
-nuclear_quadrupole=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_quadrupole 2>&1)
+atomic_number=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atomic_number -f "${config_file}" 2>&1)
+mass_number=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get mass_number -f "${config_file}" 2>&1)
+atomic_mass=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get atomic_mass -f "${config_file}" 2>&1)
+nuclear_spin=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_spin -f "${config_file}" 2>&1)
+nuclear_dipole=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_dipole -f "${config_file}" 2>&1)
+nuclear_quadrupole=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get nuclear_quadrupole -f "${config_file}" 2>&1)
 
 input_commands="$atomic_number
 $mass_number
@@ -552,11 +560,62 @@ $nuclear_quadrupole"
 safe_grasp_execute "rnucleus" "$input_commands" rnucleus
 log_with_timestamp "✅ 原子核参数设置完成"
 ###########################################
+# 断点重启完成后自动重置步骤控制设置（避免无限循环）
+reset_step_control_if_needed() {
+    # 检查是否启用了步骤控制且当前不是默认设置
+    if [[ "$enable_step_control" == "true" && "$start_step" != "auto" ]]; then
+        log_with_timestamp "🔄 检测到断点重启模式，检查是否需要重置步骤控制..."
+        
+        # 如果已经完成了指定的断点重启步骤，重置为正常模式
+        local should_reset=false
+        
+        # 检查各种重置条件
+        if [[ "$end_step" != "auto" ]]; then
+            log_with_timestamp "⚠️ 检测到指定结束步骤($end_step)，完成后将重置步骤控制"
+            should_reset=true
+        elif [[ "$start_step" == "train" ]]; then
+            log_with_timestamp "⚠️ 检测到从train步骤开始，完成train后将重置步骤控制"
+            should_reset=true
+        fi
+        
+        if [[ "$should_reset" == "true" ]]; then
+            # 设置一个标记，表示需要在适当时机重置
+            export SHOULD_RESET_STEP_CONTROL="true"
+            log_with_timestamp "📋 已标记：将在完成当前断点重启后自动重置步骤控制"
+        fi
+    fi
+}
+
+# 执行步骤控制重置
+do_step_control_reset() {
+    if [[ "$SHOULD_RESET_STEP_CONTROL" == "true" ]]; then
+        log_with_timestamp "🔄 断点重启完成，重置步骤控制设置为正常模式..."
+        
+        # 重置步骤控制设置
+        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.start_step "auto" -f "${config_file}"
+        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.end_step "auto" -f "${config_file}"
+        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.enable_step_control "false" -f "${config_file}"
+        
+        # 更新本地变量
+        start_step="auto"
+        end_step="auto"
+        enable_step_control="false"
+        
+        # 清除重置标记
+        export SHOULD_RESET_STEP_CONTROL=""
+        
+        log_with_timestamp "✅ 步骤控制已重置，后续循环将正常执行所有步骤"
+    fi
+}
+
+# 在主循环开始前检查是否需要重置
+reset_step_control_if_needed
+
 while true
 do
 ###########################################
 log_with_timestamp "获取循环计数..."
-loop=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get cal_loop_num 2>&1)
+loop=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get cal_loop_num -f "${config_file}" 2>&1)
 log_with_timestamp "当前循环: $loop"
 
 if [ $loop -eq 1 ]; then
@@ -576,7 +635,7 @@ if [ $loop -eq 1 ]; then
 fi
 ###########################################
 log_with_timestamp "检查计算状态..."
-cal_status=$(python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get continue_cal 2>&1)
+cal_status=$(run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get continue_cal -f "${config_file}" 2>&1)
 log_with_timestamp "计算状态: $cal_status"
 
 if [[ "$cal_status" == "false" ]]; then
@@ -831,7 +890,7 @@ fi
 
 log_with_timestamp "返回上级目录..."
 cd ..
-python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method ${cal_method} 2>&1
+run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method ${cal_method} -f "${config_file}"
 ## 机器学习训练
 if check_step_should_run "train" "$loop"; then
     log_stage "执行机器学习训练" "START"
@@ -862,6 +921,9 @@ if check_step_should_run "train" "$loop"; then
         log_with_timestamp "🛑 根据配置在train步骤后停止执行"
         exit 0
     fi
+    
+    # 如果完成了train步骤，检查是否需要重置步骤控制
+    do_step_control_reset
 else
     log_with_timestamp "⏭️ 跳过步骤: train (根据步骤控制配置)"
 fi
