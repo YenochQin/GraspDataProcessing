@@ -12,6 +12,7 @@ from pathlib import Path
 import sys
 import numpy as np
 import math
+import os
 
 # 路径通过 sbatch 脚本中的 PYTHONPATH 环境变量自动设置
 try:
@@ -19,6 +20,60 @@ try:
 except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
+
+# =============================================================================
+# 日志格式增强函数（与shell脚本中的common_functions.sh保持一致）
+# =============================================================================
+
+# 颜色代码定义
+COLOR_RED = '\033[0;31m'
+COLOR_GREEN = '\033[0;32m'
+COLOR_YELLOW = '\033[1;33m'
+COLOR_BLUE = '\033[0;34m'
+COLOR_PURPLE = '\033[0;35m'
+COLOR_CYAN = '\033[0;36m'
+COLOR_WHITE = '\033[1;37m'
+COLOR_BOLD = '\033[1m'
+COLOR_RESET = '\033[0m'
+
+def simplify_path_python(full_path, root_path=None):
+    """
+    路径简化函数 - 去除root_path前缀，只显示相对路径
+    """
+    if root_path is None:
+        # 尝试从环境变量获取root_path
+        root_path = os.getcwd()
+    
+    full_path_str = str(full_path)
+    root_path_str = str(root_path)
+    
+    # 如果路径不包含root_path，返回原路径
+    if not full_path_str.startswith(root_path_str):
+        return full_path_str
+    
+    # 移除root_path前缀
+    relative_path = full_path_str[len(root_path_str):]
+    # 移除开头的斜杠
+    relative_path = relative_path.lstrip('/')
+    
+    # 如果简化后路径为空，表示就是root目录
+    if not relative_path:
+        return "."
+    
+    return relative_path
+
+def highlight_number_python(text, color=COLOR_CYAN):
+    """
+    数值高亮函数
+    """
+    return f"{color}{text}{COLOR_RESET}"
+
+def highlight_path_python(path, root_path=None):
+    """
+    路径高亮和简化函数
+    """
+    simplified = simplify_path_python(path, root_path)
+    return f"{COLOR_BLUE}{simplified}{COLOR_RESET}"
 
 def load_target_pool_data(config):
     """
@@ -662,11 +717,14 @@ def main(config):
     try:
         result = perform_csfs_selection(config)
 
-        print(f"📁 输出.c文件: {result['chosen_csfs_file_path']}")
-        print(f"📁 输出目录: {result['cal_path']}")
+        # 获取root_path用于路径简化
+        root_path = getattr(config, 'root_path', None)
+        
+        print(f"📁 输出.c文件: {highlight_path_python(result['chosen_csfs_file_path'], root_path)}")
+        print(f"📁 输出目录: {highlight_path_python(result['cal_path'], root_path)}")
         print(f"📋 选择方法: {result['selection_method']}")
         print(f"🔧 构建方式: {'直接索引构建' if result['use_direct_indices'] else '随机选择构建'}")
-        print(f"📊 选择数量: {result['total_chosen']}")
+        print(f"📊 选择数量: {highlight_number_python(result['total_chosen'])}")
         
         return result
         

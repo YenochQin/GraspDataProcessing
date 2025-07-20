@@ -86,7 +86,7 @@ check_grasp_errors() {
     
     # 检查是否有预期的输出文件
     if [ -n "$expected_files" ]; then
-        log_with_timestamp "📁 当前工作目录: $(pwd)"
+        log_with_timestamp_and_path "📁 当前工作目录" "$(pwd)"
         log_with_timestamp "📋 检查预期文件: $expected_files"
         
         # 对于 MPI 程序，等待一段时间确保文件完全写入
@@ -309,12 +309,11 @@ log_with_timestamp "MPI临时文件路径配置: $mpi_tmp_path"
 loop1_rwfn_file=$(basename "$selected_csfs_file" .c).w
 rwfnestimate_file="${conf}_1.w"
 
-log_with_timestamp "配置参数: atom=$atom, conf=$conf, processor=$processor"
-log_with_timestamp "活性空间: $Active_space, 计算能级: $cal_levels"
+log_config_params "$atom" "$conf" "$processor" "$Active_space" "$cal_levels"
 log_with_timestamp "初始波函数文件: $loop1_rwfn_file"
 # 更新配置文件中的root_path
 run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set root_path ${cal_dir} -f "${config_file}"
-log_with_timestamp "计算目录: $cal_dir"
+log_with_timestamp_and_path "计算目录" "$cal_dir"
 ###########################################
 log_with_timestamp "设置Python程序绝对路径..."
 ML_PYTHON_DIR="${GRASP_DATA_PROCESSING_ROOT}/tests/ml_csf_choosing"
@@ -551,8 +550,9 @@ nuclear_dipole=$(safe_get_config_value "${config_file}" "nuclear_dipole" "核偶
 nuclear_quadrupole=$(safe_get_config_value "${config_file}" "nuclear_quadrupole" "核四极矩")
 
 # 验证数值的有效性
-log_with_timestamp "原子核参数: Z=$atomic_number, A=$mass_number, 质量=$atomic_mass"
-log_with_timestamp "核性质: I=$nuclear_spin, μ=$nuclear_dipole, Q=$nuclear_quadrupole"
+local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+echo -e "[$timestamp] 原子核参数: $(highlight_param "Z" "$atomic_number") $(highlight_param "A" "$mass_number") $(highlight_param "质量" "$atomic_mass")"
+echo -e "[$timestamp] 核性质: $(highlight_param "I" "$nuclear_spin") $(highlight_param "μ" "$nuclear_dipole") $(highlight_param "Q" "$nuclear_quadrupole")"
 
 input_commands="$atomic_number
 $mass_number
@@ -620,7 +620,7 @@ do
 ###########################################
 log_with_timestamp "获取循环计数..."
 loop=$(safe_get_config_value "${config_file}" "cal_loop_num" "循环计数")
-log_with_timestamp "当前循环: $loop"
+log_with_timestamp "当前循环: $(highlight_number "$loop" "$COLOR_CYAN")"
 
 if [ $loop -eq 1 ]; then
     # 初始化必要csfs文件数据
@@ -668,7 +668,7 @@ fi
 ###########################################
 ## grasp calculation routine
 
-log_with_timestamp "进入计算目录: ${conf}_${loop}"
+log_with_timestamp_and_path "进入计算目录" "${conf}_${loop}"
 cd ${conf}_${loop}
 
 # mkdisks步骤

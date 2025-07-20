@@ -1247,10 +1247,10 @@ input_commands="\${conf}_\${loop}
 n
 y
 y"
-safe_grasp_execute "jj2lsj_rmcdhf" "\$input_commands" jj2lsj
+safe_grasp_execute "jj2lsj" "\$input_commands" jj2lsj
 
 # 生成能级数据文件
-safe_grasp_execute "rlevels_rmcdhf" "" bash -c "rlevels \${conf}_\${loop}.m > \${conf}_\${loop}.level"
+safe_grasp_execute "rlevels" "\${conf}_\${loop}" bash -c "rlevels \${conf}_\${loop}.m > \${conf}_\${loop}.level"
 
 else
 log_with_timestamp "================第\${loop}次循环，使用\${rwfnestimate_file}================"
@@ -1275,10 +1275,10 @@ input_commands="\${conf}_\${loop}
 y
 y
 y"
-safe_grasp_execute "jj2lsj_rci" "\$input_commands" jj2lsj
+safe_grasp_execute "jj2lsj" "\$input_commands" jj2lsj
 
 # 生成能级数据文件
-safe_grasp_execute "rlevels_rci" "" bash -c "rlevels \${conf}_\${loop}.cm > \${conf}_\${loop}.level"
+safe_grasp_execute "rlevels" "\${conf}_\${loop}" bash -c "rlevels \${conf}_\${loop}.cm > \${conf}_\${loop}.level"
 
 fi
 

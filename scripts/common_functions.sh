@@ -439,3 +439,93 @@ safe_grasp_execute() {
     rm -f "$temp_log"
     log_with_timestamp "✅ $program_name 完成"
 }
+
+# =============================================================================
+# 日志格式增强函数
+# =============================================================================
+
+# 颜色代码定义
+readonly COLOR_RED='\033[0;31m'
+readonly COLOR_GREEN='\033[0;32m'
+readonly COLOR_YELLOW='\033[1;33m'
+readonly COLOR_BLUE='\033[0;34m'
+readonly COLOR_PURPLE='\033[0;35m'
+readonly COLOR_CYAN='\033[0;36m'
+readonly COLOR_WHITE='\033[1;37m'
+readonly COLOR_BOLD='\033[1m'
+readonly COLOR_RESET='\033[0m'
+
+# 路径简化函数 - 去除root_path前缀，只显示相对路径
+simplify_path() {
+    local full_path="$1"
+    local root_path="$2"
+    
+    # 如果没有提供root_path，尝试从config.toml中获取
+    if [ -z "$root_path" ] && [ -f "config.toml" ]; then
+        root_path=$(safe_get_config_value "config.toml" "root_path" "根目录路径" 2>/dev/null || echo "")
+    fi
+    
+    # 如果root_path为空或者路径不包含root_path，返回原路径
+    if [ -z "$root_path" ] || [[ "$full_path" != "$root_path"* ]]; then
+        echo "$full_path"
+        return
+    fi
+    
+    # 移除root_path前缀
+    local relative_path="${full_path#$root_path}"
+    # 移除开头的斜杠
+    relative_path="${relative_path#/}"
+    
+    # 如果简化后路径为空，表示就是root目录
+    if [ -z "$relative_path" ]; then
+        echo "."
+    else
+        echo "$relative_path"
+    fi
+}
+
+# 数值高亮函数
+highlight_number() {
+    local text="$1"
+    local color="${2:-$COLOR_CYAN}"
+    
+    # 使用颜色高亮数值
+    echo -e "${color}${text}${COLOR_RESET}"
+}
+
+# 参数高亮函数
+highlight_param() {
+    local key="$1"
+    local value="$2"
+    local key_color="${3:-$COLOR_WHITE}"
+    local value_color="${4:-$COLOR_CYAN}"
+    
+    echo -e "${key_color}${key}${COLOR_RESET}=$(highlight_number "$value" "$value_color")"
+}
+
+# 支持路径简化的日志函数
+log_with_timestamp_and_path() {
+    local message="$1"
+    local path_to_simplify="$2"
+    local root_path="$3"
+    
+    if [ -n "$path_to_simplify" ]; then
+        local simplified_path=$(simplify_path "$path_to_simplify" "$root_path")
+        message="${message}: ${simplified_path}"
+    fi
+    
+    log_with_timestamp "$message"
+}
+
+# 增强的配置参数日志函数
+log_config_params() {
+    local atom="$1"
+    local conf="$2" 
+    local processor="$3"
+    local active_space="$4"
+    local cal_levels="$5"
+    
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "[$timestamp] 配置参数: $(highlight_param "atom" "$atom") $(highlight_param "conf" "$conf") $(highlight_param "processor" "$processor" "$COLOR_WHITE" "$COLOR_GREEN")"
+    echo -e "[$timestamp] 活性空间: $(highlight_number "$active_space" "$COLOR_YELLOW"), 计算能级: $(highlight_number "$cal_levels" "$COLOR_YELLOW")"
+}
