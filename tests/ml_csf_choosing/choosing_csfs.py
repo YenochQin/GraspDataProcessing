@@ -496,6 +496,20 @@ def perform_csfs_selection(config):
         total_initial_selected = sum(len(selected_csfs_indices_dict.get(block, [])) 
                     for block in range(target_pool_csfs_data.block_num))
         
+        # 检查是否需要扩展选择（当selected_csfs数量远小于total_target_pool时）
+        ratio_selected_to_pool = total_initial_selected / total_target_pool if total_target_pool > 0 else 0
+        
+        # 如果selected_csfs数量比total_target_pool小两个数量级或更多，则使用expansion_ratio扩展
+        if ratio_selected_to_pool < 0.01:  # 小于1%，约两个数量级
+            expansion_ratio = getattr(config, 'expansion_ratio', 2)
+            expanded_target_chosen = math.ceil(total_target_chosen * expansion_ratio)
+            
+            logger.warning(f"⚠️ Selected CSFs数量远小于target pool: {total_initial_selected} / {total_target_pool} = {ratio_selected_to_pool:.4%}")
+            logger.info(f"🔧 应用扩展比例 {expansion_ratio}，扩展目标数量: {total_target_chosen} -> {expanded_target_chosen}")
+            
+            # 更新目标选择数量
+            total_target_chosen = expanded_target_chosen
+        
         if total_initial_selected > total_target_chosen:
             logger.warning(f"⚠️ Initial selected CSFs数量过多: {total_initial_selected} > 目标数量: {total_target_chosen}")
             logger.info(f"🔧 使用cutoff_value={config.cutoff_value}进行截断处理")
