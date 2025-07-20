@@ -493,8 +493,13 @@ highlight_number() {
     local text="$1"
     local color="${2:-$COLOR_CYAN}"
     
-    # Use color to highlight numbers
-    echo -e "${color}${text}${COLOR_RESET}"
+    # Handle empty or null values
+    if [ -z "$text" ] || [ "$text" = "null" ]; then
+        printf "%s(empty)%s" "$COLOR_YELLOW" "$COLOR_RESET"
+    else
+        # Use color to highlight numbers
+        printf "%s%s%s" "$color" "$text" "$COLOR_RESET"
+    fi
 }
 
 # Parameter highlighting function
@@ -504,7 +509,7 @@ highlight_param() {
     local key_color="${3:-$COLOR_WHITE}"
     local value_color="${4:-$COLOR_CYAN}"
     
-    echo -e "${key_color}${key}${COLOR_RESET}=$(highlight_number "$value" "$value_color")"
+    printf "%s%s%s=%s" "$key_color" "$key" "$COLOR_RESET" "$(highlight_number "$value" "$value_color")"
 }
 
 # Log function with path simplification support
@@ -530,6 +535,15 @@ log_config_params() {
     local cal_levels="$5"
     
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo -e "[$timestamp] Configuration parameters: $(highlight_param "atom" "$atom") $(highlight_param "conf" "$conf") $(highlight_param "processor" "$processor" "$COLOR_WHITE" "$COLOR_GREEN")"
-    echo -e "[$timestamp] Active space: $(highlight_number "$active_space" "$COLOR_YELLOW"), Calculation levels: $(highlight_number "$cal_levels" "$COLOR_YELLOW")"
+    # Use printf instead of echo -e for better compatibility and encoding handling
+    printf "[%s] Configuration parameters: %s %s %s\n" \
+        "$timestamp" \
+        "$(highlight_param "atom" "$atom")" \
+        "$(highlight_param "conf" "$conf")" \
+        "$(highlight_param "processor" "$processor" "$COLOR_WHITE" "$COLOR_GREEN")"
+    
+    printf "[%s] Active space: %s, Calculation levels: %s\n" \
+        "$timestamp" \
+        "$(highlight_number "$active_space" "$COLOR_YELLOW")" \
+        "$(highlight_number "$cal_levels" "$COLOR_YELLOW")"
 }

@@ -394,7 +394,7 @@ do
 ###########################################
 log_with_timestamp "Getting loop count..."
 loop=$(safe_get_config_value "${config_file}" "cal_loop_num" "loop count")
-log_with_timestamp "Current loop: $(highlight_number "$loop" "$COLOR_CYAN")
+log_with_timestamp "Current loop: $(highlight_number "$loop" "$COLOR_CYAN")"
 
 if [ $loop -eq 1 ]; then
     # Initialize necessary CSF file data
@@ -574,7 +574,7 @@ fi
 # Generate energy level data file
 if check_step_should_run "rlevels" "$loop"; then
     if ! check_step_completed "rlevels" "$loop" "$conf"; then
-        safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.m > ${conf}_${loop}.level"
+        safe_grasp_execute "rlevels" "" bash -c "rlevels ${conf}_${loop}.m > ${conf}_${loop}.level"
     fi
     
     # Check if should stop after this step
@@ -639,7 +639,7 @@ fi
 # Generate energy level data file
 if check_step_should_run "rlevels" "$loop"; then
     if ! check_step_completed "rlevels" "$loop" "$conf"; then
-        safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level"
+        safe_grasp_execute "rlevels" "" bash -c "rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level"
     fi
     
     # Check if should stop after this step

@@ -171,9 +171,13 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# claude code
+.CLAUDE.md
+
 # System files
 .DS_Store
 
 # IDE settings
 .vscode/
 .idea/ 
+
