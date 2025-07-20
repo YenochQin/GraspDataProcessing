@@ -7,6 +7,10 @@
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
+# Set proper locale and encoding for Chinese characters
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 # 设置 GraspDataProcessing 根目录路径（便于脚本移动到其他目录使用）
 GRASP_DATA_PROCESSING_ROOT="/home/workstation3/AppFiles/GraspDataProcessing"
 export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}/src:${PYTHONPATH}"

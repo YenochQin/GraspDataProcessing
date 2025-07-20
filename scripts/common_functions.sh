@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Set proper locale and encoding for Chinese characters
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 # 公共shell函数库
 # 消除重复代码，提供统一的日志和工具函数
 
