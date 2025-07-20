@@ -128,8 +128,8 @@ safe_get_config_value() {
     # Clean up temporary files
     rm -f "$temp_output" "$temp_error"
     
-    # Check if successful
-    if [ $exit_code -ne 0 ] || [ -z "$value" ] || [[ "$value" == *"Error"* ]] || [[ "$value" == *"Error"* ]]; then
+    # Check if successful (allow empty values)
+    if [ $exit_code -ne 0 ] || [[ "$value" == *"Error"* ]] || [[ "$error_msg" == *"错误"* ]]; then
         log_error_with_timestamp "Failed to read configuration item '$key': $description"
         if [ -n "$error_msg" ]; then
             log_error_with_timestamp "Error details: $error_msg"
@@ -140,7 +140,7 @@ safe_get_config_value() {
         exit 1
     fi
     
-    # Return clean value
+    # Return clean value (allow empty strings)
     echo "$value"
 }
 
