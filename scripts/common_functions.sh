@@ -495,10 +495,19 @@ highlight_number() {
     
     # Handle empty or null values
     if [ -z "$text" ] || [ "$text" = "null" ]; then
-        printf "%s(empty)%s" "$COLOR_YELLOW" "$COLOR_RESET"
+        if is_slurm_environment; then
+            printf "(empty)"
+        else
+            printf "%s(empty)%s" "$COLOR_YELLOW" "$COLOR_RESET"
+        fi
     else
-        # Use color to highlight numbers
-        printf "%s%s%s" "$color" "$text" "$COLOR_RESET"
+        # In SLURM environment, disable colors to avoid escape sequence clutter in logs
+        if is_slurm_environment; then
+            printf "%s" "$text"
+        else
+            # Use color to highlight numbers in interactive mode
+            printf "%s%s%s" "$color" "$text" "$COLOR_RESET"
+        fi
     fi
 }
 
@@ -509,7 +518,12 @@ highlight_param() {
     local key_color="${3:-$COLOR_WHITE}"
     local value_color="${4:-$COLOR_CYAN}"
     
-    printf "%s%s%s=%s" "$key_color" "$key" "$COLOR_RESET" "$(highlight_number "$value" "$value_color")"
+    # In SLURM environment, disable colors to avoid escape sequence clutter in logs
+    if is_slurm_environment; then
+        printf "%s=%s" "$key" "$(highlight_number "$value" "$value_color")"
+    else
+        printf "%s%s%s=%s" "$key_color" "$key" "$COLOR_RESET" "$(highlight_number "$value" "$value_color")"
+    fi
 }
 
 # Log function with path simplification support
