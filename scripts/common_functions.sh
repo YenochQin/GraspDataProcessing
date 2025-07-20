@@ -35,11 +35,11 @@ log_stage() {
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     if [ "$stage_type" = "START" ]; then
-        echo "[$timestamp] 🔧 Starting stage: $stage_name"
+        echo "[$timestamp] [START] Starting stage: $stage_name"
     elif [ "$stage_type" = "END" ]; then
-        echo "[$timestamp] ✅ Completed stage: $stage_name"
+        echo "[$timestamp] [DONE] Completed stage: $stage_name"
     else
-        echo "[$timestamp] 📊 Stage: $stage_name"
+        echo "[$timestamp] [INFO] Stage: $stage_name"
     fi
 }
 
@@ -275,7 +275,7 @@ check_grasp_errors() {
     # Search for error patterns
     for pattern in "${error_patterns[@]}"; do
         if grep -qi "$pattern" "$output_log"; then
-            log_with_timestamp "❌ $program_name detected error: $pattern"
+            log_with_timestamp "[ERROR] $program_name detected error: $pattern"
             log_with_timestamp "Error context:"
             grep -i -A2 -B2 "$pattern" "$output_log" | tail -10
             return 1
@@ -284,12 +284,12 @@ check_grasp_errors() {
     
     # Check if expected output files exist
     if [ -n "$expected_files" ]; then
-        log_with_timestamp "📁 Current working directory: $(pwd)"
-        log_with_timestamp "📋 Check expected files: $expected_files"
+        log_with_timestamp "[INFO] Current working directory: $(pwd)"
+        log_with_timestamp "[CHECK] Check expected files: $expected_files"
         
         # For MPI programs, wait a while to ensure files are fully written
         if [[ "$program_name" == *"_mpi" ]]; then
-            log_with_timestamp "⏱️ MPI program detected, waiting 3 seconds to ensure file writing is complete..."
+            log_with_timestamp "[WAIT] MPI program detected, waiting 3 seconds to ensure file writing is complete..."
             sleep 3
         fi
         
@@ -311,14 +311,14 @@ check_grasp_errors() {
         
         # If splitting fails, try using read command
         if [ $file_count -eq 1 ] && [[ "$expected_files" == *" "* ]]; then
-            log_with_timestamp "⚠️ Detected file list may not be correctly split, trying read command..."
+            log_with_timestamp "[WARN] Detected file list may not be correctly split, trying read command..."
             files_array=()
             local IFS=' '
             read -r -a files_array <<< "$expected_files"
             file_count=${#files_array[@]}
         fi
         
-        log_with_timestamp "🔍 Expected file count: $file_count items"
+        log_with_timestamp "[INFO] Expected file count: $file_count items"
         local index=1
         for file in "${files_array[@]}"; do
             log_with_timestamp "  [$index]: '$file'"
@@ -331,13 +331,13 @@ check_grasp_errors() {
             
             # Use array for file checking
             for file in "${files_array[@]}"; do
-                log_with_timestamp "🔍 Check file: '$file'"
+                log_with_timestamp "[CHECK] Check file: '$file'"
                 
                 if [ ! -f "$file" ]; then
                     missing_files="$missing_files $file"
                     all_files_exist=false
                 elif [ ! -s "$file" ]; then
-                    log_with_timestamp "❌ $program_name generated empty file: $file"
+                    log_with_timestamp "[ERROR] $program_name generated empty file: $file"
                     all_files_exist=false
                     break
                 fi
@@ -346,13 +346,13 @@ check_grasp_errors() {
             if [ "$all_files_exist" = false ]; then
                 retry_count=$((retry_count + 1))
                 if [ $retry_count -lt $max_retries ]; then
-                    log_with_timestamp "⏳ Retry $retry_count, waiting for file generation... Missing files:$missing_files"
+                    log_with_timestamp "[RETRY] Retry $retry_count, waiting for file generation... Missing files:$missing_files"
                     sleep 2
                 else
-                    log_with_timestamp "❌ $program_name did not generate expected files:$missing_files"
-                    log_with_timestamp "📂 Current directory contents:"
+                    log_with_timestamp "[ERROR] $program_name did not generate expected files:$missing_files"
+                    log_with_timestamp "[INFO] Current directory contents:"
                     ls -la
-                    log_with_timestamp "🔍 Detailed file status check:"
+                    log_with_timestamp "[CHECK] Detailed file status check:"
                     for file in "${files_array[@]}"; do
                         log_with_timestamp "Check file: $file"
                         if [ -e "$file" ]; then
@@ -373,7 +373,7 @@ check_grasp_errors() {
         done
         
         if [ "$all_files_exist" = true ]; then
-            log_with_timestamp "✅ All expected file checks passed: $expected_files"
+            log_with_timestamp "[SUCCESS] All expected file checks passed: $expected_files"
         fi
     fi
     
@@ -397,7 +397,7 @@ safe_grasp_execute() {
         expected_files=$(get_expected_files "$program_name" "$conf" "$loop")
     fi
     
-    log_with_timestamp "🎯 Automatically determine expected files based on program $program_name: $expected_files"
+    log_with_timestamp "[AUTO] Automatically determine expected files based on program $program_name: $expected_files"
     
     # Create temporary log file
     local temp_log="/tmp/${program_name}_${SLURM_JOB_ID}_$$.log"
@@ -417,15 +417,15 @@ safe_grasp_execute() {
     # Ensure exit code is numeric
     if [ -z "$exit_code" ]; then
         exit_code=1
-        log_with_timestamp "⚠️ Cannot get exit code for $program_name, assuming failure"
+        log_with_timestamp "[WARN] Cannot get exit code for $program_name, assuming failure"
     elif ! [[ "$exit_code" =~ ^[0-9]+$ ]]; then
         exit_code=1
-        log_with_timestamp "⚠️ Exit code for $program_name is not numeric, assuming failure"
+        log_with_timestamp "[WARN] Exit code for $program_name is not numeric, assuming failure"
     fi
     
     # Check exit code
     if [ "$exit_code" -ne 0 ]; then
-        log_with_timestamp "❌ $program_name abnormal exit, exit code: $exit_code"
+        log_with_timestamp "[ERROR] $program_name abnormal exit, exit code: $exit_code"
         log_with_timestamp "Last output:"
         tail -20 "$temp_log"
         rm -f "$temp_log"
@@ -441,7 +441,7 @@ safe_grasp_execute() {
     fi
     
     rm -f "$temp_log"
-    log_with_timestamp "✅ $program_name completed"
+    log_with_timestamp "[SUCCESS] $program_name completed"
 }
 
 # =============================================================================

@@ -189,52 +189,52 @@ check_step_should_run() {
         case "$current_step" in
             "initial_csfs")
                 if [[ "$end_step" == "initial_csfs" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "choosing_csfs")
                 if [[ "$end_step" == "choosing_csfs" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "mkdisks")
                 if [[ "$end_step" == "mkdisks" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rangular")
                 if [[ "$end_step" == "rangular" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rwfnestimate")
                 if [[ "$end_step" == "rwfnestimate" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rmcdhf"|"rci")
                 if [[ "$end_step" == "rmcdhf" || "$end_step" == "rci" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rsave")
                 if [[ "$end_step" == "rsave" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "jj2lsj")
                 if [[ "$end_step" == "jj2lsj" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rlevels")
                 if [[ "$end_step" == "rlevels" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "train")
                 if [[ "$end_step" == "train" ]]; then
-                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
+                    log_with_timestamp "[TARGET] Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
         esac
@@ -271,7 +271,7 @@ check_step_completed() {
     case "$step_name" in
         "mkdisks")
             if [[ -f "disks" ]]; then
-                log_with_timestamp "⏭️ Skip completed step: $step_name (found file: disks)"
+                log_with_timestamp "[SKIP] Skip completed step: $step_name (found file: disks)"
                 return 0
             fi
             ;;
@@ -281,31 +281,31 @@ check_step_completed() {
             ;;
         "rwfnestimate")
             if [[ -f "rwfn.inp" ]]; then
-                log_with_timestamp "⏭️ Skip completed step: $step_name (found file: rwfn.inp)"
+                log_with_timestamp "[SKIP] Skip completed step: $step_name (found file: rwfn.inp)"
                 return 0
             fi
             ;;
         "rmcdhf"|"rci")
             if [[ -f "rwfn.out" && -f "rmix.out" ]] || [[ -f "${conf_name}_${loop_num}.cm" ]]; then
-                log_with_timestamp "⏭️ Skip completed step: $step_name (found output files)"
+                log_with_timestamp "[SKIP] Skip completed step: $step_name (found output files)"
                 return 0
             fi
             ;;
         "rsave")
             if [[ -f "${conf_name}_${loop_num}.w" && -f "${conf_name}_${loop_num}.c" && -f "${conf_name}_${loop_num}.m" ]]; then
-                log_with_timestamp "⏭️ Skip completed step: $step_name (found saved files)"
+                log_with_timestamp "[SKIP] Skip completed step: $step_name (found saved files)"
                 return 0
             fi
             ;;
         "jj2lsj")
             if [[ -f "${conf_name}_${loop_num}.lsj.lbl" ]]; then
-                log_with_timestamp "⏭️ Skip completed step: $step_name (found file: ${conf_name}_${loop_num}.lsj.lbl)"
+                log_with_timestamp "[SKIP] Skip completed step: $step_name (found file: ${conf_name}_${loop_num}.lsj.lbl)"
                 return 0
             fi
             ;;
         "rlevels")
             if [[ -f "${conf_name}_${loop_num}.level" ]]; then
-                log_with_timestamp "⏭️ Skip completed step: $step_name (found file: ${conf_name}_${loop_num}.level)"
+                log_with_timestamp "[SKIP] Skip completed step: $step_name (found file: ${conf_name}_${loop_num}.level)"
                 return 0
             fi
             ;;
@@ -326,7 +326,7 @@ nuclear_quadrupole=$(safe_get_config_value "${config_file}" "nuclear_quadrupole"
 # Verify the validity of numeric values
 local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 echo -e "[$timestamp] Nuclear parameters: $(highlight_param "Z" "$atomic_number") $(highlight_param "A" "$mass_number") $(highlight_param "mass" "$atomic_mass")"
-echo -e "[$timestamp] Nuclear properties: $(highlight_param "I" "$nuclear_spin") $(highlight_param "μ" "$nuclear_dipole") $(highlight_param "Q" "$nuclear_quadrupole")"
+echo -e "[$timestamp] Nuclear properties: $(highlight_param "I" "$nuclear_spin") $(highlight_param "mu" "$nuclear_dipole") $(highlight_param "Q" "$nuclear_quadrupole")"
 
 input_commands="$atomic_number
 $mass_number
@@ -336,30 +336,30 @@ $nuclear_spin
 $nuclear_dipole
 $nuclear_quadrupole"
 safe_grasp_execute "rnucleus" "$input_commands" rnucleus
-log_with_timestamp "✅ Nuclear parameter setup completed"
+log_with_timestamp "[SUCCESS] Nuclear parameter setup completed"
 ###########################################
 # Automatically reset step control settings after breakpoint restart (to avoid infinite loops)
 reset_step_control_if_needed() {
     # Check if step control is enabled and current settings are not default
     if [[ "$enable_step_control" == "true" && "$start_step" != "auto" ]]; then
-        log_with_timestamp "🔄 Detected breakpoint restart mode, checking if step control reset is needed..."
+        log_with_timestamp "[RESTART] Detected breakpoint restart mode, checking if step control reset is needed..."
         
         # If the specified breakpoint restart step has been completed, reset to normal mode
         local should_reset=false
         
         # Check various reset conditions
         if [[ "$end_step" != "auto" ]]; then
-            log_with_timestamp "⚠️ Detected specified end step ($end_step), will reset step control after completion"
+            log_with_timestamp "[WARN] Detected specified end step ($end_step), will reset step control after completion"
             should_reset=true
         elif [[ "$start_step" == "train" ]]; then
-            log_with_timestamp "⚠️ Detected start from train step, will reset step control after train completion"
+            log_with_timestamp "[WARN] Detected start from train step, will reset step control after train completion"
             should_reset=true
         fi
         
         if [[ "$should_reset" == "true" ]]; then
             # Set a flag indicating reset is needed at appropriate time
             export SHOULD_RESET_STEP_CONTROL="true"
-            log_with_timestamp "📋 Marked: Will automatically reset step control after completing current breakpoint restart"
+            log_with_timestamp "[MARK] Marked: Will automatically reset step control after completing current breakpoint restart"
         fi
     fi
 }
@@ -367,7 +367,7 @@ reset_step_control_if_needed() {
 # Execute step control reset
 do_step_control_reset() {
     if [[ "$SHOULD_RESET_STEP_CONTROL" == "true" ]]; then
-        log_with_timestamp "🔄 Breakpoint restart completed, resetting step control settings to normal mode..."
+        log_with_timestamp "[RESTART] Breakpoint restart completed, resetting step control settings to normal mode..."
         
         # Reset step control settings
         run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.start_step "auto" -f "${config_file}"
@@ -382,7 +382,7 @@ do_step_control_reset() {
         # Clear reset flag
         export SHOULD_RESET_STEP_CONTROL=""
         
-        log_with_timestamp "✅ Step control has been reset, subsequent loops will execute all steps normally"
+        log_with_timestamp "[SUCCESS] Step control has been reset, subsequent loops will execute all steps normally"
     fi
 }
 
@@ -404,11 +404,11 @@ if [ $loop -eq 1 ]; then
         
         # Check if should stop after this step
         if check_should_stop_after_step "initial_csfs"; then
-            log_with_timestamp "🛑 Stop execution after initial_csfs step according to configuration"
+            log_with_timestamp "[STOP] Stop execution after initial_csfs step according to configuration"
             exit 0
         fi
     else
-        log_with_timestamp "⏭️ Skip step: initial_csfs (according to step control configuration)"
+        log_with_timestamp "[SKIP] Skip step: initial_csfs (according to step control configuration)"
     fi
 fi
 ###########################################
@@ -426,18 +426,18 @@ if check_step_should_run "choosing_csfs" "$loop"; then
     log_stage "Execute configuration selection" "START"
     run_python_with_env "${ML_PYTHON_DIR}/choosing_csfs.py"
     if [ $? -ne 0 ]; then
-        log_with_timestamp "❌ Configuration selection failed!"
+        log_with_timestamp "[ERROR] Configuration selection failed!"
         exit 1
     fi
-    log_with_timestamp "✅ Configuration selection completed"
+    log_with_timestamp "[SUCCESS] Configuration selection completed"
     
     # Check if should stop after this step
     if check_should_stop_after_step "choosing_csfs"; then
-        log_with_timestamp "🛑 Stop execution after choosing_csfs step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after choosing_csfs step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: choosing_csfs (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: choosing_csfs (according to step control configuration)"
 fi
 ###########################################
 ## grasp calculation routine
@@ -460,11 +460,11 @@ if check_step_should_run "mkdisks" "$loop"; then
     
     # Check if should stop after this step
     if check_should_stop_after_step "mkdisks"; then
-        log_with_timestamp "🛑 Stop execution after mkdisks step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after mkdisks step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: mkdisks (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: mkdisks (according to step control configuration)"
 fi
 
 ### rcsf
@@ -485,11 +485,11 @@ if check_step_should_run "rangular" "$loop"; then
     
     # Check if should stop after this step
     if check_should_stop_after_step "rangular"; then
-        log_with_timestamp "🛑 Stop execution after rangular step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after rangular step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: rangular (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: rangular (according to step control configuration)"
 fi
 
 ### rwfnestimate
@@ -508,11 +508,11 @@ ${conf}.w
     
     # Check if should stop after this step
     if check_should_stop_after_step "rwfnestimate"; then
-        log_with_timestamp "🛑 Stop execution after rwfnestimate step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after rwfnestimate step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: rwfnestimate (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: rwfnestimate (according to step control configuration)"
 fi
 
 ### rmcdhf
@@ -529,11 +529,11 @@ ${orbital_params}
     
     # Check if should stop after this step
     if check_should_stop_after_step "rmcdhf"; then
-        log_with_timestamp "🛑 Stop execution after rmcdhf step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after rmcdhf step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: rmcdhf (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: rmcdhf (according to step control configuration)"
 fi
 
 ### rsave
@@ -545,11 +545,11 @@ if check_step_should_run "rsave" "$loop"; then
     
     # Check if should stop after this step
     if check_should_stop_after_step "rsave"; then
-        log_with_timestamp "🛑 Stop execution after rsave step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after rsave step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: rsave (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: rsave (according to step control configuration)"
 fi
 
 ### jj2lsj rmcdhf
@@ -564,11 +564,11 @@ y"
     
     # Check if should stop after this step
     if check_should_stop_after_step "jj2lsj"; then
-        log_with_timestamp "🛑 Stop execution after jj2lsj step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: jj2lsj (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
 fi
 
 # Generate energy level data file
@@ -579,11 +579,11 @@ if check_step_should_run "rlevels" "$loop"; then
     
     # Check if should stop after this step
     if check_should_stop_after_step "rlevels"; then
-        log_with_timestamp "🛑 Stop execution after rlevels step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: rlevels (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
 fi
 
 else
@@ -610,11 +610,11 @@ ${cal_levels}"
     
     # Check if should stop after this step
     if check_should_stop_after_step "rci"; then
-        log_with_timestamp "🛑 Stop execution after rci step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after rci step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: rci (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: rci (according to step control configuration)"
 fi
 
 ### jj2lsj rci
@@ -629,11 +629,11 @@ y"
     
     # Check if should stop after this step
     if check_should_stop_after_step "jj2lsj"; then
-        log_with_timestamp "🛑 Stop execution after jj2lsj step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: jj2lsj (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
 fi
 
 # Generate energy level data file
@@ -644,11 +644,11 @@ if check_step_should_run "rlevels" "$loop"; then
     
     # Check if should stop after this step
     if check_should_stop_after_step "rlevels"; then
-        log_with_timestamp "🛑 Stop execution after rlevels step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ Skip step: rlevels (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
 fi
 
 fi
@@ -658,9 +658,9 @@ if [ -d "mpi_tmp" ]; then
     log_with_timestamp "Found temporary folder mpi_tmp, cleaning up..."
     rm -rf mpi_tmp
     if [ $? -eq 0 ]; then
-        log_with_timestamp "✅ Temporary folder mpi_tmp cleanup completed"
+        log_with_timestamp "[SUCCESS] Temporary folder mpi_tmp cleanup completed"
     else
-        log_with_timestamp "⚠️ Temporary folder mpi_tmp cleanup failed"
+        log_with_timestamp "[WARN] Temporary folder mpi_tmp cleanup failed"
     fi
 else
     log_with_timestamp "Temporary folder mpi_tmp not found"
@@ -676,18 +676,18 @@ if check_step_should_run "train" "$loop"; then
     # Execute directly, allowing real-time output display (run_python_with_env already includes error handling)
     run_python_with_env "${ML_PYTHON_DIR}/train.py"
     
-    log_with_timestamp "✅ Machine learning training completed"
+    log_with_timestamp "[SUCCESS] Machine learning training completed"
     
     # Check if should stop after this step
     if check_should_stop_after_step "train"; then
-        log_with_timestamp "🛑 Stop execution after train step according to configuration"
+        log_with_timestamp "[STOP] Stop execution after train step according to configuration"
         exit 0
     fi
     
     # If train step is completed, check if step control reset is needed
     do_step_control_reset
 else
-    log_with_timestamp "⏭️ Skip step: train (according to step control configuration)"
+    log_with_timestamp "[SKIP] Skip step: train (according to step control configuration)"
 fi
 
 log_with_timestamp "Loop $loop completed, preparing for next iteration..."
