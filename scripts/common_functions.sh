@@ -4,46 +4,46 @@
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-# 公共shell函数库
-# 消除重复代码，提供统一的日志和工具函数
+# Common shell function library
+# Eliminate duplicate code, provide unified logging and utility functions
 
-# 带时间戳的日志函数
+# Logging function with timestamp
 log_with_timestamp() {
     local message="$1"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] $message"
 }
 
-# 带时间戳的错误日志函数
+# Error logging function with timestamp
 log_error_with_timestamp() {
     local message="$1" 
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] ERROR: $message" >&2
 }
 
-# 带时间戳的警告日志函数
+# Warning logging function with timestamp
 log_warning_with_timestamp() {
     local message="$1"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] WARNING: $message" >&2
 }
 
-# 阶段日志函数
+# Stage logging function
 log_stage() {
     local stage_name="$1"
     local stage_type="$2"  # START or END
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     if [ "$stage_type" = "START" ]; then
-        echo "[$timestamp] 🔧 开始阶段: $stage_name"
+        echo "[$timestamp] 🔧 Starting stage: $stage_name"
     elif [ "$stage_type" = "END" ]; then
-        echo "[$timestamp] ✅ 完成阶段: $stage_name"
+        echo "[$timestamp] ✅ Completed stage: $stage_name"
     else
-        echo "[$timestamp] 📊 阶段: $stage_name"
+        echo "[$timestamp] 📊 Stage: $stage_name"
     fi
 }
 
-# 检查环境变量是否在SLURM中运行
+# Check if running in SLURM environment
 is_slurm_environment() {
     if [ -n "$SLURM_JOB_ID" ] || [ -n "$SLURM_PROCID" ] || [ -n "$SLURM_LOCALID" ]; then
         return 0  # true
@@ -52,7 +52,7 @@ is_slurm_environment() {
     fi
 }
 
-# 检查是否在调试模式
+# Check if in debug mode
 is_debug_mode() {
     if [ "$DEBUG" = "1" ] || [ "$DEBUG" = "true" ] || [ "$PYTHON_DEBUG" = "1" ]; then
         return 0  # true
@@ -61,117 +61,117 @@ is_debug_mode() {
     fi
 }
 
-# 环境感知的Python执行函数
+# Environment-aware Python execution function
 run_python_with_env() {
     local python_script="$1"
-    shift  # 移除第一个参数，剩下的作为脚本参数
+    shift  # Remove first parameter, remaining parameters serve as script arguments
     
-    # 检查是否为配置读取脚本（不需要成功日志）
+    # Check if it's a config reading script (no success log needed)
     local script_basename=$(basename "$python_script")
     local is_config_script=false
     if [[ "$script_basename" == "csfs_ml_choosing_config_load.py" ]]; then
         is_config_script=true
     fi
     
-    # 设置环境变量
+    # Set environment variables
     if is_slurm_environment && ! is_debug_mode; then
-        # SLURM生产环境：关闭进度条
+        # SLURM production environment: disable progress bar
         export PYTHONUNBUFFERED=1
-        # 只为非配置脚本输出执行日志
+        # Only output execution log for non-config scripts
         if [[ "$is_config_script" == "false" ]]; then
-            log_with_timestamp "在SLURM环境中运行Python脚本（生产模式）: $python_script"
+            log_with_timestamp "Running Python script in SLURM environment (production mode): $python_script"
         fi
     else
-        # 调试模式：启用进度条
+        # Debug mode: enable progress bar
         export DEBUG=1
-        # 只为非配置脚本输出执行日志
+        # Only output execution log for non-config scripts
         if [[ "$is_config_script" == "false" ]]; then
-            log_with_timestamp "在调试模式中运行Python脚本: $python_script"
+            log_with_timestamp "Running Python script in debug mode: $python_script"
         fi
     fi
     
-    # 执行Python脚本
+    # Execute Python script
     python "$python_script" "$@"
     local exit_code=$?
     
     if [ $exit_code -eq 0 ]; then
-        # 只为非配置脚本输出成功日志
+        # Only output success log for non-config scripts
         if [[ "$is_config_script" == "false" ]]; then
-            log_with_timestamp "Python脚本执行成功: $python_script"
+            log_with_timestamp "Python script executed successfully: $python_script"
         fi
     else
-        # 失败日志始终输出（包括配置脚本）
-        log_error_with_timestamp "Python脚本执行失败: $python_script (退出码: $exit_code)"
+        # Failure log is always output (including config scripts)
+        log_error_with_timestamp "Python script execution failed: $python_script (exit code: $exit_code)"
     fi
     
     return $exit_code
 }
 
-# 安全的配置值读取函数（确保返回纯数值，失败时退出）
+# Safe configuration value reading function (ensures pure numeric return, exits on failure)
 safe_get_config_value() {
     local config_file="$1"
     local key="$2"
     local description="$3"
     
-    # 使用临时文件捕获输出和错误
+    # Use temporary files to capture output and errors
     local temp_output=$(mktemp)
     local temp_error=$(mktemp)
     
-    # 执行配置读取
+    # Execute configuration reading
     python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get "$key" -f "$config_file" > "$temp_output" 2> "$temp_error"
     local exit_code=$?
     
-    # 读取结果
+    # Read results
     local value=$(cat "$temp_output")
     local error_msg=$(cat "$temp_error")
     
-    # 清理临时文件
+    # Clean up temporary files
     rm -f "$temp_output" "$temp_error"
     
-    # 检查是否成功
-    if [ $exit_code -ne 0 ] || [ -z "$value" ] || [[ "$value" == *"错误"* ]] || [[ "$value" == *"Error"* ]]; then
-        log_error_with_timestamp "读取配置项 '$key' 失败: $description"
+    # Check if successful
+    if [ $exit_code -ne 0 ] || [ -z "$value" ] || [[ "$value" == *"Error"* ]] || [[ "$value" == *"Error"* ]]; then
+        log_error_with_timestamp "Failed to read configuration item '$key': $description"
         if [ -n "$error_msg" ]; then
-            log_error_with_timestamp "错误详情: $error_msg"
+            log_error_with_timestamp "Error details: $error_msg"
         fi
         if [ -n "$value" ]; then
-            log_error_with_timestamp "返回值: $value"
+            log_error_with_timestamp "Return value: $value"
         fi
         exit 1
     fi
     
-    # 返回纯净的值
+    # Return clean value
     echo "$value"
 }
 
-# 文件存在性检查函数
+# File existence check function
 check_file_exists() {
     local file_path="$1"
     local description="$2"
     
     if [ -f "$file_path" ]; then
-        log_with_timestamp "找到文件: $description ($file_path)"
+        log_with_timestamp "Found file: $description ($file_path)"
         return 0
     else
-        log_error_with_timestamp "未找到文件: $description ($file_path)"
+        log_error_with_timestamp "File not found: $description ($file_path)"
         return 1
     fi
 }
 
-# 目录创建函数
+# Directory creation function
 ensure_directory() {
     local dir_path="$1"
     local description="$2"
     
     if [ ! -d "$dir_path" ]; then
         mkdir -p "$dir_path"
-        log_with_timestamp "创建目录: $description ($dir_path)"
+        log_with_timestamp "Created directory: $description ($dir_path)"
     else
-        log_with_timestamp "目录已存在: $description ($dir_path)"
+        log_with_timestamp "Directory already exists: $description ($dir_path)"
     fi
 }
 
-# 计算执行时间的函数
+# Function to calculate execution time
 calculate_execution_time() {
     local start_time="$1"
     local end_time="$2"
@@ -182,38 +182,38 @@ calculate_execution_time() {
     local seconds=$((execution_time % 60))
     
     if [ $hours -gt 0 ]; then
-        echo "${hours}小时${minutes}分钟${seconds}秒"
+        echo "${hours} hours ${minutes} minutes ${seconds} seconds"
     elif [ $minutes -gt 0 ]; then
-        echo "${minutes}分钟${seconds}秒"
+        echo "${minutes} minutes ${seconds} seconds"
     else
-        echo "${seconds}秒"
+        echo "${seconds} seconds"
     fi
 }
 
-# 输出环境信息
+# Print environment information
 print_environment_info() {
-    log_with_timestamp "=== 环境信息 ==="
-    log_with_timestamp "主机名: $(hostname)"
-    log_with_timestamp "当前用户: $(whoami)"
-    log_with_timestamp "工作目录: $(pwd)"
+    log_with_timestamp "=== Environment Information ==="
+    log_with_timestamp "Hostname: $(hostname)"
+    log_with_timestamp "Current user: $(whoami)"
+    log_with_timestamp "Working directory: $(pwd)"
     
     if is_slurm_environment; then
-        log_with_timestamp "运行环境: SLURM作业 (Job ID: ${SLURM_JOB_ID:-未知})"
+        log_with_timestamp "Runtime environment: SLURM job (Job ID: ${SLURM_JOB_ID:-Unknown})"
     else
-        log_with_timestamp "运行环境: 本地执行"
+        log_with_timestamp "Runtime environment: Local execution"
     fi
     
     if is_debug_mode; then
-        log_with_timestamp "调试模式: 已启用"
+        log_with_timestamp "Debug mode: Enabled"
     else
-        log_with_timestamp "调试模式: 已禁用"
+        log_with_timestamp "Debug mode: Disabled"
     fi
     
-    log_with_timestamp "Python版本: $(python --version 2>&1)"
+    log_with_timestamp "Python version: $(python --version 2>&1)"
     log_with_timestamp "==================="
 } 
 
-# 根据程序名确定期望的输出文件
+# Determine expected output files based on program name
 get_expected_files() {
     local program_name="$1"
     local conf="$2" 
@@ -224,7 +224,7 @@ get_expected_files() {
             echo "disks"
             ;;
         "rangular_mpi")
-            echo ""  # 没有文件输出
+            echo ""  # No file output
             ;;
         "rwfnestimate")
             echo "rwfn.inp"
@@ -248,18 +248,18 @@ get_expected_files() {
             echo "isodata"
             ;;
         *)
-            echo ""  # 未知程序，不检查文件
+            echo ""  # Unknown program, no file check
             ;;
     esac
 }
 
-# GRASP程序错误检查函数
+# GRASP program error checking function
 check_grasp_errors() {
     local program_name="$1"
     local output_log="$2"
     local expected_files="$3"
     
-    # 检查严重错误模式
+    # Check for serious error patterns
     local error_patterns=(
         "Fortran runtime error"
         "Error termination"
@@ -272,53 +272,53 @@ check_grasp_errors() {
         "core dumped"
     )
     
-    # 搜索错误模式
+    # Search for error patterns
     for pattern in "${error_patterns[@]}"; do
         if grep -qi "$pattern" "$output_log"; then
-            log_with_timestamp "❌ $program_name 检测到错误: $pattern"
-            log_with_timestamp "错误上下文："
+            log_with_timestamp "❌ $program_name detected error: $pattern"
+            log_with_timestamp "Error context:"
             grep -i -A2 -B2 "$pattern" "$output_log" | tail -10
             return 1
         fi
     done
     
-    # 检查是否有预期的输出文件
+    # Check if expected output files exist
     if [ -n "$expected_files" ]; then
-        log_with_timestamp "📁 当前工作目录: $(pwd)"
-        log_with_timestamp "📋 检查预期文件: $expected_files"
+        log_with_timestamp "📁 Current working directory: $(pwd)"
+        log_with_timestamp "📋 Check expected files: $expected_files"
         
-        # 对于 MPI 程序，等待一段时间确保文件完全写入
+        # For MPI programs, wait a while to ensure files are fully written
         if [[ "$program_name" == *"_mpi" ]]; then
-            log_with_timestamp "⏱️ MPI程序检测，等待3秒确保文件写入完成..."
+            log_with_timestamp "⏱️ MPI program detected, waiting 3 seconds to ensure file writing is complete..."
             sleep 3
         fi
         
-        # 使用重试机制检查文件
+        # Use retry mechanism to check files
         local max_retries=5
         local retry_count=0
         local all_files_exist=false
         
-        # 将文件列表转换为数组进行处理
+        # Convert file list to array for processing
         local files_array
         if [[ -n "${ZSH_VERSION:-}" ]]; then
-            # zsh 下使用特殊语法
+            # Use special syntax under zsh
             files_array=(${=expected_files})
         else
-            # bash 下直接分割
+            # Direct splitting under bash
             files_array=($expected_files)
         fi
         local file_count=${#files_array[@]}
         
-        # 如果分割失败，尝试使用 read 命令
+        # If splitting fails, try using read command
         if [ $file_count -eq 1 ] && [[ "$expected_files" == *" "* ]]; then
-            log_with_timestamp "⚠️ 检测到文件列表可能未正确分割，尝试使用read命令..."
+            log_with_timestamp "⚠️ Detected file list may not be correctly split, trying read command..."
             files_array=()
             local IFS=' '
             read -r -a files_array <<< "$expected_files"
             file_count=${#files_array[@]}
         fi
         
-        log_with_timestamp "🔍 预期文件数量: $file_count 个"
+        log_with_timestamp "🔍 Expected file count: $file_count items"
         local index=1
         for file in "${files_array[@]}"; do
             log_with_timestamp "  [$index]: '$file'"
@@ -329,15 +329,15 @@ check_grasp_errors() {
             all_files_exist=true
             local missing_files=""
             
-            # 使用数组进行文件检查
+            # Use array for file checking
             for file in "${files_array[@]}"; do
-                log_with_timestamp "🔍 检查文件: '$file'"
+                log_with_timestamp "🔍 Check file: '$file'"
                 
                 if [ ! -f "$file" ]; then
                     missing_files="$missing_files $file"
                     all_files_exist=false
                 elif [ ! -s "$file" ]; then
-                    log_with_timestamp "❌ $program_name 生成的文件为空: $file"
+                    log_with_timestamp "❌ $program_name generated empty file: $file"
                     all_files_exist=false
                     break
                 fi
@@ -346,25 +346,25 @@ check_grasp_errors() {
             if [ "$all_files_exist" = false ]; then
                 retry_count=$((retry_count + 1))
                 if [ $retry_count -lt $max_retries ]; then
-                    log_with_timestamp "⏳ 第 $retry_count 次重试，等待文件生成... 缺失文件:$missing_files"
+                    log_with_timestamp "⏳ Retry $retry_count, waiting for file generation... Missing files:$missing_files"
                     sleep 2
                 else
-                    log_with_timestamp "❌ $program_name 未生成预期文件:$missing_files"
-                    log_with_timestamp "📂 当前目录内容："
+                    log_with_timestamp "❌ $program_name did not generate expected files:$missing_files"
+                    log_with_timestamp "📂 Current directory contents:"
                     ls -la
-                    log_with_timestamp "🔍 详细检查文件情况："
+                    log_with_timestamp "🔍 Detailed file status check:"
                     for file in "${files_array[@]}"; do
-                        log_with_timestamp "检查文件: $file"
+                        log_with_timestamp "Check file: $file"
                         if [ -e "$file" ]; then
-                            log_with_timestamp "  - 文件存在但可能有问题"
-                            log_with_timestamp "  - 文件大小: $(du -h "$file" 2>/dev/null || echo "无法获取大小")"
-                            log_with_timestamp "  - 文件权限: $(ls -l "$file" 2>/dev/null || echo "无法获取权限")"
+                            log_with_timestamp "  - File exists but may have issues"
+                            log_with_timestamp "  - File size: $(du -h "$file" 2>/dev/null || echo "Cannot get size")"
+                            log_with_timestamp "  - File permissions: $(ls -l "$file" 2>/dev/null || echo "Cannot get permissions")"
                         else
-                            log_with_timestamp "  - 文件不存在"
-                            # 查找类似的文件名
+                            log_with_timestamp "  - File does not exist"
+                            # Look for similar file names
                             local basename=$(basename "$file")
-                            local similar_files=$(ls -1 | grep -i "${basename%.*}" 2>/dev/null || echo "无相似文件")
-                            log_with_timestamp "  - 相似文件: $similar_files"
+                            local similar_files=$(ls -1 | grep -i "${basename%.*}" 2>/dev/null || echo "No similar files")
+                            log_with_timestamp "  - Similar files: $similar_files"
                         fi
                     done
                     return 1
@@ -373,66 +373,66 @@ check_grasp_errors() {
         done
         
         if [ "$all_files_exist" = true ]; then
-            log_with_timestamp "✅ 所有预期文件检查通过: $expected_files"
+            log_with_timestamp "✅ All expected file checks passed: $expected_files"
         fi
     fi
     
     return 0
 }
 
-# 安全执行GRASP程序的函数
+# Function to safely execute GRASP programs
 safe_grasp_execute() {
     local program_name="$1"
     local input_commands="$2"
     shift 2
     
-    log_with_timestamp "执行 $program_name..."
+    log_with_timestamp "Execute $program_name..."
     
-    # 动态获取期望的文件列表
+    # Dynamically get expected file list
     local expected_files=""
     if [[ "$program_name" == "rsave" ]]; then
-        # 对于 rsave，我们需要从上下文获取 conf 和 loop 变量
+        # For rsave, we need to get conf and loop variables from context
         expected_files=$(get_expected_files "$program_name" "$conf" "$loop")
     else
         expected_files=$(get_expected_files "$program_name" "$conf" "$loop")
     fi
     
-    log_with_timestamp "🎯 根据程序 $program_name 自动确定期望文件: $expected_files"
+    log_with_timestamp "🎯 Automatically determine expected files based on program $program_name: $expected_files"
     
-    # 创建临时日志文件
+    # Create temporary log file
     local temp_log="/tmp/${program_name}_${SLURM_JOB_ID}_$$.log"
     
-    # 执行程序并获取退出码
+    # Execute program and get exit code
     local exit_code=0
     if [ -n "$input_commands" ]; then
-        # 带输入的程序
+        # Program with input
         echo "$input_commands" | "$@" 2>&1 | tee "$temp_log"
         exit_code=${PIPESTATUS[0]:-$?}
     else
-        # 不带输入的程序
+        # Program without input
         "$@" 2>&1 | tee "$temp_log"
         exit_code=$?
     fi
     
-    # 确保退出码是数字
+    # Ensure exit code is numeric
     if [ -z "$exit_code" ]; then
         exit_code=1
-        log_with_timestamp "⚠️ 无法获取 $program_name 的退出码，假设为失败"
+        log_with_timestamp "⚠️ Cannot get exit code for $program_name, assuming failure"
     elif ! [[ "$exit_code" =~ ^[0-9]+$ ]]; then
         exit_code=1
-        log_with_timestamp "⚠️ $program_name 的退出码不是数字，假设为失败"
+        log_with_timestamp "⚠️ Exit code for $program_name is not numeric, assuming failure"
     fi
     
-    # 检查退出码
+    # Check exit code
     if [ "$exit_code" -ne 0 ]; then
-        log_with_timestamp "❌ $program_name 非正常退出，退出码: $exit_code"
-        log_with_timestamp "最后的输出："
+        log_with_timestamp "❌ $program_name abnormal exit, exit code: $exit_code"
+        log_with_timestamp "Last output:"
         tail -20 "$temp_log"
         rm -f "$temp_log"
         exit 1
     fi
     
-    # 检查GRASP特定错误
+    # Check GRASP-specific errors
     check_grasp_errors "$program_name" "$temp_log" "$expected_files"
     local check_result=$?
     if [ "$check_result" -ne 0 ]; then
@@ -441,14 +441,14 @@ safe_grasp_execute() {
     fi
     
     rm -f "$temp_log"
-    log_with_timestamp "✅ $program_name 完成"
+    log_with_timestamp "✅ $program_name completed"
 }
 
 # =============================================================================
-# 日志格式增强函数
+# Log format enhancement functions
 # =============================================================================
 
-# 颜色代码定义
+# Color code definitions
 readonly COLOR_RED='\033[0;31m'
 readonly COLOR_GREEN='\033[0;32m'
 readonly COLOR_YELLOW='\033[1;33m'
@@ -459,28 +459,28 @@ readonly COLOR_WHITE='\033[1;37m'
 readonly COLOR_BOLD='\033[1m'
 readonly COLOR_RESET='\033[0m'
 
-# 路径简化函数 - 去除root_path前缀，只显示相对路径
+# Path simplification function - remove root_path prefix, show only relative path
 simplify_path() {
     local full_path="$1"
     local root_path="$2"
     
-    # 如果没有提供root_path，尝试从config.toml中获取
+    # If root_path not provided, try to get from config.toml
     if [ -z "$root_path" ] && [ -f "config.toml" ]; then
-        root_path=$(safe_get_config_value "config.toml" "root_path" "根目录路径" 2>/dev/null || echo "")
+        root_path=$(safe_get_config_value "config.toml" "root_path" "Root directory path" 2>/dev/null || echo "")
     fi
     
-    # 如果root_path为空或者路径不包含root_path，返回原路径
+    # If root_path is empty or path doesn't contain root_path, return original path
     if [ -z "$root_path" ] || [[ "$full_path" != "$root_path"* ]]; then
         echo "$full_path"
         return
     fi
     
-    # 移除root_path前缀
+    # Remove root_path prefix
     local relative_path="${full_path#$root_path}"
-    # 移除开头的斜杠
+    # Remove leading slash
     relative_path="${relative_path#/}"
     
-    # 如果简化后路径为空，表示就是root目录
+    # If simplified path is empty, means it's the root directory
     if [ -z "$relative_path" ]; then
         echo "."
     else
@@ -488,16 +488,16 @@ simplify_path() {
     fi
 }
 
-# 数值高亮函数
+# Numeric highlighting function
 highlight_number() {
     local text="$1"
     local color="${2:-$COLOR_CYAN}"
     
-    # 使用颜色高亮数值
+    # Use color to highlight numbers
     echo -e "${color}${text}${COLOR_RESET}"
 }
 
-# 参数高亮函数
+# Parameter highlighting function
 highlight_param() {
     local key="$1"
     local value="$2"
@@ -507,7 +507,7 @@ highlight_param() {
     echo -e "${key_color}${key}${COLOR_RESET}=$(highlight_number "$value" "$value_color")"
 }
 
-# 支持路径简化的日志函数
+# Log function with path simplification support
 log_with_timestamp_and_path() {
     local message="$1"
     local path_to_simplify="$2"
@@ -521,7 +521,7 @@ log_with_timestamp_and_path() {
     log_with_timestamp "$message"
 }
 
-# 增强的配置参数日志函数
+# Enhanced configuration parameter logging function
 log_config_params() {
     local atom="$1"
     local conf="$2" 
@@ -530,6 +530,6 @@ log_config_params() {
     local cal_levels="$5"
     
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo -e "[$timestamp] 配置参数: $(highlight_param "atom" "$atom") $(highlight_param "conf" "$conf") $(highlight_param "processor" "$processor" "$COLOR_WHITE" "$COLOR_GREEN")"
-    echo -e "[$timestamp] 活性空间: $(highlight_number "$active_space" "$COLOR_YELLOW"), 计算能级: $(highlight_number "$cal_levels" "$COLOR_YELLOW")"
+    echo -e "[$timestamp] Configuration parameters: $(highlight_param "atom" "$atom") $(highlight_param "conf" "$conf") $(highlight_param "processor" "$processor" "$COLOR_WHITE" "$COLOR_GREEN")"
+    echo -e "[$timestamp] Active space: $(highlight_number "$active_space" "$COLOR_YELLOW"), Calculation levels: $(highlight_number "$cal_levels" "$COLOR_YELLOW")"
 }

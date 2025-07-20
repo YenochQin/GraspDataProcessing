@@ -11,120 +11,120 @@
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-# 设置 GraspDataProcessing 根目录路径（便于脚本移动到其他目录使用）
+# Set GraspDataProcessing root directory path for script portability
 GRASP_DATA_PROCESSING_ROOT="/home/workstation3/AppFiles/GraspDataProcessing"
 export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}/src:${PYTHONPATH}"
 export PATH="${GRASP_DATA_PROCESSING_ROOT}/scripts:${PATH}"
 
-# 加载公共函数库（使用绝对路径，消除重复代码）
+# Load common function library (absolute path to eliminate code duplication)
 source "${GRASP_DATA_PROCESSING_ROOT}/scripts/common_functions.sh"
 
 
-log_with_timestamp "========== 开始执行 sbatch 脚本 =========="
-log_with_timestamp "作业名: ${SLURM_JOB_NAME:-未设置}"
-log_with_timestamp "作业编号: ${SLURM_JOB_ID:-未设置}"
+log_with_timestamp "========== Starting sbatch script execution ========="
+log_with_timestamp "Job name: ${SLURM_JOB_NAME:-Not set}"
+log_with_timestamp "Job ID: ${SLURM_JOB_ID:-Not set}"
 
 ###########################################
 ## module load
-log_with_timestamp "加载必要的模块..."
+log_with_timestamp "Loading required modules..."
 module load mpi/openmpi-x86_64-gcc
 module load openblas/0.3.28-gcc-11.4.1
 module load grasp/grasp_openblas
 ###########################################
-# ⚠️ 关键修改：确保正确加载 Conda（zsh 需要手动初始化）
-log_with_timestamp "初始化 Conda 环境..."
+# Critical fix: Ensure proper Conda loading (zsh requires manual initialization)
+log_with_timestamp "Initializing Conda environment..."
 source /home/workstation3/AppFiles/miniconda3/etc/profile.d/conda.sh  || {
-    log_with_timestamp "❌ 加载 Conda 失败！请检查路径是否正确。"
+    log_with_timestamp "ERROR: Failed to load Conda! Please check if path is correct."
     exit 1
 }
 conda activate grasp-env || {
-    log_with_timestamp "❌ 激活环境失败！请确认环境名是否正确。"
+    log_with_timestamp "ERROR: Failed to activate environment! Please confirm environment name is correct."
     exit 1
 }
-log_with_timestamp "✅ Conda 环境激活成功"
+log_with_timestamp "SUCCESS: Conda environment activated successfully"
 
-# 输出环境信息（使用正确的Python版本）
+# Print environment information (using correct Python version)
 print_environment_info
 
 ###########################################
-# GraspDataProcessing 包路径和工具脚本路径已在脚本开头设置
-log_with_timestamp "设置 PYTHONPATH: $PYTHONPATH"
-log_with_timestamp "设置 PATH: $PATH"
+# GraspDataProcessing package path and tool script paths set at script beginning
+log_with_timestamp "Set PYTHONPATH: $PYTHONPATH"
+log_with_timestamp "Set PATH: $PATH"
 ###########################################
-# 检查 Python 路径和配置工具
-log_with_timestamp "检查 Python 环境..."
+# Check Python path and configuration tools
+log_with_timestamp "Checking Python environment..."
 which python
 python --version
 which csfs_ml_choosing_config_load.py
 ###########################################
-## 从config.toml读取配置参数（在计算根目录中）
-log_with_timestamp "从config.toml读取配置参数..."
+## Read configuration parameters from config.toml (in calculation root directory)
+log_with_timestamp "Reading configuration parameters from config.toml..."
 cal_dir=${PWD}
 config_file="${cal_dir}/config.toml"
 
-# 检查配置文件是否存在
+# Check if configuration file exists
 if [ ! -f "$config_file" ]; then
-    log_error_with_timestamp "配置文件不存在: $config_file"
+    log_error_with_timestamp "Configuration file does not exist: $config_file"
     exit 1
 fi
 
-atom=$(safe_get_config_value "${config_file}" "atom" "原子符号")
-conf=$(safe_get_config_value "${config_file}" "conf" "组态名称")
-processor=$(safe_get_config_value "${config_file}" "tasks_per_node" "处理器核数")
-Active_space=$(safe_get_config_value "${config_file}" "active_space" "活性空间")
-cal_levels=$(safe_get_config_value "${config_file}" "cal_levels" "计算能级")
-selected_csfs_file=$(safe_get_config_value "${config_file}" "selected_csfs_file" "初筛CSFs文件")
+atom=$(safe_get_config_value "${config_file}" "atom" "atomic symbol")
+conf=$(safe_get_config_value "${config_file}" "conf" "configuration name")
+processor=$(safe_get_config_value "${config_file}" "tasks_per_node" "processor count")
+Active_space=$(safe_get_config_value "${config_file}" "active_space" "active space")
+cal_levels=$(safe_get_config_value "${config_file}" "cal_levels" "calculation levels")
+selected_csfs_file=$(safe_get_config_value "${config_file}" "selected_csfs_file" "initial CSFs file")
 
-# 读取mpi_tmp_path配置参数（在进入子目录之前读取）
-mpi_tmp_path=$(safe_get_config_value "${config_file}" "mpi_tmp_path" "MPI临时路径")
-log_with_timestamp "MPI临时文件路径配置: $mpi_tmp_path"
+# Read mpi_tmp_path configuration parameter (before entering subdirectory)
+mpi_tmp_path=$(safe_get_config_value "${config_file}" "mpi_tmp_path" "MPI temp path")
+log_with_timestamp "MPI temporary file path configuration: $mpi_tmp_path"
 
-# 生成派生文件名
+# Generate derived filenames
 loop1_rwfn_file=$(basename "$selected_csfs_file" .c).w
 rwfnestimate_file="${conf}_1.w"
 
 log_config_params "$atom" "$conf" "$processor" "$Active_space" "$cal_levels"
-log_with_timestamp "初始波函数文件: $loop1_rwfn_file"
-# 更新配置文件中的root_path
+log_with_timestamp "Initial wavefunction file: $loop1_rwfn_file"
+# Update root_path in configuration file
 run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set root_path ${cal_dir} -f "${config_file}"
-log_with_timestamp_and_path "计算目录" "$cal_dir"
+log_with_timestamp_and_path "Calculation directory" "$cal_dir"
 ###########################################
-log_with_timestamp "设置Python程序绝对路径..."
+log_with_timestamp "Setting absolute paths for Python programs..."
 ML_PYTHON_DIR="${GRASP_DATA_PROCESSING_ROOT}/tests/ml_csf_choosing"
-log_with_timestamp "✅ Python程序路径设置完成: $ML_PYTHON_DIR"
+log_with_timestamp "SUCCESS: Python program path setup complete: $ML_PYTHON_DIR"
 
 ###########################################
-# 读取步骤控制参数
-log_with_timestamp "读取步骤控制配置..."
-enable_step_control=$(safe_get_config_value "${config_file}" "step_control.enable_step_control" "启用步骤控制")
-target_loop=$(safe_get_config_value "${config_file}" "step_control.target_loop" "目标循环")
-start_step=$(safe_get_config_value "${config_file}" "step_control.start_step" "起始步骤")
-end_step=$(safe_get_config_value "${config_file}" "step_control.end_step" "结束步骤")
-skip_completed_steps=$(safe_get_config_value "${config_file}" "step_control.skip_completed_steps" "跳过已完成步骤")
+# Read step control parameters
+log_with_timestamp "Reading step control configuration..."
+enable_step_control=$(safe_get_config_value "${config_file}" "step_control.enable_step_control" "Enable step control")
+target_loop=$(safe_get_config_value "${config_file}" "step_control.target_loop" "Target loop")
+start_step=$(safe_get_config_value "${config_file}" "step_control.start_step" "Start step")
+end_step=$(safe_get_config_value "${config_file}" "step_control.end_step" "End step")
+skip_completed_steps=$(safe_get_config_value "${config_file}" "step_control.skip_completed_steps" "Skip completed steps")
 
-log_with_timestamp "步骤控制配置:"
-log_with_timestamp "  启用步骤控制: $enable_step_control"
-log_with_timestamp "  目标循环: $target_loop"
-log_with_timestamp "  起始步骤: $start_step"
-log_with_timestamp "  结束步骤: $end_step"
-log_with_timestamp "  跳过已完成步骤: $skip_completed_steps"
+log_with_timestamp "Step control configuration:"
+log_with_timestamp "  Enable step control: $enable_step_control"
+log_with_timestamp "  Target loop: $target_loop"
+log_with_timestamp "  Start step: $start_step"
+log_with_timestamp "  End step: $end_step"
+log_with_timestamp "  Skip completed steps: $skip_completed_steps"
 
-# 步骤检查函数
+# Step check function
 check_step_should_run() {
     local current_step="$1"
     local current_loop="$2"
     
-    # 如果未启用步骤控制，总是执行
+    # If step control is not enabled, always execute
     if [[ "$enable_step_control" != "true" ]]; then
         return 0
     fi
     
-    # 检查目标循环
+    # Check target loop
     if [[ "$target_loop" != "0" && "$current_loop" != "$target_loop" ]]; then
-        return 1  # 跳过不是目标循环的步骤
+        return 1  # Skip steps not in target loop
     fi
     
-    # 检查起始步骤
+    # Check start step
     if [[ "$start_step" != "auto" ]]; then
         case "$current_step" in
             "initial_csfs")
@@ -179,62 +179,62 @@ check_step_should_run() {
                 esac
                 ;;
             "train")
-                # train总是可以执行（除非明确跳过）
+                # train can always be executed (unless explicitly skipped)
                 ;;
         esac
     fi
     
-    # 检查结束步骤
+    # Check end step
     if [[ "$end_step" != "auto" ]]; then
         case "$current_step" in
             "initial_csfs")
                 if [[ "$end_step" == "initial_csfs" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "choosing_csfs")
                 if [[ "$end_step" == "choosing_csfs" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "mkdisks")
                 if [[ "$end_step" == "mkdisks" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rangular")
                 if [[ "$end_step" == "rangular" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rwfnestimate")
                 if [[ "$end_step" == "rwfnestimate" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rmcdhf"|"rci")
                 if [[ "$end_step" == "rmcdhf" || "$end_step" == "rci" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rsave")
                 if [[ "$end_step" == "rsave" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "jj2lsj")
                 if [[ "$end_step" == "jj2lsj" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "rlevels")
                 if [[ "$end_step" == "rlevels" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
             "train")
                 if [[ "$end_step" == "train" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: $end_step，将在此步骤后停止"
+                    log_with_timestamp "🎯 Reached ending step: $end_step, will stop after this step"
                 fi
                 ;;
         esac
@@ -243,90 +243,90 @@ check_step_should_run() {
     return 0
 }
 
-# 检查步骤完成后是否应该停止
+# Check if should stop after step completion
 check_should_stop_after_step() {
     local current_step="$1"
     
     if [[ "$enable_step_control" != "true" ]]; then
-        return 1  # 不停止
+        return 1  # Don't stop
     fi
     
     if [[ "$end_step" != "auto" && "$current_step" == "$end_step" ]]; then
-        return 0  # 应该停止
+        return 0  # Should stop
     fi
     
-    return 1  # 不停止
+    return 1  # Don't stop
 }
 
-# 文件存在性检查函数（用于跳过已完成步骤）
+# File existence check function (for skipping completed steps)
 check_step_completed() {
     local step_name="$1"
     local loop_num="$2"
     local conf_name="$3"
     
     if [[ "$skip_completed_steps" != "true" ]]; then
-        return 1  # 不跳过
+        return 1  # Don't skip
     fi
     
     case "$step_name" in
         "mkdisks")
             if [[ -f "disks" ]]; then
-                log_with_timestamp "⏭️ 跳过已完成的步骤: $step_name (发现文件: disks)"
+                log_with_timestamp "⏭️ Skip completed step: $step_name (found file: disks)"
                 return 0
             fi
             ;;
         "rangular")
-            # rangular没有直接输出文件，检查后续步骤的前提文件
-            # 这里可以根据实际情况调整判断逻辑
+            # rangular has no direct output files, check prerequisite files for subsequent steps
+            # The judgment logic can be adjusted according to actual conditions
             ;;
         "rwfnestimate")
             if [[ -f "rwfn.inp" ]]; then
-                log_with_timestamp "⏭️ 跳过已完成的步骤: $step_name (发现文件: rwfn.inp)"
+                log_with_timestamp "⏭️ Skip completed step: $step_name (found file: rwfn.inp)"
                 return 0
             fi
             ;;
         "rmcdhf"|"rci")
             if [[ -f "rwfn.out" && -f "rmix.out" ]] || [[ -f "${conf_name}_${loop_num}.cm" ]]; then
-                log_with_timestamp "⏭️ 跳过已完成的步骤: $step_name (发现输出文件)"
+                log_with_timestamp "⏭️ Skip completed step: $step_name (found output files)"
                 return 0
             fi
             ;;
         "rsave")
             if [[ -f "${conf_name}_${loop_num}.w" && -f "${conf_name}_${loop_num}.c" && -f "${conf_name}_${loop_num}.m" ]]; then
-                log_with_timestamp "⏭️ 跳过已完成的步骤: $step_name (发现保存文件)"
+                log_with_timestamp "⏭️ Skip completed step: $step_name (found saved files)"
                 return 0
             fi
             ;;
         "jj2lsj")
             if [[ -f "${conf_name}_${loop_num}.lsj.lbl" ]]; then
-                log_with_timestamp "⏭️ 跳过已完成的步骤: $step_name (发现文件: ${conf_name}_${loop_num}.lsj.lbl)"
+                log_with_timestamp "⏭️ Skip completed step: $step_name (found file: ${conf_name}_${loop_num}.lsj.lbl)"
                 return 0
             fi
             ;;
         "rlevels")
             if [[ -f "${conf_name}_${loop_num}.level" ]]; then
-                log_with_timestamp "⏭️ 跳过已完成的步骤: $step_name (发现文件: ${conf_name}_${loop_num}.level)"
+                log_with_timestamp "⏭️ Skip completed step: $step_name (found file: ${conf_name}_${loop_num}.level)"
                 return 0
             fi
             ;;
     esac
     
-    return 1  # 未完成，不跳过
+    return 1  # Not completed, do not skip
 }
 ###########################################
-### rnucleus - 设置原子核参数
-log_with_timestamp "设置原子核参数..."
-atomic_number=$(safe_get_config_value "${config_file}" "atomic_number" "原子序数")
-mass_number=$(safe_get_config_value "${config_file}" "mass_number" "质量数")
-atomic_mass=$(safe_get_config_value "${config_file}" "atomic_mass" "原子质量")
-nuclear_spin=$(safe_get_config_value "${config_file}" "nuclear_spin" "核自旋量子数")
-nuclear_dipole=$(safe_get_config_value "${config_file}" "nuclear_dipole" "核偶极矩")
-nuclear_quadrupole=$(safe_get_config_value "${config_file}" "nuclear_quadrupole" "核四极矩")
+### rnucleus - Setting nuclear parameters
+log_with_timestamp "Setting nuclear parameters..."
+atomic_number=$(safe_get_config_value "${config_file}" "atomic_number" "atomic number")
+mass_number=$(safe_get_config_value "${config_file}" "mass_number" "mass number")
+atomic_mass=$(safe_get_config_value "${config_file}" "atomic_mass" "atomic mass")
+nuclear_spin=$(safe_get_config_value "${config_file}" "nuclear_spin" "nuclear spin quantum number")
+nuclear_dipole=$(safe_get_config_value "${config_file}" "nuclear_dipole" "nuclear dipole moment")
+nuclear_quadrupole=$(safe_get_config_value "${config_file}" "nuclear_quadrupole" "nuclear quadrupole moment")
 
-# 验证数值的有效性
+# Verify the validity of numeric values
 local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-echo -e "[$timestamp] 原子核参数: $(highlight_param "Z" "$atomic_number") $(highlight_param "A" "$mass_number") $(highlight_param "质量" "$atomic_mass")"
-echo -e "[$timestamp] 核性质: $(highlight_param "I" "$nuclear_spin") $(highlight_param "μ" "$nuclear_dipole") $(highlight_param "Q" "$nuclear_quadrupole")"
+echo -e "[$timestamp] Nuclear parameters: $(highlight_param "Z" "$atomic_number") $(highlight_param "A" "$mass_number") $(highlight_param "mass" "$atomic_mass")"
+echo -e "[$timestamp] Nuclear properties: $(highlight_param "I" "$nuclear_spin") $(highlight_param "μ" "$nuclear_dipole") $(highlight_param "Q" "$nuclear_quadrupole")"
 
 input_commands="$atomic_number
 $mass_number
@@ -336,135 +336,135 @@ $nuclear_spin
 $nuclear_dipole
 $nuclear_quadrupole"
 safe_grasp_execute "rnucleus" "$input_commands" rnucleus
-log_with_timestamp "✅ 原子核参数设置完成"
+log_with_timestamp "✅ Nuclear parameter setup completed"
 ###########################################
-# 断点重启完成后自动重置步骤控制设置（避免无限循环）
+# Automatically reset step control settings after breakpoint restart (to avoid infinite loops)
 reset_step_control_if_needed() {
-    # 检查是否启用了步骤控制且当前不是默认设置
+    # Check if step control is enabled and current settings are not default
     if [[ "$enable_step_control" == "true" && "$start_step" != "auto" ]]; then
-        log_with_timestamp "🔄 检测到断点重启模式，检查是否需要重置步骤控制..."
+        log_with_timestamp "🔄 Detected breakpoint restart mode, checking if step control reset is needed..."
         
-        # 如果已经完成了指定的断点重启步骤，重置为正常模式
+        # If the specified breakpoint restart step has been completed, reset to normal mode
         local should_reset=false
         
-        # 检查各种重置条件
+        # Check various reset conditions
         if [[ "$end_step" != "auto" ]]; then
-            log_with_timestamp "⚠️ 检测到指定结束步骤($end_step)，完成后将重置步骤控制"
+            log_with_timestamp "⚠️ Detected specified end step ($end_step), will reset step control after completion"
             should_reset=true
         elif [[ "$start_step" == "train" ]]; then
-            log_with_timestamp "⚠️ 检测到从train步骤开始，完成train后将重置步骤控制"
+            log_with_timestamp "⚠️ Detected start from train step, will reset step control after train completion"
             should_reset=true
         fi
         
         if [[ "$should_reset" == "true" ]]; then
-            # 设置一个标记，表示需要在适当时机重置
+            # Set a flag indicating reset is needed at appropriate time
             export SHOULD_RESET_STEP_CONTROL="true"
-            log_with_timestamp "📋 已标记：将在完成当前断点重启后自动重置步骤控制"
+            log_with_timestamp "📋 Marked: Will automatically reset step control after completing current breakpoint restart"
         fi
     fi
 }
 
-# 执行步骤控制重置
+# Execute step control reset
 do_step_control_reset() {
     if [[ "$SHOULD_RESET_STEP_CONTROL" == "true" ]]; then
-        log_with_timestamp "🔄 断点重启完成，重置步骤控制设置为正常模式..."
+        log_with_timestamp "🔄 Breakpoint restart completed, resetting step control settings to normal mode..."
         
-        # 重置步骤控制设置
+        # Reset step control settings
         run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.start_step "auto" -f "${config_file}"
         run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.end_step "auto" -f "${config_file}"
         run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.enable_step_control "false" -f "${config_file}"
         
-        # 更新本地变量
+        # Update local variables
         start_step="auto"
         end_step="auto"
         enable_step_control="false"
         
-        # 清除重置标记
+        # Clear reset flag
         export SHOULD_RESET_STEP_CONTROL=""
         
-        log_with_timestamp "✅ 步骤控制已重置，后续循环将正常执行所有步骤"
+        log_with_timestamp "✅ Step control has been reset, subsequent loops will execute all steps normally"
     fi
 }
 
-# 在主循环开始前检查是否需要重置
+# Check if reset is needed before main loop starts
 reset_step_control_if_needed
 
 while true
 do
 ###########################################
-log_with_timestamp "获取循环计数..."
-loop=$(safe_get_config_value "${config_file}" "cal_loop_num" "循环计数")
-log_with_timestamp "当前循环: $(highlight_number "$loop" "$COLOR_CYAN")"
+log_with_timestamp "Getting loop count..."
+loop=$(safe_get_config_value "${config_file}" "cal_loop_num" "loop count")
+log_with_timestamp "Current loop: $(highlight_number "$loop" "$COLOR_CYAN")
 
 if [ $loop -eq 1 ]; then
-    # 初始化必要csfs文件数据
+    # Initialize necessary CSF file data
     if check_step_should_run "initial_csfs" "$loop"; then
-        log_stage "初始化必要csfs文件数据" "START"
+        log_stage "Initialize necessary CSF file data" "START"
         run_python_with_env "${ML_PYTHON_DIR}/initial_csfs.py"
         
-        # 检查是否应该在此步骤后停止
+        # Check if should stop after this step
         if check_should_stop_after_step "initial_csfs"; then
-            log_with_timestamp "🛑 根据配置在initial_csfs步骤后停止执行"
+            log_with_timestamp "🛑 Stop execution after initial_csfs step according to configuration"
             exit 0
         fi
     else
-        log_with_timestamp "⏭️ 跳过步骤: initial_csfs (根据步骤控制配置)"
+        log_with_timestamp "⏭️ Skip step: initial_csfs (according to step control configuration)"
     fi
 fi
 ###########################################
-log_with_timestamp "检查计算状态..."
-cal_status=$(safe_get_config_value "${config_file}" "continue_cal" "计算继续状态")
-log_with_timestamp "计算状态: $cal_status"
+log_with_timestamp "Checking calculation status..."
+cal_status=$(safe_get_config_value "${config_file}" "continue_cal" "calculation continue status")
+log_with_timestamp "Calculation status: $cal_status"
 
 if [[ "$cal_status" == "false" ]]; then
-    log_with_timestamp "================计算终止================"
+    log_with_timestamp "================ Calculation terminated ================"
     break
 fi
 ###########################################
-## 组态选择处理
+## Configuration selection processing
 if check_step_should_run "choosing_csfs" "$loop"; then
-    log_stage "执行组态选择" "START"
+    log_stage "Execute configuration selection" "START"
     run_python_with_env "${ML_PYTHON_DIR}/choosing_csfs.py"
     if [ $? -ne 0 ]; then
-        log_with_timestamp "❌ 组态选择失败!"
+        log_with_timestamp "❌ Configuration selection failed!"
         exit 1
     fi
-    log_with_timestamp "✅ 组态选择完成"
+    log_with_timestamp "✅ Configuration selection completed"
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "choosing_csfs"; then
-        log_with_timestamp "🛑 根据配置在choosing_csfs步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after choosing_csfs step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: choosing_csfs (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: choosing_csfs (according to step control configuration)"
 fi
 ###########################################
 ## grasp calculation routine
 
-log_with_timestamp_and_path "进入计算目录" "${conf}_${loop}"
+log_with_timestamp_and_path "Enter calculation directory" "${conf}_${loop}"
 cd ${conf}_${loop}
 
-# mkdisks步骤
+# mkdisks step
 if check_step_should_run "mkdisks" "$loop"; then
     if ! check_step_completed "mkdisks" "$loop" "$conf"; then
-        # 使用循环外已读取的mpi_tmp_path配置参数
+        # Use mpi_tmp_path configuration parameter read outside loop
         if [[ -n "$mpi_tmp_path" && "$mpi_tmp_path" != "null" && ! "$mpi_tmp_path" =~ ^ERROR: ]]; then
-            log_with_timestamp "使用配置的mpi_tmp路径: $mpi_tmp_path"
+            log_with_timestamp "Use configured mpi_tmp path: $mpi_tmp_path"
             safe_grasp_execute "mkdisks" "" mkdisks ${processor} "$mpi_tmp_path"
         else
-            log_with_timestamp "未配置mpi_tmp_path或读取失败，使用默认路径（当前目录）"
+            log_with_timestamp "mpi_tmp_path not configured or failed to read, using default path (current directory)"
             safe_grasp_execute "mkdisks" "" mkdisks ${processor}
         fi
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "mkdisks"; then
-        log_with_timestamp "🛑 根据配置在mkdisks步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after mkdisks step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: mkdisks (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: mkdisks (according to step control configuration)"
 fi
 
 ### rcsf
@@ -472,8 +472,8 @@ fi
 cp ../isodata .
 
 if [ $loop -eq 1 ]; then
-log_with_timestamp "================第一次循环，使用${loop1_rwfn_file}================"
-log_with_timestamp "准备 rcsf 输入文件..."
+log_with_timestamp "================ First loop, using ${loop1_rwfn_file} ================"
+log_with_timestamp "Preparing rcsf input file..."
 cp ${conf}_${loop}.c rcsf.inp # rmcdhf
 cp ../${loop1_rwfn_file} ${conf}.w
 orbital_params=${Active_space}
@@ -483,13 +483,13 @@ cal_method='rmcdhf'
 if check_step_should_run "rangular" "$loop"; then
     safe_grasp_execute "rangular_mpi" "y" mpirun -np ${processor} rangular_mpi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "rangular"; then
-        log_with_timestamp "🛑 根据配置在rangular步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after rangular step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: rangular (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: rangular (according to step control configuration)"
 fi
 
 ### rwfnestimate
@@ -506,13 +506,13 @@ ${conf}.w
         safe_grasp_execute "rwfnestimate" "$input_commands" rwfnestimate
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "rwfnestimate"; then
-        log_with_timestamp "🛑 根据配置在rwfnestimate步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after rwfnestimate step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: rwfnestimate (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: rwfnestimate (according to step control configuration)"
 fi
 
 ### rmcdhf
@@ -527,13 +527,13 @@ ${orbital_params}
         safe_grasp_execute "rmcdhf_mem_mpi" "$input_commands" mpirun -np ${processor} rmcdhf_mem_mpi
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "rmcdhf"; then
-        log_with_timestamp "🛑 根据配置在rmcdhf步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after rmcdhf step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: rmcdhf (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: rmcdhf (according to step control configuration)"
 fi
 
 ### rsave
@@ -543,13 +543,13 @@ if check_step_should_run "rsave" "$loop"; then
         cp ${conf}_${loop}.w ..
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "rsave"; then
-        log_with_timestamp "🛑 根据配置在rsave步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after rsave step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: rsave (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: rsave (according to step control configuration)"
 fi
 
 ### jj2lsj rmcdhf
@@ -562,32 +562,32 @@ y"
         safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "jj2lsj"; then
-        log_with_timestamp "🛑 根据配置在jj2lsj步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after jj2lsj step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: jj2lsj (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: jj2lsj (according to step control configuration)"
 fi
 
-# 生成能级数据文件
+# Generate energy level data file
 if check_step_should_run "rlevels" "$loop"; then
     if ! check_step_completed "rlevels" "$loop" "$conf"; then
         safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.m > ${conf}_${loop}.level"
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "rlevels"; then
-        log_with_timestamp "🛑 根据配置在rlevels步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after rlevels step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: rlevels (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: rlevels (according to step control configuration)"
 fi
 
 else
-log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
+log_with_timestamp "================ Loop ${loop}, using ${rwfnestimate_file} ================"
 cp ../${rwfnestimate_file} ${conf}_${loop}.w
 cal_method='rci'
 
@@ -608,13 +608,13 @@ ${cal_levels}"
         safe_grasp_execute "rci_mpi" "$input_commands" mpirun -np ${processor} rci_mpi
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "rci"; then
-        log_with_timestamp "🛑 根据配置在rci步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after rci step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: rci (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: rci (according to step control configuration)"
 fi
 
 ### jj2lsj rci
@@ -627,70 +627,70 @@ y"
         safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "jj2lsj"; then
-        log_with_timestamp "🛑 根据配置在jj2lsj步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after jj2lsj step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: jj2lsj (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: jj2lsj (according to step control configuration)"
 fi
 
-# 生成能级数据文件
+# Generate energy level data file
 if check_step_should_run "rlevels" "$loop"; then
     if ! check_step_completed "rlevels" "$loop" "$conf"; then
         safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level"
     fi
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "rlevels"; then
-        log_with_timestamp "🛑 根据配置在rlevels步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after rlevels step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: rlevels (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: rlevels (according to step control configuration)"
 fi
 
 fi
 
-# 清理临时文件夹
+# Clean up temporary folder
 if [ -d "mpi_tmp" ]; then
-    log_with_timestamp "发现临时文件夹 mpi_tmp，正在清理..."
+    log_with_timestamp "Found temporary folder mpi_tmp, cleaning up..."
     rm -rf mpi_tmp
     if [ $? -eq 0 ]; then
-        log_with_timestamp "✅ 临时文件夹 mpi_tmp 清理完成"
+        log_with_timestamp "✅ Temporary folder mpi_tmp cleanup completed"
     else
-        log_with_timestamp "⚠️ 临时文件夹 mpi_tmp 清理失败"
+        log_with_timestamp "⚠️ Temporary folder mpi_tmp cleanup failed"
     fi
 else
-    log_with_timestamp "未发现临时文件夹 mpi_tmp"
+    log_with_timestamp "Temporary folder mpi_tmp not found"
 fi
 
-log_with_timestamp "返回上级目录..."
+log_with_timestamp "Returning to parent directory..."
 cd ..
 run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method ${cal_method} -f "${config_file}"
-## 机器学习训练
+## Machine learning training
 if check_step_should_run "train" "$loop"; then
-    log_stage "执行机器学习训练" "START"
+    log_stage "Execute machine learning training" "START"
     
-    # 直接执行，让输出实时显示（run_python_with_env已包含错误处理）
+    # Execute directly, allowing real-time output display (run_python_with_env already includes error handling)
     run_python_with_env "${ML_PYTHON_DIR}/train.py"
     
-    log_with_timestamp "✅ 机器学习训练完成"
+    log_with_timestamp "✅ Machine learning training completed"
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "train"; then
-        log_with_timestamp "🛑 根据配置在train步骤后停止执行"
+        log_with_timestamp "🛑 Stop execution after train step according to configuration"
         exit 0
     fi
     
-    # 如果完成了train步骤，检查是否需要重置步骤控制
+    # If train step is completed, check if step control reset is needed
     do_step_control_reset
 else
-    log_with_timestamp "⏭️ 跳过步骤: train (根据步骤控制配置)"
+    log_with_timestamp "⏭️ Skip step: train (according to step control configuration)"
 fi
 
-log_with_timestamp "循环 $loop 完成，准备下一次迭代..."
+log_with_timestamp "Loop $loop completed, preparing for next iteration..."
 done
 
-log_with_timestamp "========== sbatch 脚本执行完成 =========="
+log_with_timestamp "========== sbatch script execution completed =========="

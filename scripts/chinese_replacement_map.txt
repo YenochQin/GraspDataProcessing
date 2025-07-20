@@ -1,0 +1,127 @@
+# Complete Chinese Text Replacement Map for Both Files
+# Format: OLD_TEXT|NEW_TEXT
+
+# ============ run_script.sh Remaining Items ============
+## 组态选择处理|## Configuration selection processing
+执行组态选择|Execute configuration selection
+❌ 组态选择失败!|❌ Configuration selection failed!
+✅ 组态选择完成|✅ Configuration selection completed
+检查是否应该在此步骤后停止|Check if should stop after this step
+🛑 根据配置在choosing_csfs步骤后停止执行|🛑 Stop execution after choosing_csfs step according to configuration
+⏭️ 跳过步骤: choosing_csfs (根据步骤控制配置)|⏭️ Skip step: choosing_csfs (according to step control configuration)
+进入计算目录|Enter calculation directory
+mkdisks步骤|mkdisks step
+使用循环外已读取的mpi_tmp_path配置参数|Use mpi_tmp_path configuration parameter read outside loop
+使用配置的mpi_tmp路径|Use configured mpi_tmp path
+未配置mpi_tmp_path或读取失败，使用默认路径（当前目录）|mpi_tmp_path not configured or failed to read, using default path (current directory)
+🛑 根据配置在mkdisks步骤后停止执行|🛑 Stop execution after mkdisks step according to configuration
+⏭️ 跳过步骤: mkdisks (根据步骤控制配置)|⏭️ Skip step: mkdisks (according to step control configuration)
+================第一次循环，使用${loop1_rwfn_file}================|================ First loop, using ${loop1_rwfn_file} ================
+准备 rcsf 输入文件...|Preparing rcsf input file...
+🛑 根据配置在rangular步骤后停止执行|🛑 Stop execution after rangular step according to configuration
+⏭️ 跳过步骤: rangular (根据步骤控制配置)|⏭️ Skip step: rangular (according to step control configuration)
+🛑 根据配置在rwfnestimate步骤后停止执行|🛑 Stop execution after rwfnestimate step according to configuration
+⏭️ 跳过步骤: rwfnestimate (根据步骤控制配置)|⏭️ Skip step: rwfnestimate (according to step control configuration)
+🛑 根据配置在rmcdhf步骤后停止执行|🛑 Stop execution after rmcdhf step according to configuration
+⏭️ 跳过步骤: rmcdhf (根据步骤控制配置)|⏭️ Skip step: rmcdhf (according to step control configuration)
+🛑 根据配置在rsave步骤后停止执行|🛑 Stop execution after rsave step according to configuration
+⏭️ 跳过步骤: rsave (根据步骤控制配置)|⏭️ Skip step: rsave (according to step control configuration)
+🛑 根据配置在jj2lsj步骤后停止执行|🛑 Stop execution after jj2lsj step according to configuration
+⏭️ 跳过步骤: jj2lsj (根据步骤控制配置)|⏭️ Skip step: jj2lsj (according to step control configuration)
+生成能级数据文件|Generate energy level data file
+🛑 根据配置在rlevels步骤后停止执行|🛑 Stop execution after rlevels step according to configuration
+⏭️ 跳过步骤: rlevels (根据步骤控制配置)|⏭️ Skip step: rlevels (according to step control configuration)
+================第${loop}次循环，使用${rwfnestimate_file}================|================ Loop ${loop}, using ${rwfnestimate_file} ================
+🛑 根据配置在rci步骤后停止执行|🛑 Stop execution after rci step according to configuration
+⏭️ 跳过步骤: rci (根据步骤控制配置)|⏭️ Skip step: rci (according to step control configuration)
+发现临时文件夹 mpi_tmp，正在清理...|Found temporary folder mpi_tmp, cleaning up...
+✅ 临时文件夹 mpi_tmp 清理完成|✅ Temporary folder mpi_tmp cleanup completed
+⚠️ 临时文件夹 mpi_tmp 清理失败|⚠️ Temporary folder mpi_tmp cleanup failed
+未发现临时文件夹 mpi_tmp|Temporary folder mpi_tmp not found
+返回上级目录...|Returning to parent directory...
+机器学习训练|machine learning training
+执行机器学习训练|Execute machine learning training
+✅ 机器学习训练完成|✅ Machine learning training completed
+🛑 根据配置在train步骤后停止执行|🛑 Stop execution after train step according to configuration
+⏭️ 跳过步骤: train (根据步骤控制配置)|⏭️ Skip step: train (according to step control configuration)
+循环 $loop 完成，准备下一次迭代...|Loop $loop completed, preparing for next iteration...
+========== sbatch 脚本执行完成 ==========|========== sbatch script execution completed ==========
+
+# ============ common_functions.sh Remaining Items ============
+计算执行时间的函数|Function to calculate execution time
+${hours}小时${minutes}分钟${seconds}秒|${hours} hours ${minutes} minutes ${seconds} seconds
+${minutes}分钟${seconds}秒|${minutes} minutes ${seconds} seconds
+${seconds}秒|${seconds} seconds
+根据程序名确定期望的输出文件|Determine expected output files based on program name
+没有文件输出|No file output
+未知程序，不检查文件|Unknown program, no file check
+GRASP程序错误检查函数|GRASP program error checking function
+检查严重错误模式|Check for serious error patterns
+搜索错误模式|Search for error patterns
+❌ $program_name 检测到错误|❌ $program_name detected error
+错误上下文|Error context
+检查是否有预期的输出文件|Check if expected output files exist
+📁 当前工作目录|📁 Current working directory
+📋 检查预期文件|📋 Check expected files
+对于 MPI 程序，等待一段时间确保文件完全写入|For MPI programs, wait a while to ensure files are fully written
+⏱️ MPI程序检测，等待3秒确保文件写入完成...|⏱️ MPI program detected, waiting 3 seconds to ensure file writing is complete...
+使用重试机制检查文件|Use retry mechanism to check files
+将文件列表转换为数组进行处理|Convert file list to array for processing
+zsh 下使用特殊语法|Use special syntax under zsh
+bash 下直接分割|Direct splitting under bash
+如果分割失败，尝试使用 read 命令|If splitting fails, try using read command
+⚠️ 检测到文件列表可能未正确分割，尝试使用read命令...|⚠️ Detected file list may not be correctly split, trying read command...
+🔍 预期文件数量|🔍 Expected file count
+个|items
+使用数组进行文件检查|Use array for file checking
+🔍 检查文件|🔍 Check file
+❌ $program_name 生成的文件为空|❌ $program_name generated empty file
+⏳ 第 $retry_count 次重试，等待文件生成... 缺失文件|⏳ Retry $retry_count, waiting for file generation... Missing files
+❌ $program_name 未生成预期文件|❌ $program_name did not generate expected files
+📂 当前目录内容|📂 Current directory contents
+🔍 详细检查文件情况|🔍 Detailed file status check
+检查文件|Check file
+文件存在但可能有问题|File exists but may have issues
+文件大小|File size
+无法获取大小|Cannot get size
+文件权限|File permissions
+无法获取权限|Cannot get permissions
+文件不存在|File does not exist
+查找类似的文件名|Look for similar file names
+无相似文件|No similar files
+相似文件|Similar files
+✅ 所有预期文件检查通过|✅ All expected file checks passed
+安全执行GRASP程序的函数|Function to safely execute GRASP programs
+执行|Execute
+动态获取期望的文件列表|Dynamically get expected file list
+对于 rsave，我们需要从上下文获取 conf 和 loop 变量|For rsave, we need to get conf and loop variables from context
+🎯 根据程序 $program_name 自动确定期望文件|🎯 Automatically determine expected files based on program $program_name
+创建临时日志文件|Create temporary log file
+执行程序并获取退出码|Execute program and get exit code
+带输入的程序|Program with input
+不带输入的程序|Program without input
+确保退出码是数字|Ensure exit code is numeric
+⚠️ 无法获取 $program_name 的退出码，假设为失败|⚠️ Cannot get exit code for $program_name, assuming failure
+⚠️ $program_name 的退出码不是数字，假设为失败|⚠️ Exit code for $program_name is not numeric, assuming failure
+检查退出码|Check exit code
+❌ $program_name 非正常退出，退出码|❌ $program_name abnormal exit, exit code
+最后的输出|Last output
+检查GRASP特定错误|Check GRASP-specific errors
+✅ $program_name 完成|✅ $program_name completed
+日志格式增强函数|Log format enhancement functions
+颜色代码定义|Color code definitions
+路径简化函数 - 去除root_path前缀，只显示相对路径|Path simplification function - remove root_path prefix, show only relative path
+如果没有提供root_path，尝试从config.toml中获取|If root_path not provided, try to get from config.toml
+根目录路径|Root directory path
+如果root_path为空或者路径不包含root_path，返回原路径|If root_path is empty or path doesn't contain root_path, return original path
+移除root_path前缀|Remove root_path prefix
+移除开头的斜杠|Remove leading slash
+如果简化后路径为空，表示就是root目录|If simplified path is empty, means it's the root directory
+数值高亮函数|Numeric highlighting function
+使用颜色高亮数值|Use color to highlight numbers
+参数高亮函数|Parameter highlighting function
+支持路径简化的日志函数|Log function with path simplification support
+增强的配置参数日志函数|Enhanced configuration parameter logging function
+配置参数|Configuration parameters
+活性空间|Active space
+计算能级|Calculation levels
