@@ -447,15 +447,16 @@
             <div id="config-status" style="margin-top: 16px; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.9); display: none;"></div>
         </div>
 
-        <div class="main-content">
+        <!-- <div class="main-content"> -->
             <!-- 配置管理栏 -->
-            <div class="config-management-bar">
-                <h2 class="config-management-title">配置管理与生成</h2>
-                <div class="config-management-buttons">
+            <!-- <div class="config-management-bar"> -->
+                <!-- <h2 class="config-management-title">配置管理与生成</h2> -->
+                
+            <!-- </div> -->
+            <div class="config-management-buttons" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px;">
                     <button class="btn btn-success" onclick="saveConfig()">💾 保存配置</button>
                     <button class="btn btn-warning" onclick="loadConfigFromFile()">📂 加载配置</button>
                     <button class="btn btn-primary" onclick="generateFiles()">🔄 生成文件</button>
-                </div>
             </div>
 
             <!-- 三栏配置输入 -->
@@ -688,6 +689,11 @@
                 addSpectralTermInput();
             }
             
+            // 如果输入框内容为空且不是最后一个输入框，删除空的输入框
+            if (input.value.trim() === '' && input !== document.querySelector('.spectral-term-input:last-child')) {
+                removeEmptySpectralTermInput(input);
+            }
+            
             // 延迟触发文件生成，避免输入过程中频繁更新
             clearTimeout(window.spectralTermTimeout);
             window.spectralTermTimeout = setTimeout(() => {
@@ -704,6 +710,15 @@
             newInput.placeholder = '继续输入下一个光谱项';
             newInput.oninput = function() { handleSpectralTermInput(this); };
             container.appendChild(newInput);
+        }
+
+        // 删除空的光谱项输入框
+        function removeEmptySpectralTermInput(input) {
+            const container = document.getElementById('spectral-terms-container');
+            // 确保至少保留一个输入框
+            if (container.querySelectorAll('.spectral-term-input').length > 1) {
+                container.removeChild(input);
+            }
         }
 
         // 获取所有光谱项
@@ -725,6 +740,11 @@
                 addModuleInput();
             }
             
+            // 如果输入框内容为空且不是最后一个输入框，删除空的输入框
+            if (input.value.trim() === '' && input !== document.querySelector('.module-input:last-child')) {
+                removeEmptyModuleInput(input);
+            }
+            
             // 延迟触发文件生成，避免输入过程中频繁更新
             clearTimeout(window.moduleTimeout);
             window.moduleTimeout = setTimeout(() => {
@@ -741,6 +761,15 @@
             newInput.placeholder = '继续输入下一个模块';
             newInput.oninput = function() { handleModuleInput(this); };
             container.appendChild(newInput);
+        }
+
+        // 删除空的模块输入框
+        function removeEmptyModuleInput(input) {
+            const container = document.getElementById('modules-container');
+            // 确保至少保留一个输入框
+            if (container.querySelectorAll('.module-input').length > 1) {
+                container.removeChild(input);
+            }
         }
 
         // 获取所有模块
