@@ -80,7 +80,7 @@ mpi_tmp_path=$(safe_get_config_value "${config_file}" "mpi_tmp_path" "MPI temp p
 log_with_timestamp "MPI temporary file path configuration: $mpi_tmp_path"
 
 # Generate derived filenames
-loop1_rwfn_file=$(basename "$selected_csfs_file" .c).w
+loop1_rwfn_file=$(safe_get_config_value "${config_file}" "loop1_rwfn_file" "previous got RWFN file")
 rwfnestimate_file="${conf}_1.w"
 
 log_config_params "$atom" "$conf" "$processor" "$Active_space" "$cal_levels"

@@ -12,84 +12,183 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
-            color: #333;
-            background-color: #f5f5f5;
+            color: #1f2937;
+            background: linear-gradient(135deg, #f8fafc 0%, #e7edf3 100%);
+            margin: 0;
+            min-height: 100vh;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 16px;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
             color: white;
-            padding: 30px 0;
+            padding: 32px 24px;
             text-align: center;
-            margin-bottom: 30px;
-            border-radius: 10px;
+            margin-bottom: 24px;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='7' cy='7' r='7'/%3E%3Ccircle cx='53' cy='7' r='7'/%3E%3Ccircle cx='7' cy='53' r='7'/%3E%3Ccircle cx='53' cy='53' r='7'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            position: relative;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.25);
         }
 
         .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
+            font-size: 1.125rem;
+            opacity: 0.95;
+            position: relative;
+            font-weight: 500;
         }
 
         .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
+            display: block;
+            margin-bottom: 24px;
         }
 
-        .results-column {
+        .config-management-bar {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .config-management-title {
+            font-size: 1rem;
+            color: #374151;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .config-management-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .config-columns {
             display: grid;
-            grid-template-rows: auto 1fr 1fr;
-            gap: 20px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .config-column {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .output-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 32px;
         }
 
         .config-panel {
             background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
         }
 
         .config-panel h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #3498db;
+            color: #111827;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #6366f1;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .config-column h3 {
+            color: #111827;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #6366f1;
+            font-size: 1.125rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
-            color: #2c3e50;
+            color: #374151;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e8ed;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+
+        .form-group input:hover,
+        .form-group select:hover,
+        .form-group textarea:hover {
+            border-color: #d1d5db;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            transform: translateY(-1px);
         }
 
         .spectral-term-input {
@@ -108,181 +207,234 @@
             margin-bottom: 0;
         }
 
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 14px;
         }
 
         .output-panel {
             background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
+            height: fit-content;
         }
 
         .output-panel h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #27ae60;
+            color: #111827;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #10b981;
+            font-size: 1.125rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .output-content {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
-            padding: 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 18px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 12px;
             line-height: 1.5;
             white-space: pre-wrap;
-            max-height: 600px;
+            min-height: 350px;
+            max-height: 500px;
             overflow-y: auto;
+            color: #1f2937;
         }
 
         .button-group {
             display: flex;
-            gap: 15px;
-            margin-top: 20px;
+            gap: 10px;
+            margin-top: 16px;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 12px 24px;
+            padding: 10px 18px;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             text-align: center;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
 
         .btn-primary {
-            background: #3498db;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
+            background: linear-gradient(135deg, #5856eb 0%, #7c3aed 100%);
         }
 
         .btn-success {
-            background: #27ae60;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
         }
 
         .btn-success:hover {
-            background: #229954;
-            transform: translateY(-2px);
+            background: linear-gradient(135deg, #047857 0%, #065f46 100%);
         }
 
         .btn-secondary {
-            background: #95a5a6;
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
             color: white;
         }
 
         .btn-secondary:hover {
-            background: #7f8c8d;
-            transform: translateY(-2px);
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
         }
 
         .btn-warning {
-            background: #f39c12;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: white;
         }
 
         .btn-warning:hover {
-            background: #e67e22;
-            transform: translateY(-2px);
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
         }
 
         .section {
-            margin-bottom: 25px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #3498db;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .section:hover {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            transform: translateY(-1px);
         }
 
         .section h3 {
-            color: #2c3e50;
-            margin-bottom: 15px;
+            color: #1f2937;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #f3f4f6;
         }
 
         .help-text {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-top: 5px;
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+            font-style: italic;
         }
 
         .footer {
             text-align: center;
-            padding: 20px;
-            color: #7f8c8d;
+            padding: 32px 20px;
+            color: #6b7280;
             font-size: 14px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-top: 32px;
         }
 
-        /* Placeholder样式 */
-        input::placeholder, textarea::placeholder {
-            color: rgba(136, 136, 136, 0.6);
-            font-style: italic;
-            opacity: 1;
-        }
-        
-        input::-webkit-input-placeholder, textarea::-webkit-input-placeholder {
-            color: rgba(136, 136, 136, 0.6);
-            font-style: italic;
-        }
-        
-        input::-moz-placeholder, textarea::-moz-placeholder {
-            color: rgba(136, 136, 136, 0.6);
-            font-style: italic;
-            opacity: 1;
-        }
-        
-        input:-ms-input-placeholder, textarea:-ms-input-placeholder {
-            color: rgba(136, 136, 136, 0.6);
-            font-style: italic;
-        }
-        
-        input:focus::placeholder, textarea:focus::placeholder {
-            color: rgba(136, 136, 136, 0.3);
-            transition: color 0.3s ease;
+        @media (max-width: 1200px) {
+            .config-columns {
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+            
+            .output-section {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
         }
 
         @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-
-            .results-column {
-                grid-template-rows: auto auto;
+            .container {
+                padding: 12px;
             }
             
-            .form-row {
+            .header {
+                padding: 24px 20px;
+                border-radius: 12px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .config-management-bar {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+            
+            .config-management-buttons {
+                justify-content: center;
+            }
+            
+            .config-columns {
                 grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .config-column,
+            .output-panel {
+                padding: 16px;
             }
             
             .button-group {
                 flex-direction: column;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .config-management-bar {
+                padding: 12px 16px;
+            }
+            
+            .config-column,
+            .output-panel {
+                padding: 14px;
+            }
+            
+            .section {
+                padding: 12px;
+                margin-bottom: 16px;
             }
         }
     </style>
@@ -290,19 +442,88 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔬 GraspDataProcessing machine learning CSFs choosing </h1>
-            <p>Config.toml & SbatchScript  generator</p>
-            <div id="config-status" style="margin-top: 10px; font-size: 14px; color: rgba(255,255,255,0.8);"></div>
+            <h1>🔬 GRASP 机器学习 CSFs 配置生成器</h1>
+            <p>智能化 Config.toml 和 SLURM 脚本生成工具</p>
+            <div id="config-status" style="margin-top: 16px; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.9); display: none;"></div>
         </div>
 
         <div class="main-content">
-            <div class="config-panel">
-                <h2>⚙️ 配置参数</h2>
-                
+            <!-- 配置管理栏 -->
+            <div class="config-management-bar">
+                <h2 class="config-management-title">配置管理与生成</h2>
+                <div class="config-management-buttons">
+                    <button class="btn btn-success" onclick="saveConfig()">💾 保存配置</button>
+                    <button class="btn btn-warning" onclick="loadConfigFromFile()">📂 加载配置</button>
+                    <button class="btn btn-primary" onclick="generateFiles()">🔄 生成文件</button>
+                </div>
+            </div>
 
+            <!-- 三栏配置输入 -->
+            <div class="config-columns">
+                <!-- 第一栏：基本配置 -->
+                <div class="config-column">
+                    <h3>📋 基本配置</h3>
+                    
+                    <div class="form-group">
+                        <label for="root_path">根路径 *</label>
+                        <input type="text" id="root_path" placeholder="例如: /home/workstation3/caldata/GdI/cvodd1/as3_odd4">
+                        <div class="help-text">计算目标CSFs的根目录，计算结果会保存在这个目录下</div>
+                    </div>
 
-                <div class="section">
-                    <h3>📋 基本信息</h3>
+                    <div class="form-group">
+                        <label for="grasp_data_processing_root">GraspDataProcessing根路径 *</label>
+                        <input type="text" id="grasp_data_processing_root" placeholder="例如: /home/workstation3/AppFiles/GraspDataProcessing">
+                        <div class="help-text">GraspDataProcessing库的根目录路径</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="conda_path">Conda路径 *</label>
+                        <input type="text" id="conda_path" placeholder="例如: /home/workstation3/AppFiles/miniconda3">
+                        <div class="help-text">conda的安装位置（注意是根目录，不是bin目录）</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="partition">SLURM分区</label>
+                        <input type="text" id="partition" placeholder="例如: work3">
+                        <div class="help-text">使用sinfo获得可用分区</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tasks_per_node">每节点任务数</label>
+                        <input type="number" id="tasks_per_node" min="1" max="128" placeholder="例如: 46">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mpi_tmp_path">MPI临时文件路径</label>
+                        <input type="text" id="mpi_tmp_path" placeholder="例如: /home/workstation3/caltmp">
+                        <div class="help-text">MPI计算临时文件存储路径，如果不设置则使用当前目录</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="conda_env">Conda环境名</label>
+                        <input type="text" id="conda_env" placeholder="例如: grasp-env">
+                        <div class="help-text">Python环境名称</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="pytorch_threads">PyTorch CPU线程数</label>
+                        <input type="number" id="pytorch_threads" min="1" max="128" placeholder="例如: 32">
+                        <div class="help-text">PyTorch使用的CPU线程数量</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modules">环境模块 *</label>
+                        <div id="modules-container">
+                            <input type="text" class="module-input" placeholder="例如: mpi/openmpi-x86_64-gcc" oninput="handleModuleInput(this)">
+                        </div>
+                        <div class="help-text">输入模块名后会自动生成新的输入框</div>
+                    </div>
+                </div>
+
+                <!-- 第二栏：计算与核参数 -->
+                <div class="config-column">
+                    <h3>⚛️ 计算参数</h3>
+                    
                     <div class="form-group">
                         <label for="atom">原子符号 *</label>
                         <input type="text" id="atom" placeholder="例如: GdI">
@@ -321,41 +542,34 @@
                         </div>
                         <div class="help-text">rlevels 获得的能级组态，一个框输入一个能级。</div>
                     </div>
-                </div>
-
-                <div class="section">
-                    <h3>📁 路径和文件</h3>
+                    
                     <div class="form-group">
-                        <label for="root_path">根路径 *</label>
-                        <input type="text" id="root_path" placeholder="例如: /home/workstation3/caldata/GdI/cvodd1/as3_odd4">
-                        <div class="help-text">计算目标CSFs的根目录，计算结果会保存在这个目录下</div>
+                        <label for="active_space">活性空间轨道</label>
+                        <input type="text" id="active_space" placeholder="例如: 10s,9p,8d,7f,6g">
+                        <div class="help-text">活性空间轨道定义</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cal_levels">计算能级</label>
+                        <input type="text" id="cal_levels" placeholder="例如: 1-4">
+                        <div class="help-text">计算的能级范围</div>
                     </div>
                     
                     <div class="form-group">
                         <label for="selected_csfs">初筛CSFs文件名 *</label>
-                        <input type="text" id="selected_csfs" placeholder="例如: mJ-1-90chosenas3_odd4">
-                        <div class="help-text">初筛的CSFs组态文件名（不含扩展名，最好包含.c, .w, .[c]m文件，一般使用上一个活性空间的结果）</div>
+                        <input type="text" id="selected_csfs" placeholder="例如: ${conf}_as${active_space-1}">
+                        <div class="help-text">初筛的CSFs组态文件名（不含扩展名，最好包含.c, .[c]m文件，一般使用上一个活性空间的结果）</div>
                     </div>
 
                     <div class="form-group">
-                        <label for="grasp_data_processing_root">GraspDataProcessing根路径 *</label>
-                        <input type="text" id="grasp_data_processing_root" placeholder="例如: /home/workstation3/AppFiles/GraspDataProcessing">
-                        <div class="help-text">GraspDataProcessing库的根目录路径</div>
+                        <label for="loop1_rwfn_file">预备径向波函数</label>
+                        <input type="text" id="loop1_rwfn_file" placeholder="例如: ${conf}_as${active_space-1}.w">
+                        <div class="help-text">预备径向波函数，上一层活性空间计算得到的径向波函数</div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="conda_path">Conda路径 *</label>
-                        <input type="text" id="conda_path" placeholder="例如: /home/workstation3/AppFiles/miniconda3">
-                        <div class="help-text">conda的安装位置（注意是根目录，不是bin目录）</div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h3>🔧 计算参数</h3>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="chosen_ratio">CSFs选择比例</label>
-                            <input type="number" id="chosen_ratio" step="0.01" min="0.01" max="1.0" placeholder="例如: 0.09">
+                            <input type="number" id="chosen_ratio" step="0.01" min="0.01" max="1.0" placeholder="例如: 0.085">
                             <div class="help-text">初始CSFs选择比例</div>
                         </div>
                         
@@ -368,268 +582,96 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="active_space">活性空间轨道</label>
-                            <input type="text" id="active_space" placeholder="例如: 10s,9p,8d,7f,6g">
-                            <div class="help-text">活性空间轨道定义</div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="cal_levels">计算能级</label>
-                            <input type="text" id="cal_levels" placeholder="例如: 1-4">
-                            <div class="help-text">计算的能级范围</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h3>⚛️ 原子核参数</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="atomic_number">原子序数 *</label>
-                            <input type="number" id="atomic_number" min="1" max="118" placeholder="例如: 64">
-                            <div class="help-text">原子的质子数</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="mass_number">质量数 *</label>
-                            <input type="number" id="mass_number" min="1" max="300" placeholder="例如: 157">
-                            <div class="help-text">原子核的质量数</div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="atomic_mass">原子质量</label>
-                            <input type="number" id="atomic_mass" step="0.01" min="1" max="300" placeholder="例如: 157.25">
-                            <div class="help-text">中性原子的质量 (amu)</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="nuclear_spin">核自旋量子数</label>
-                            <input type="number" id="nuclear_spin" step="0.5" min="0" max="10" placeholder="例如: 1">
-                            <div class="help-text">核自旋量子数 I (单位: ℏ/2π)</div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="nuclear_dipole">核偶极矩</label>
-                            <input type="number" id="nuclear_dipole" step="0.1" placeholder="例如: 1">
-                            <div class="help-text">核偶极矩 (单位: 核磁子)</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="nuclear_quadrupole">核四极矩</label>
-                            <input type="number" id="nuclear_quadrupole" step="0.1" placeholder="例如: 1">
-                            <div class="help-text">核四极矩 (单位: barn)</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h3>🤖 机器学习参数</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="n_estimators">随机森林树数</label>
-                            <input type="number" id="n_estimators" min="100" max="5000" placeholder="例如: 1000">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="random_state">随机种子</label>
-                            <input type="number" id="random_state" placeholder="例如: 42">
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="class_weight_0">负样本权重</label>
-                            <input type="number" id="class_weight_0" min="0.1" max="10" step="0.1" placeholder="例如: 1">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="class_weight_1">正样本权重</label>
-                            <input type="number" id="class_weight_1" min="0.1" max="10" step="0.1" placeholder="例如: 3">
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="pytorch_threads">PyTorch CPU线程数</label>
-                            <input type="number" id="pytorch_threads" min="1" max="128" placeholder="例如: 32">
-                            <div class="help-text">PyTorch使用的CPU线程数量</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h3>📈 收敛性检查参数</h3>
-                    <div class="form-row">
-                        <div class="form-group">
                             <label for="std_threshold">标准差阈值</label>
-                            <input type="number" id="std_threshold" step="1e-6" min="1e-6" max="1e-3" placeholder="例如: 1e-5">
+                            <input type="number" id="std_threshold" step="1e-6" min="1e-6" max="1e-3" placeholder="例如: 2e-5">
                             <div class="help-text">能级计算的标准差收敛阈值</div>
                         </div>
                         
                         <div class="form-group">
                             <label for="csfs_num_relative_std_threshold">相对标准差阈值</label>
-                            <input type="number" id="csfs_num_relative_std_threshold" step="1e-4" min="1e-4" max="1e-2" placeholder="例如: 1e-3">
+                            <input type="number" id="csfs_num_relative_std_threshold" step="1e-4" min="1e-4" max="1e-2" placeholder="例如: 0.002">
                             <div class="help-text">CSFs数量变化的相对标准差阈值</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="section">
-                    <h3>🎯 步骤级断点重启控制</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="enable_step_control">启用步骤控制</label>
-                            <select id="enable_step_control">
-                                <option value="false">否（正常执行）</option>
-                                <option value="true">是（启用步骤控制）</option>
-                            </select>
-                            <div class="help-text">是否启用步骤级精确控制功能</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="target_loop">目标循环编号</label>
-                            <input type="number" id="target_loop" min="0" max="20" placeholder="例如: 0">
-                            <div class="help-text">0表示所有循环，>0表示仅在指定循环应用控制</div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="start_step">起始步骤</label>
-                            <select id="start_step">
-                                <option value="auto">自动（从循环开始）</option>
-                                <option value="initial_csfs">initial_csfs（初始化CSFs数据）</option>
-                                <option value="choosing_csfs">choosing_csfs（组态选择）</option>
-                                <option value="mkdisks">mkdisks（创建计算磁盘）</option>
-                                <option value="rangular">rangular（角系数计算）</option>
-                                <option value="rwfnestimate">rwfnestimate（波函数估计）</option>
-                                <option value="rmcdhf">rmcdhf（自洽场计算）</option>
-                                <option value="rci">rci（组态相互作用计算）</option>
-                                <option value="rsave">rsave（保存计算结果）</option>
-                                <option value="jj2lsj">jj2lsj（jj到LSJ转换）</option>
-                                <option value="rlevels">rlevels（能级数据生成）</option>
-                                <option value="train">train（机器学习训练）</option>
-                            </select>
-                            <div class="help-text">从哪个步骤开始执行</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="end_step">结束步骤</label>
-                            <select id="end_step">
-                                <option value="auto">自动（执行到结束）</option>
-                                <option value="initial_csfs">initial_csfs（初始化CSFs数据）</option>
-                                <option value="choosing_csfs">choosing_csfs（组态选择）</option>
-                                <option value="mkdisks">mkdisks（创建计算磁盘）</option>
-                                <option value="rangular">rangular（角系数计算）</option>
-                                <option value="rwfnestimate">rwfnestimate（波函数估计）</option>
-                                <option value="rmcdhf">rmcdhf（自洽场计算）</option>
-                                <option value="rci">rci（组态相互作用计算）</option>
-                                <option value="rsave">rsave（保存计算结果）</option>
-                                <option value="jj2lsj">jj2lsj（jj到LSJ转换）</option>
-                                <option value="rlevels">rlevels（能级数据生成）</option>
-                                <option value="train">train（机器学习训练）</option>
-                            </select>
-                            <div class="help-text">在哪个步骤后停止执行</div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="skip_completed_steps">跳过已完成步骤</label>
-                            <select id="skip_completed_steps">
-                                <option value="true">是（智能跳过）</option>
-                                <option value="false">否（强制重新执行）</option>
-                            </select>
-                            <div class="help-text">是否自动检测并跳过已完成的步骤</div>
-                        </div>
-                    </div>
-                </div>
+                
 
-                <div class="section">
-                    <h3>⚡ SLURM设置</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="partition">SLURM分区</label>
-                            <input type="text" id="partition" placeholder="例如: work3">
-                            <div class="help-text">使用sinfo获得可用分区</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="tasks_per_node">每节点任务数</label>
-                            <input type="number" id="tasks_per_node" min="1" max="128" placeholder="例如: 46">
-                        </div>
+                <!-- 第三栏：原子核与系统参数 -->
+                <div class="config-column">
+                    <h3>⚛️ 原子核参数</h3>
+                    
+                    <div class="form-group">
+                        <label for="atomic_number">原子序数 *</label>
+                        <input type="number" id="atomic_number" min="1" max="118" placeholder="例如: 64">
+                        <div class="help-text">原子的质子数</div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="mpi_tmp_path">MPI临时文件路径</label>
-                        <input type="text" id="mpi_tmp_path" placeholder="例如: /home/workstation3/caltmp">
-                        <div class="help-text">MPI计算临时文件存储路径，如果不设置则使用当前目录</div>
+                        <label for="mass_number">质量数 *</label>
+                        <input type="number" id="mass_number" min="1" max="300" placeholder="例如: 157">
+                        <div class="help-text">原子核的质量数</div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="conda_env">Conda环境名</label>
-                        <input type="text" id="conda_env" placeholder="例如: grasp-env">
-                        <div class="help-text">Python环境名称</div>
+                        <label for="atomic_mass">原子质量</label>
+                        <input type="number" id="atomic_mass" step="0.01" min="1" max="300" placeholder="例如: 157.25">
+                        <div class="help-text">中性原子的质量 (amu)</div>
                     </div>
-                </div>
-
-                <div class="section">
-                    <h3>📦 Module加载配置</h3>
+                    
                     <div class="form-group">
-                        <label for="modules">环境模块 *</label>
-                        <div id="modules-container">
-                            <input type="text" class="module-input" placeholder="例如: mpi/openmpi-x86_64-gcc" oninput="handleModuleInput(this)">
-                        </div>
-                        <div class="help-text">输入模块名后会自动生成新的输入框</div>
+                        <label for="nuclear_spin">核自旋量子数</label>
+                        <input type="number" id="nuclear_spin" step="0.5" min="0" max="10" placeholder="例如: 1">
+                        <div class="help-text">核自旋量子数 I (单位: ℏ/2π)</div>
                     </div>
-                </div>
-
-                <div class="button-group">
-                    <button class="btn btn-primary" onclick="generateFiles()">🔄 生成文件</button>
-                    <button class="btn btn-secondary" onclick="resetForm()">🔄 重置表单</button>
-                </div>
-            </div>
-
-            <div class="results-column">
-                <!-- 配置管理面板 -->
-                <div class="config-panel" style="margin-bottom: 20px;">
-                    <h2>💾 配置管理</h2>
-                    <div class="button-group">
-                        <button class="btn btn-success" onclick="saveConfig()">💾 保存配置</button>
-                        <button class="btn btn-warning" onclick="loadConfigFromFile()">📂 加载配置</button>
+                    
+                    <div class="form-group">
+                        <label for="nuclear_dipole">核偶极矩</label>
+                        <input type="number" id="nuclear_dipole" step="0.1" placeholder="例如: 1">
+                        <div class="help-text">核偶极矩 (单位: 核磁子)</div>
                     </div>
-                </div>
-
-                <div class="output-panel">
-                    <h2>📄 Config.toml</h2>
-                    <div class="button-group">
-                        <button class="btn btn-success" onclick="downloadFile('config')">💾 下载Config</button>
-                        <button class="btn btn-secondary" onclick="copyToClipboard('config')">📋 复制</button>
-                    </div>
-                    <div class="output-content" id="config-output">
-# 请填写左侧参数后，配置文件将在这里生成
-                    </div>
-                </div>
-
-                <div class="output-panel">
-                    <h2>📜 Shell脚本</h2>
-                    <div class="button-group">
-                        <button class="btn btn-warning" onclick="downloadFile('script')">💾 下载脚本</button>
-                        <button class="btn btn-secondary" onclick="copyToClipboard('script')">📋 复制</button>
-                    </div>
-                    <div class="output-content" id="script-output">
-# 请填写左侧参数后，Shell脚本将在这里生成
+                    
+                    <div class="form-group">
+                        <label for="nuclear_quadrupole">核四极矩</label>
+                        <input type="number" id="nuclear_quadrupole" step="0.1" placeholder="例如: 1">
+                        <div class="help-text">核四极矩 (单位: barn)</div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- 底部输出区域 -->
+        <div class="output-section">
+            <div class="output-panel">
+                <h2>📄 Config.toml</h2>
+                <div class="button-group">
+                    <button class="btn btn-success" onclick="downloadFile('config')">💾 下载Config</button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard('config')">📋 复制</button>
+                </div>
+                <div class="output-content" id="config-output">
+# 请填写配置参数后，配置文件将在这里生成
+                </div>
+            </div>
+
+            <div class="output-panel">
+                <h2>📜 Shell脚本</h2>
+                <div class="button-group">
+                    <button class="btn btn-warning" onclick="downloadFile('script')">💾 下载脚本</button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard('script')">📋 复制</button>
+                </div>
+                <div class="output-content" id="script-output">
+# 请填写配置参数后，Shell脚本将在这里生成
+                </div>
+            </div>
+        </div>
+
         <div class="footer">
-            <p>🔬 GraspDataProcessing machine learning CSFS choosing Config & Script  generator | 秦毅 (Yenoch Qin)</p>
+            <p>🔬 <strong>GRASP DataProcessing</strong> 机器学习 CSFs 配置生成器 | 设计与开发：<strong>秦毅 (Yenoch Qin)</strong></p>
+            <p style="margin-top: 8px; font-size: 12px;">
+                <a href="https://github.com/YenochQin" target="_blank" style="color: #6366f1; text-decoration: none; opacity: 0.8;">
+                    🚀 GitHub: https://github.com/YenochQin
+                </a>
+            </p>
         </div>
     </div>
 
@@ -725,6 +767,7 @@
             if (config.modules.length === 0) missingFields.push('环境模块');
             if (!config.root_path) missingFields.push('根路径');
             if (!config.selected_csfs) missingFields.push('初筛CSFs文件名');
+            if (!config.loop1_rwfn_file) missingFields.push('预备径向波函数');
             if (!config.grasp_data_processing_root) missingFields.push('GraspDataProcessing根路径');
             if (!config.atomic_number) missingFields.push('原子序数');
             if (!config.mass_number) missingFields.push('质量数');
@@ -737,7 +780,7 @@
             
             // 生成合成参数
             const jobName = config.atom + '_ml_' + config.conf;
-            const loop1RwfnFile = `${config.selected_csfs}.w`;
+            const loop1RwfnFile = `${config.loop1_rwfn_file}`;
             const rwfnEstimateFile = `${config.conf}_1.w`;
             
             // 生成config.toml
@@ -745,7 +788,7 @@
             document.getElementById('config-output').textContent = configContent;
             
             // 生成shell脚本
-            const scriptContent = generateShellScript(config, jobName, loop1RwfnFile, rwfnEstimateFile);
+            const scriptContent = generateShellScript(config, jobName, rwfnEstimateFile);
             document.getElementById('script-output').textContent = scriptContent;
         }
 
@@ -758,9 +801,10 @@
                 modules: getModules(),
                 root_path: document.getElementById('root_path').value,
                 selected_csfs: document.getElementById('selected_csfs').value,
+                loop1_rwfn_file: document.getElementById('loop1_rwfn_file').value,
                 grasp_data_processing_root: document.getElementById('grasp_data_processing_root').value,
                 conda_path: document.getElementById('conda_path').value || '/home/workstation3/AppFiles/miniconda3',
-                chosen_ratio: document.getElementById('chosen_ratio').value || '0.09',
+                chosen_ratio: document.getElementById('chosen_ratio').value || '0.085',
                 cutoff_value: document.getElementById('cutoff_value').value || '1e-09',
                 active_space: document.getElementById('active_space').value || '10s,9p,8d,7f,6g',
                 cal_levels: document.getElementById('cal_levels').value || '1-4',
@@ -770,20 +814,9 @@
                 nuclear_spin: document.getElementById('nuclear_spin').value || '1',
                 nuclear_dipole: document.getElementById('nuclear_dipole').value || '1',
                 nuclear_quadrupole: document.getElementById('nuclear_quadrupole').value || '1',
-                n_estimators: document.getElementById('n_estimators').value || '1000',
-                random_state: document.getElementById('random_state').value || '42',
-                class_weight_0: document.getElementById('class_weight_0').value || '1',
-                class_weight_1: document.getElementById('class_weight_1').value || '3',
                 pytorch_threads: document.getElementById('pytorch_threads').value || '32',
-                std_threshold: document.getElementById('std_threshold').value || '1e-5',
-                csfs_num_relative_std_threshold: document.getElementById('csfs_num_relative_std_threshold').value || '1e-3',
-                
-                // 步骤控制配置
-                enable_step_control: document.getElementById('enable_step_control').value || 'false',
-                target_loop: document.getElementById('target_loop').value || '0',
-                start_step: document.getElementById('start_step').value || 'auto',
-                end_step: document.getElementById('end_step').value || 'auto',
-                skip_completed_steps: document.getElementById('skip_completed_steps').value || 'true',
+                std_threshold: document.getElementById('std_threshold').value || '2e-5',
+                csfs_num_relative_std_threshold: document.getElementById('csfs_num_relative_std_threshold').value || '0.002',
                 
                 partition: document.getElementById('partition').value || 'work3',
                 tasks_per_node: document.getElementById('tasks_per_node').value || '46',
@@ -799,12 +832,15 @@
                 spectralTermsString = '';
             } else {
                 spectralTermsString = config.spectral_terms.map(term => `    "${term}"`).join(',\n');
+                if (spectralTermsString) {
+                    spectralTermsString += ',';
+                }
             }
             
             return `atom = "${config.atom}"
 conf = "${config.conf}"
-spetral_term = [
-${spectralTermsString},
+spectral_term = [
+${spectralTermsString}
 ]
 continue_cal = true
 cal_loop_num = 1
@@ -817,11 +853,13 @@ target_pool_file = "${config.conf}.c"
 root_path = "${config.root_path}"
 selected_csfs_file = "${config.selected_csfs}.c"
 selected_csfs_mix_file = "${config.selected_csfs}.cm"
+loop1_rwfn_file = "${config.loop1_rwfn_file}"
 energy_std_threshold = ${config.std_threshold}
 csfs_num_relative_std_threshold = ${config.csfs_num_relative_std_threshold}
 cal_method = "rmcdhf"
 
 # GRASP计算参数
+loop1_rwfn_file = "${config.loop1_rwfn_file}"
 active_space = "${config.active_space}"
 cal_levels = "${config.cal_levels}"
 tasks_per_node = ${config.tasks_per_node}
@@ -835,13 +873,13 @@ nuclear_spin = ${config.nuclear_spin}
 nuclear_dipole = ${config.nuclear_dipole}
 nuclear_quadrupole = ${config.nuclear_quadrupole}
 
-# 步骤级断点重启控制
+# 步骤级断点重启控制（默认配置）
 [step_control]
-enable_step_control = ${config.enable_step_control}      # 是否启用步骤级控制
-target_loop = ${config.target_loop}                  # 目标循环编号（0表示使用当前cal_loop_num）
-start_step = "${config.start_step}"              # 起始步骤（auto/initial_csfs/choosing_csfs/mkdisks/rangular/rwfnestimate/rmcdhf/rsave/jj2lsj/rlevels/train）
-end_step = "${config.end_step}"                # 结束步骤（auto表示执行到最后）
-skip_completed_steps = ${config.skip_completed_steps}      # 是否跳过已完成的步骤
+enable_step_control = false      # 是否启用步骤级控制
+target_loop = 0                  # 目标循环编号（0表示使用当前cal_loop_num）
+start_step = "auto"              # 起始步骤（auto/initial_csfs/choosing_csfs/mkdisks/rangular/rwfnestimate/rmcdhf/rsave/jj2lsj/rlevels/train）
+end_step = "auto"                # 结束步骤（auto表示执行到最后）
+skip_completed_steps = true      # 是否跳过已完成的步骤
 
 [cpu_config]
 pytorch_threads = ${config.pytorch_threads}
@@ -866,13 +904,14 @@ overfitting_threshold = 0.1
 underfitting_threshold = -0.05
 include_wrong_level_negatives = true
 
+# 机器学习模型参数（默认配置）
 [model_params]
-n_estimators = ${config.n_estimators}
-random_state = ${config.random_state}
+n_estimators = 1000
+random_state = 42
 
 [model_params.class_weight]
-0 = ${config.class_weight_0}
-1 = ${config.class_weight_1}`;
+0 = 1
+1 = 3`;
         }
 
         // 生成module load语句
@@ -886,7 +925,7 @@ random_state = ${config.random_state}
         }
 
         // 生成shell脚本内容
-        function generateShellScript(config, jobName, loop1RwfnFile, rwfnEstimateFile) {
+        function generateShellScript(config, jobName, rwfnEstimateFile) {
             return `#!/bin/zsh
 #SBATCH -J ${jobName}
 #SBATCH -N 1
@@ -896,118 +935,123 @@ random_state = ${config.random_state}
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
-# 设置 GraspDataProcessing 根目录路径（便于脚本移动到其他目录使用）
+# Set proper locale and encoding for Chinese characters
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+# Set GraspDataProcessing root directory path for script portability
 GRASP_DATA_PROCESSING_ROOT="${config.grasp_data_processing_root}"
 export PYTHONPATH="\${GRASP_DATA_PROCESSING_ROOT}/src:\${PYTHONPATH}"
 export PATH="\${GRASP_DATA_PROCESSING_ROOT}/scripts:\${PATH}"
 
-# 加载公共函数库（使用绝对路径，消除重复代码）
+# Load common function library (absolute path to eliminate code duplication)
 source "\${GRASP_DATA_PROCESSING_ROOT}/scripts/common_functions.sh"
 
-log_with_timestamp "========== 开始执行 sbatch 脚本 =========="
-log_with_timestamp "作业名: \${SLURM_JOB_NAME:-未设置}"
-log_with_timestamp "作业编号: \${SLURM_JOB_ID:-未设置}"
+
+log_with_timestamp "========== Starting sbatch script execution ========="
+log_with_timestamp "Job name: \${SLURM_JOB_NAME:-Not set}"
+log_with_timestamp "Job ID: \${SLURM_JOB_ID:-Not set}"
 
 ###########################################
 ## module load
-log_with_timestamp "加载必要的模块..."
+log_with_timestamp "Loading required modules..."
 ${generateModuleLoads(config)}
 ###########################################
-# ⚠️ 关键修改：确保正确加载 Conda（zsh 需要手动初始化）
-log_with_timestamp "初始化 Conda 环境..."
+# Critical fix: Ensure proper Conda loading (zsh requires manual initialization)
+log_with_timestamp "Initializing Conda environment..."
 source ${config.conda_path}/etc/profile.d/conda.sh  || {
-    log_with_timestamp "❌ 加载 Conda 失败！请检查路径是否正确。"
+    log_with_timestamp "ERROR: Failed to load Conda! Please check if path is correct."
     exit 1
 }
 conda activate ${config.conda_env} || {
-    log_with_timestamp "❌ 激活环境失败！请确认环境名是否正确。"
+    log_with_timestamp "ERROR: Failed to activate environment! Please confirm environment name is correct."
     exit 1
 }
-log_with_timestamp "✅ Conda 环境激活成功"
+log_with_timestamp "SUCCESS: Conda environment activated successfully"
 
-# 输出环境信息（使用正确的Python版本）
+# Print environment information (using correct Python version)
 print_environment_info
 
-# GraspDataProcessing 包路径和工具脚本路径已在脚本开头设置
-log_with_timestamp "设置 PYTHONPATH: \$PYTHONPATH"
-log_with_timestamp "设置 PATH: \$PATH"
 ###########################################
-# 检查 Python 路径和配置工具
-log_with_timestamp "检查 Python 环境..."
+# GraspDataProcessing package path and tool script paths set at script beginning
+log_with_timestamp "Set PYTHONPATH: \$PYTHONPATH"
+log_with_timestamp "Set PATH: \$PATH"
+###########################################
+# Check Python path and configuration tools
+log_with_timestamp "Checking Python environment..."
 which python
 python --version
 which csfs_ml_choosing_config_load.py
 ###########################################
-## 从config.toml读取配置参数（在计算根目录中）
-log_with_timestamp "从config.toml读取配置参数..."
+## Read configuration parameters from config.toml (in calculation root directory)
+log_with_timestamp "Reading configuration parameters from config.toml..."
 cal_dir=\${PWD}
 config_file="\${cal_dir}/config.toml"
 
-# 检查配置文件是否存在
+# Check if configuration file exists
 if [ ! -f "\$config_file" ]; then
-    log_error_with_timestamp "配置文件不存在: \$config_file"
+    log_error_with_timestamp "Configuration file does not exist: \$config_file"
     exit 1
 fi
 
-atom=\$(safe_get_config_value "\${config_file}" "atom" "原子符号")
-conf=\$(safe_get_config_value "\${config_file}" "conf" "组态名称")
-processor=\$(safe_get_config_value "\${config_file}" "tasks_per_node" "处理器核数")
-Active_space=\$(safe_get_config_value "\${config_file}" "active_space" "活性空间")
-cal_levels=\$(safe_get_config_value "\${config_file}" "cal_levels" "计算能级")
-selected_csfs_file=\$(safe_get_config_value "\${config_file}" "selected_csfs_file" "初筛CSFs文件")
+atom=\$(safe_get_config_value "\${config_file}" "atom" "atomic symbol")
+conf=\$(safe_get_config_value "\${config_file}" "conf" "configuration name")
+processor=\$(safe_get_config_value "\${config_file}" "tasks_per_node" "processor count")
+Active_space=\$(safe_get_config_value "\${config_file}" "active_space" "active space")
+cal_levels=\$(safe_get_config_value "\${config_file}" "cal_levels" "calculation levels")
+selected_csfs_file=\$(safe_get_config_value "\${config_file}" "selected_csfs_file" "initial CSFs file")
 
-# 读取mpi_tmp_path配置参数（在进入子目录之前读取）
-mpi_tmp_path=\$(safe_get_config_value "\${config_file}" "mpi_tmp_path" "MPI临时路径")
-log_with_timestamp "MPI临时文件路径配置: \$mpi_tmp_path"
+# Read mpi_tmp_path configuration parameter (before entering subdirectory)
+mpi_tmp_path=\$(safe_get_config_value "\${config_file}" "mpi_tmp_path" "MPI temp path")
+log_with_timestamp "MPI temporary file path configuration: \$mpi_tmp_path"
 
-# 生成派生文件名
-loop1_rwfn_file=\$(basename "\$selected_csfs_file" .c).w
+# Generate derived filenames
+loop1_rwfn_file=\$(safe_get_config_value "\${config_file}" "loop1_rwfn_file" "previous got RWFN file")
 rwfnestimate_file="\${conf}_1.w"
 
-log_with_timestamp "配置参数: atom=\$atom, conf=\$conf, processor=\$processor"
-log_with_timestamp "活性空间: \$Active_space, 计算能级: \$cal_levels"
-log_with_timestamp "初始波函数文件: \$loop1_rwfn_file"
+log_config_params "\$atom" "\$conf" "\$processor" "\$Active_space" "\$cal_levels"
+log_with_timestamp "Initial wavefunction file: \$loop1_rwfn_file"
 ###########################################
-# 更新配置文件中的root_path
+# Update root_path in configuration file
 run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set root_path \${cal_dir} -f "\${config_file}"
-log_with_timestamp "计算目录: \$cal_dir"
+log_with_timestamp_and_path "Calculation directory" "\$cal_dir"
 ###########################################
-log_with_timestamp "设置Python程序绝对路径..."
+log_with_timestamp "Setting absolute paths for Python programs..."
 ML_PYTHON_DIR="\${GRASP_DATA_PROCESSING_ROOT}/tests/ml_csf_choosing"
-log_with_timestamp "✅ Python程序路径设置完成: \$ML_PYTHON_DIR"
+log_with_timestamp "SUCCESS: Python program path setup complete: \$ML_PYTHON_DIR"
 
 ###########################################
-# 读取步骤控制参数
-log_with_timestamp "读取步骤控制配置..."
-enable_step_control=\$(safe_get_config_value "\${config_file}" "step_control.enable_step_control" "启用步骤控制")
-target_loop=\$(safe_get_config_value "\${config_file}" "step_control.target_loop" "目标循环")
-start_step=\$(safe_get_config_value "\${config_file}" "step_control.start_step" "起始步骤")
-end_step=\$(safe_get_config_value "\${config_file}" "step_control.end_step" "结束步骤")
-skip_completed_steps=\$(safe_get_config_value "\${config_file}" "step_control.skip_completed_steps" "跳过已完成步骤")
+# Read step control parameters
+log_with_timestamp "Reading step control configuration..."
+enable_step_control=\$(safe_get_config_value "\${config_file}" "step_control.enable_step_control" "Enable step control")
+target_loop=\$(safe_get_config_value "\${config_file}" "step_control.target_loop" "Target loop")
+start_step=\$(safe_get_config_value "\${config_file}" "step_control.start_step" "Start step")
+end_step=\$(safe_get_config_value "\${config_file}" "step_control.end_step" "End step")
+skip_completed_steps=\$(safe_get_config_value "\${config_file}" "step_control.skip_completed_steps" "Skip completed steps")
 
-log_with_timestamp "步骤控制配置:"
-log_with_timestamp "  启用步骤控制: \$enable_step_control"
-log_with_timestamp "  目标循环: \$target_loop"
-log_with_timestamp "  起始步骤: \$start_step"
-log_with_timestamp "  结束步骤: \$end_step"
-log_with_timestamp "  跳过已完成步骤: \$skip_completed_steps"
+log_with_timestamp "Step control configuration:"
+log_with_timestamp "  Enable step control: \$enable_step_control"
+log_with_timestamp "  Target loop: \$target_loop"
+log_with_timestamp "  Start step: \$start_step"
+log_with_timestamp "  End step: \$end_step"
+log_with_timestamp "  Skip completed steps: \$skip_completed_steps"
 
-# 步骤检查函数
+# Step check function
 check_step_should_run() {
     local current_step="\$1"
     local current_loop="\$2"
     
-    # 如果未启用步骤控制，总是执行
+    # If step control is not enabled, always execute
     if [[ "\$enable_step_control" != "true" ]]; then
         return 0
     fi
     
-    # 检查目标循环
+    # Check target loop
     if [[ "\$target_loop" != "0" && "\$current_loop" != "\$target_loop" ]]; then
-        return 1  # 跳过不是目标循环的步骤
+        return 1  # Skip steps not in target loop
     fi
     
-    # 检查起始步骤
+    # Check start step
     if [[ "\$start_step" != "auto" ]]; then
         case "\$current_step" in
             "initial_csfs")
@@ -1019,28 +1063,105 @@ check_step_should_run() {
                     *) return 1 ;;
                 esac
                 ;;
+            "mkdisks")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rangular")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rwfnestimate")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rmcdhf"|"rci")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate"|"rmcdhf"|"rci") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rsave")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate"|"rmcdhf"|"rci"|"rsave") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "jj2lsj")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate"|"rmcdhf"|"rci"|"rsave"|"jj2lsj") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rlevels")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate"|"rmcdhf"|"rci"|"rsave"|"jj2lsj"|"rlevels") ;;
+                    *) return 1 ;;
+                esac
+                ;;
             "train")
-                # train总是可以执行（除非明确跳过）
+                # train can always be executed (unless explicitly skipped)
                 ;;
         esac
     fi
     
-    # 检查结束步骤
+    # Check end step
     if [[ "\$end_step" != "auto" ]]; then
         case "\$current_step" in
             "initial_csfs")
                 if [[ "\$end_step" == "initial_csfs" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: \$end_step，将在此步骤后停止"
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
                 fi
                 ;;
             "choosing_csfs")
                 if [[ "\$end_step" == "choosing_csfs" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: \$end_step，将在此步骤后停止"
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "mkdisks")
+                if [[ "\$end_step" == "mkdisks" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rangular")
+                if [[ "\$end_step" == "rangular" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rwfnestimate")
+                if [[ "\$end_step" == "rwfnestimate" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rmcdhf"|"rci")
+                if [[ "\$end_step" == "rmcdhf" || "\$end_step" == "rci" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rsave")
+                if [[ "\$end_step" == "rsave" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "jj2lsj")
+                if [[ "\$end_step" == "jj2lsj" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rlevels")
+                if [[ "\$end_step" == "rlevels" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
                 fi
                 ;;
             "train")
                 if [[ "\$end_step" == "train" ]]; then
-                    log_with_timestamp "🎯 达到结束步骤: \$end_step，将在此步骤后停止"
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
                 fi
                 ;;
         esac
@@ -1049,33 +1170,90 @@ check_step_should_run() {
     return 0
 }
 
-# 检查步骤完成后是否应该停止
+# Check if should stop after step completion
 check_should_stop_after_step() {
     local current_step="\$1"
     
     if [[ "\$enable_step_control" != "true" ]]; then
-        return 1  # 不停止
+        return 1  # Don't stop
     fi
     
     if [[ "\$end_step" != "auto" && "\$current_step" == "\$end_step" ]]; then
-        return 0  # 应该停止
+        return 0  # Should stop
     fi
     
-    return 1  # 不停止
+    return 1  # Don't stop
+}
+
+# File existence check function (for skipping completed steps)
+check_step_completed() {
+    local step_name="\$1"
+    local loop_num="\$2"
+    local conf_name="\$3"
+    
+    if [[ "\$skip_completed_steps" != "true" ]]; then
+        return 1  # Don't skip
+    fi
+    
+    case "\$step_name" in
+        "mkdisks")
+            if [[ -f "disks" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found file: disks)"
+                return 0
+            fi
+            ;;
+        "rangular")
+            # rangular has no direct output files, check prerequisite files for subsequent steps
+            # The judgment logic can be adjusted according to actual conditions
+            ;;
+        "rwfnestimate")
+            if [[ -f "rwfn.inp" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found file: rwfn.inp)"
+                return 0
+            fi
+            ;;
+        "rmcdhf"|"rci")
+            if [[ -f "rwfn.out" && -f "rmix.out" ]] || [[ -f "\${conf_name}_\${loop_num}.cm" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found output files)"
+                return 0
+            fi
+            ;;
+        "rsave")
+            if [[ -f "\${conf_name}_\${loop_num}.w" && -f "\${conf_name}_\${loop_num}.c" && -f "\${conf_name}_\${loop_num}.m" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found saved files)"
+                return 0
+            fi
+            ;;
+        "jj2lsj")
+            if [[ -f "\${conf_name}_\${loop_num}.lsj.lbl" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found file: \${conf_name}_\${loop_num}.lsj.lbl)"
+                return 0
+            fi
+            ;;
+        "rlevels")
+            if [[ -f "\${conf_name}_\${loop_num}.level" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found file: \${conf_name}_\${loop_num}.level)"
+                return 0
+            fi
+            ;;
+    esac
+    
+    return 1  # Not completed, do not skip
 }
 ###########################################
-### rnucleus - 设置原子核参数
-log_with_timestamp "设置原子核参数..."
-atomic_number=\$(safe_get_config_value "\${config_file}" "atomic_number" "原子序数")
-mass_number=\$(safe_get_config_value "\${config_file}" "mass_number" "质量数")
-atomic_mass=\$(safe_get_config_value "\${config_file}" "atomic_mass" "原子质量")
-nuclear_spin=\$(safe_get_config_value "\${config_file}" "nuclear_spin" "核自旋量子数")
-nuclear_dipole=\$(safe_get_config_value "\${config_file}" "nuclear_dipole" "核偶极矩")
-nuclear_quadrupole=\$(safe_get_config_value "\${config_file}" "nuclear_quadrupole" "核四极矩")
+### rnucleus - Setting nuclear parameters
+log_with_timestamp "Setting nuclear parameters..."
+atomic_number=\$(safe_get_config_value "\${config_file}" "atomic_number" "atomic number")
+mass_number=\$(safe_get_config_value "\${config_file}" "mass_number" "mass number")
+atomic_mass=\$(safe_get_config_value "\${config_file}" "atomic_mass" "atomic mass")
+nuclear_spin=\$(safe_get_config_value "\${config_file}" "nuclear_spin" "nuclear spin quantum number")
+nuclear_dipole=\$(safe_get_config_value "\${config_file}" "nuclear_dipole" "nuclear dipole moment")
+nuclear_quadrupole=\$(safe_get_config_value "\${config_file}" "nuclear_quadrupole" "nuclear quadrupole moment")
 
-# 验证数值的有效性
-log_with_timestamp "原子核参数: Z=\$atomic_number, A=\$mass_number, 质量=\$atomic_mass"
-log_with_timestamp "核性质: I=\$nuclear_spin, μ=\$nuclear_dipole, Q=\$nuclear_quadrupole"
+# Verify the validity of numeric values
+local timestamp=\$(date '+%Y-%m-%d %H:%M:%S')
+echo -e "[\$timestamp] Nuclear parameters: \$(highlight_param "Z" "\$atomic_number") \$(highlight_param "A" "\$mass_number") \$(highlight_param "mass" "\$atomic_mass")"
+echo -e "[\$timestamp] Nuclear properties: \$(highlight_param "I" "\$nuclear_spin") \$(highlight_param "mu" "\$nuclear_dipole") \$(highlight_param "Q" "\$nuclear_quadrupole")"
 
 input_commands="\$atomic_number
 \$mass_number
@@ -1085,127 +1263,139 @@ n
 \$nuclear_dipole
 \$nuclear_quadrupole"
 safe_grasp_execute "rnucleus" "\$input_commands" rnucleus
-log_with_timestamp "✅ 原子核参数设置完成"
+log_with_timestamp "[SUCCESS] Nuclear parameter setup completed"
 ###########################################
-# 断点重启完成后自动重置步骤控制设置（避免无限循环）
+# Automatically reset step control settings after breakpoint restart (to avoid infinite loops)
 reset_step_control_if_needed() {
-    # 检查是否启用了步骤控制且当前不是默认设置
+    # Check if step control is enabled and current settings are not default
     if [[ "\$enable_step_control" == "true" && "\$start_step" != "auto" ]]; then
-        log_with_timestamp "🔄 检测到断点重启模式，检查是否需要重置步骤控制..."
+        log_with_timestamp "[RESTART] Detected breakpoint restart mode, checking if step control reset is needed..."
         
-        # 如果已经完成了指定的断点重启步骤，重置为正常模式
+        # If the specified breakpoint restart step has been completed, reset to normal mode
         local should_reset=false
         
-        # 检查各种重置条件
+        # Check various reset conditions
         if [[ "\$end_step" != "auto" ]]; then
-            log_with_timestamp "⚠️ 检测到指定结束步骤(\$end_step)，完成后将重置步骤控制"
+            log_with_timestamp "[WARN] Detected specified end step (\$end_step), will reset step control after completion"
             should_reset=true
         elif [[ "\$start_step" == "train" ]]; then
-            log_with_timestamp "⚠️ 检测到从train步骤开始，完成train后将重置步骤控制"
+            log_with_timestamp "[WARN] Detected start from train step, will reset step control after train completion"
             should_reset=true
         fi
         
         if [[ "\$should_reset" == "true" ]]; then
-            # 设置一个标记，表示需要在适当时机重置
+            # Set a flag indicating reset is needed at appropriate time
             export SHOULD_RESET_STEP_CONTROL="true"
-            log_with_timestamp "📋 已标记：将在完成当前断点重启后自动重置步骤控制"
+            log_with_timestamp "[MARK] Marked: Will automatically reset step control after completing current breakpoint restart"
         fi
     fi
 }
 
-# 执行步骤控制重置
+# Execute step control reset
 do_step_control_reset() {
     if [[ "\$SHOULD_RESET_STEP_CONTROL" == "true" ]]; then
-        log_with_timestamp "🔄 断点重启完成，重置步骤控制设置为正常模式..."
+        log_with_timestamp "[RESTART] Breakpoint restart completed, resetting step control settings to normal mode..."
         
-        # 重置步骤控制设置
+        # Reset step control settings
         run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.start_step "auto" -f "\${config_file}"
         run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.end_step "auto" -f "\${config_file}"
         run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.enable_step_control "false" -f "\${config_file}"
         
-        # 更新本地变量
+        # Update local variables
         start_step="auto"
         end_step="auto"
         enable_step_control="false"
         
-        # 清除重置标记
+        # Clear reset flag
         export SHOULD_RESET_STEP_CONTROL=""
         
-        log_with_timestamp "✅ 步骤控制已重置，后续循环将正常执行所有步骤"
+        log_with_timestamp "[SUCCESS] Step control has been reset, subsequent loops will execute all steps normally"
     fi
 }
 
-# 在主循环开始前检查是否需要重置
+# Check if reset is needed before main loop starts
 reset_step_control_if_needed
 
 while true
 do
 ###########################################
-log_with_timestamp "获取循环计数..."
-loop=\$(safe_get_config_value "\${config_file}" "cal_loop_num" "循环计数")
-log_with_timestamp "当前循环: \$loop"
+log_with_timestamp "Getting loop count..."
+loop=\$(safe_get_config_value "\${config_file}" "cal_loop_num" "loop count")
+log_with_timestamp "Current loop: \$(highlight_number "\$loop" "\$COLOR_CYAN")"
 
 if [ $loop -eq 1 ]; then
-    # 初始化必要csfs文件数据
+    # Initialize necessary CSF file data
     if check_step_should_run "initial_csfs" "\$loop"; then
-        log_with_timestamp "================初始化必要csfs文件数据================"
+        log_stage "Initialize necessary CSF file data" "START"
         run_python_with_env "\${ML_PYTHON_DIR}/initial_csfs.py"
         
-        # 检查是否应该在此步骤后停止
+        # Check if should stop after this step
         if check_should_stop_after_step "initial_csfs"; then
-            log_with_timestamp "🛑 根据配置在initial_csfs步骤后停止执行"
+            log_with_timestamp "[STOP] Stop execution after initial_csfs step according to configuration"
             exit 0
         fi
     else
-        log_with_timestamp "⏭️ 跳过步骤: initial_csfs (根据步骤控制配置)"
+        log_with_timestamp "[SKIP] Skip step: initial_csfs (according to step control configuration)"
     fi
 fi
 ###########################################
-log_with_timestamp "检查计算状态..."
-cal_status=\$(safe_get_config_value "\${config_file}" "continue_cal" "计算继续状态")
-log_with_timestamp "计算状态: \$cal_status"
+log_with_timestamp "Checking calculation status..."
+cal_status=\$(safe_get_config_value "\${config_file}" "continue_cal" "calculation continue status")
+log_with_timestamp "Calculation status: \$cal_status"
 
-if [[ "$cal_status" == "false" ]]; then
-    log_with_timestamp "================计算终止================"
+if [[ "\$cal_status" == "false" ]]; then
+    log_with_timestamp "================ Calculation terminated ================"
     break
 fi
 ###########################################
-## 组态选择处理
+## Configuration selection processing
 if check_step_should_run "choosing_csfs" "\$loop"; then
-    log_with_timestamp "================执行组态选择================"
+    log_stage "Execute configuration selection" "START"
     run_python_with_env "\${ML_PYTHON_DIR}/choosing_csfs.py"
-    if [ $? -ne 0 ]; then
-        log_with_timestamp "❌ 组态选择失败!"
+    if [ \$? -ne 0 ]; then
+        log_with_timestamp "[ERROR] Configuration selection failed!"
         exit 1
     fi
-    log_with_timestamp "✅ 组态选择完成"
+    log_with_timestamp "[SUCCESS] Configuration selection completed"
     
-    # 检查是否应该在此步骤后停止
+    # Check if should stop after this step
     if check_should_stop_after_step "choosing_csfs"; then
-        log_with_timestamp "🛑 根据配置在choosing_csfs步骤后停止执行"
+        log_with_timestamp "[STOP] Stop execution after choosing_csfs step according to configuration"
         exit 0
     fi
 else
-    log_with_timestamp "⏭️ 跳过步骤: choosing_csfs (根据步骤控制配置)"
+    log_with_timestamp "[SKIP] Skip step: choosing_csfs (according to step control configuration)"
 fi
 ###########################################
 ## grasp calculation routine
 
-log_with_timestamp "进入计算目录: \${conf}_\${loop}"
+log_with_timestamp_and_path "Enter calculation directory" "\${conf}_\${loop}"
 cd \${conf}_\${loop}
 
-# 使用循环外已读取的mpi_tmp_path配置参数
-if [[ -n "\$mpi_tmp_path" && "\$mpi_tmp_path" != "null" && ! "\$mpi_tmp_path" =~ ^ERROR: ]]; then
-    log_with_timestamp "使用配置的mpi_tmp路径: \$mpi_tmp_path"
-    safe_grasp_execute "mkdisks" "" mkdisks \${processor} "\$mpi_tmp_path"
+# mkdisks step
+if check_step_should_run "mkdisks" "\$loop"; then
+    if ! check_step_completed "mkdisks" "\$loop" "\$conf"; then
+        # Use mpi_tmp_path configuration parameter read outside loop
+        if [[ -n "\$mpi_tmp_path" && "\$mpi_tmp_path" != "null" && ! "\$mpi_tmp_path" =~ ^ERROR: ]]; then
+            log_with_timestamp "Use configured mpi_tmp path: \$mpi_tmp_path"
+            safe_grasp_execute "mkdisks" "" mkdisks \${processor} "\$mpi_tmp_path"
+        else
+            log_with_timestamp "mpi_tmp_path not configured or failed to read, using default path (current directory)"
+            safe_grasp_execute "mkdisks" "" mkdisks \${processor}
+        fi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "mkdisks"; then
+        log_with_timestamp "[STOP] Stop execution after mkdisks step according to configuration"
+        exit 0
+    fi
 else
-    log_with_timestamp "未配置mpi_tmp_path或读取失败，使用默认路径（当前目录）"
-    safe_grasp_execute "mkdisks" "" mkdisks \${processor}
+    log_with_timestamp "[SKIP] Skip step: mkdisks (according to step control configuration)"
 fi
 
 ### rcsf
-log_with_timestamp "准备 rcsf 输入文件..."
-cp \${conf}_\${loop}.c rcsf.inp # rmcdhf
+
 cp ../isodata .
 
 if [ $loop -eq 1 ]; then
@@ -1462,11 +1652,11 @@ log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
         function fillFormWithConfig(config) {
             // 填充基本字段
             const simpleFields = [
-                'atom', 'conf', 'root_path', 'selected_csfs', 'grasp_data_processing_root',
-                'conda_path', 'chosen_ratio', 'cutoff_value', 'active_space', 'cal_levels',
+                'atom', 'conf', 'root_path', 'selected_csfs', 'loop1_rwfn_file',
+                'grasp_data_processing_root', 'conda_path', 'chosen_ratio',
+                'cutoff_value', 'active_space', 'cal_levels',
                 'atomic_number', 'mass_number', 'atomic_mass', 'nuclear_spin', 'nuclear_dipole',
-                'nuclear_quadrupole', 'n_estimators', 'random_state', 'class_weight_0',
-                'class_weight_1', 'pytorch_threads', 'std_threshold', 'csfs_num_relative_std_threshold',
+                'nuclear_quadrupole', 'pytorch_threads', 'std_threshold', 'csfs_num_relative_std_threshold',
                 'partition', 'tasks_per_node', 'mpi_tmp_path', 'conda_env'
             ];
             
@@ -1528,9 +1718,26 @@ log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
             
             if (statusElement) {
                 statusElement.innerHTML = `${icons[type] || icons.info} ${message}`;
-                // 3秒后清除状态
+                statusElement.style.display = 'block';
+                
+                // 根据类型设置不同的背景色
+                const bgColors = {
+                    success: 'rgba(16, 185, 129, 0.2)',
+                    warning: 'rgba(245, 158, 11, 0.2)',
+                    error: 'rgba(239, 68, 68, 0.2)',
+                    info: 'rgba(99, 102, 241, 0.2)'
+                };
+                statusElement.style.background = bgColors[type] || bgColors.info;
+                
+                // 3秒后淡出隐藏
                 setTimeout(() => {
-                    statusElement.innerHTML = '';
+                    statusElement.style.transition = 'opacity 0.5s ease';
+                    statusElement.style.opacity = '0';
+                    setTimeout(() => {
+                        statusElement.style.display = 'none';
+                        statusElement.style.opacity = '1';
+                        statusElement.style.transition = '';
+                    }, 500);
                 }, 3000);
             }
         }
