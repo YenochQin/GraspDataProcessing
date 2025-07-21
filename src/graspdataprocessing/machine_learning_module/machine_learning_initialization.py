@@ -178,24 +178,37 @@ def check_configuration_coupling(config, energy_level_data_pd, logger):
     """检查组态耦合是否正确"""
     cal_configuration_list = energy_level_data_pd['configuration'].tolist()
     
-    # 检查每个光谱项是否有且仅有一次出现，并记录位置
-    spectral_term_positions = []
-    all_found_once = True
-    
+    # 统计config.spetral_term中每个谱项的出现次数
+    spetral_term_counts = {}
     for term in config.spetral_term:
-        count = cal_configuration_list.count(term)
-        if count == 1:
-            position = cal_configuration_list.index(term)
-            spectral_term_positions.append(position)
-            logger.info(f"光谱项 '{term}' 在位置 {position} 找到")
-        elif count == 0:
-            logger.error(f"光谱项 '{term}' 未找到")
-            all_found_once = False
-        else:
-            logger.error(f"光谱项 '{term}' 出现 {count} 次，应该有且仅有一次")
-            all_found_once = False
+        spetral_term_counts[term] = spetral_term_counts.get(term, 0) + 1
     
-    if all_found_once:
+    # 检查每个光谱项的出现次数是否与配置中的要求一致，并记录位置
+    spectral_term_positions = []
+    all_found_correctly = True
+    
+    for term in set(config.spetral_term):  # 使用set去重，避免重复检查
+        expected_count = spetral_term_counts[term]
+        actual_count = cal_configuration_list.count(term)
+        
+        if actual_count == expected_count:
+            # 找到所有出现位置
+            positions = [i for i, x in enumerate(cal_configuration_list) if x == term]
+            spectral_term_positions.extend(positions)
+            if expected_count == 1:
+                logger.info(f"光谱项 '{term}' 在位置 {positions[0]} 找到")
+            else:
+                logger.info(f"光谱项 '{term}' 在位置 {positions} 找到（期望 {expected_count} 次，实际 {actual_count} 次）")
+        elif actual_count == 0:
+            logger.error(f"光谱项 '{term}' 未找到")
+            all_found_correctly = False
+        else:
+            logger.error(f"光谱项 '{term}' 出现 {actual_count} 次，期望 {expected_count} 次")
+            all_found_correctly = False
+    
+    if all_found_correctly:
+        # 按位置排序，保持一致的输出顺序
+        spectral_term_positions.sort()
         logger.info(f"cal_loop {config.cal_loop_num} 组态耦合正确，位置索引: {spectral_term_positions}")
         return True, spectral_term_positions
     else:
