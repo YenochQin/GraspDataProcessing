@@ -588,7 +588,32 @@ fi
 
 else
 log_with_timestamp "================ Loop ${loop}, using ${rwfnestimate_file} ================"
-cp ../${rwfnestimate_file} ${conf}_${loop}.w
+cp ../${rwfnestimate_file} .
+### rwfnestimate
+if check_step_should_run "rwfnestimate" "$loop"; then
+    if ! check_step_completed "rwfnestimate" "$loop" "$conf"; then
+        input_commands="y
+1
+${rwfnestimate_file}
+*
+2
+*
+3
+*"
+        safe_grasp_execute "rwfnestimate" "$input_commands" rwfnestimate
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rwfnestimate"; then
+        log_with_timestamp "[STOP] Stop execution after rwfnestimate step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rwfnestimate (according to step control configuration)"
+fi
+
+cp rwfn.inp ${conf}_${loop}.w
+
 cal_method='rci'
 
 # rci
