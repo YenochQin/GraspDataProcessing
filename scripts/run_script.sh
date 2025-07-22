@@ -1,18 +1,14 @@
 #!/bin/zsh
-#SBATCH -J Gd_I_ml_cv6odd1_j3as5
+#SBATCH -J cv1even1j0_2
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=46
-#SBATCH -p work3
+#SBATCH -p batch
 #SBATCH --output=%j_%x.log
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
-# Set proper locale and encoding for Chinese characters
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-
 # Set GraspDataProcessing root directory path for script portability
-GRASP_DATA_PROCESSING_ROOT="/home/workstation3/AppFiles/GraspDataProcessing"
+GRASP_DATA_PROCESSING_ROOT="/home/computer-0-2/AppFiles/GraspDataProcessing"
 export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}/src:${PYTHONPATH}"
 export PATH="${GRASP_DATA_PROCESSING_ROOT}/scripts:${PATH}"
 
@@ -27,13 +23,12 @@ log_with_timestamp "Job ID: ${SLURM_JOB_ID:-Not set}"
 ###########################################
 ## module load
 log_with_timestamp "Loading required modules..."
-module load mpi/openmpi-x86_64-gcc
-module load openblas/0.3.28-gcc-11.4.1
+module load mpi/openmpi-x86_64
 module load grasp/grasp_openblas
 ###########################################
 # Critical fix: Ensure proper Conda loading (zsh requires manual initialization)
 log_with_timestamp "Initializing Conda environment..."
-source /home/workstation3/AppFiles/miniconda3/etc/profile.d/conda.sh  || {
+source /home/computer-0-2/AppFiles/miniconda3/etc/profile.d/conda.sh  || {
     log_with_timestamp "ERROR: Failed to load Conda! Please check if path is correct."
     exit 1
 }
@@ -85,6 +80,7 @@ rwfnestimate_file="${conf}_1.w"
 
 log_config_params "$atom" "$conf" "$processor" "$Active_space" "$cal_levels"
 log_with_timestamp "Initial wavefunction file: $loop1_rwfn_file"
+###########################################
 # Update root_path in configuration file
 run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set root_path ${cal_dir} -f "${config_file}"
 log_with_timestamp_and_path "Calculation directory" "$cal_dir"
@@ -470,32 +466,18 @@ fi
 ### rcsf
 
 cp ../isodata .
-
+cp ${conf}_${loop}.c rcsf.inp
 if [ $loop -eq 1 ]; then
-log_with_timestamp "================ First loop, using ${loop1_rwfn_file} ================"
-log_with_timestamp "Preparing rcsf input file..."
-cp ${conf}_${loop}.c rcsf.inp # rmcdhf
+log_with_timestamp "================第一次循环，使用${loop1_rwfn_file}================"
 cp ../${loop1_rwfn_file} ${conf}.w
 orbital_params=${Active_space}
 cal_method='rmcdhf'
 
 ### rangular
-if check_step_should_run "rangular" "$loop"; then
-    safe_grasp_execute "rangular_mpi" "y" mpirun -np ${processor} rangular_mpi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "rangular"; then
-        log_with_timestamp "[STOP] Stop execution after rangular step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: rangular (according to step control configuration)"
-fi
+safe_grasp_execute "rangular_mpi" "y" mpirun -np ${processor} rangular_mpi
 
 ### rwfnestimate
-if check_step_should_run "rwfnestimate" "$loop"; then
-    if ! check_step_completed "rwfnestimate" "$loop" "$conf"; then
-        input_commands="y
+input_commands="y
 1
 ${conf}.w
 *
@@ -503,92 +485,36 @@ ${conf}.w
 *
 3
 *"
-        safe_grasp_execute "rwfnestimate" "$input_commands" rwfnestimate
-    fi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "rwfnestimate"; then
-        log_with_timestamp "[STOP] Stop execution after rwfnestimate step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: rwfnestimate (according to step control configuration)"
-fi
+safe_grasp_execute "rwfnestimate" "$input_commands" rwfnestimate
 
 ### rmcdhf
-if check_step_should_run "rmcdhf" "$loop"; then
-    if ! check_step_completed "rmcdhf" "$loop" "$conf"; then
-        input_commands="y
+input_commands="y
 ${cal_levels}
 5
 ${orbital_params}
 
 100"
-        safe_grasp_execute "rmcdhf_mem_mpi" "$input_commands" mpirun -np ${processor} rmcdhf_mem_mpi
-    fi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "rmcdhf"; then
-        log_with_timestamp "[STOP] Stop execution after rmcdhf step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: rmcdhf (according to step control configuration)"
-fi
+safe_grasp_execute "rmcdhf_mem_mpi" "$input_commands" mpirun -np ${processor} rmcdhf_mem_mpi
 
 ### rsave
-if check_step_should_run "rsave" "$loop"; then
-    if ! check_step_completed "rsave" "$loop" "$conf"; then
-        safe_grasp_execute "rsave" "" rsave ${conf}_${loop}
-        cp ${conf}_${loop}.w ..
-    fi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "rsave"; then
-        log_with_timestamp "[STOP] Stop execution after rsave step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: rsave (according to step control configuration)"
-fi
+safe_grasp_execute "rsave" "" rsave ${conf}_${loop}
+
+cp ${conf}_${loop}.w ..
 
 ### jj2lsj rmcdhf
-if check_step_should_run "jj2lsj" "$loop"; then
-    if ! check_step_completed "jj2lsj" "$loop" "$conf"; then
-        input_commands="${conf}_${loop}
+input_commands="${conf}_${loop}
 n
 y
 y"
-        safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
-    fi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "jj2lsj"; then
-        log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
-fi
+safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
 
-# Generate energy level data file
-if check_step_should_run "rlevels" "$loop"; then
-    if ! check_step_completed "rlevels" "$loop" "$conf"; then
-        safe_grasp_execute "rlevels" "" bash -c "rlevels ${conf}_${loop}.m > ${conf}_${loop}.level"
-    fi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "rlevels"; then
-        log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
-fi
+# 生成能级数据文件
+safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.m > ${conf}_${loop}.level"
 
 else
-log_with_timestamp "================ Loop ${loop}, using ${rwfnestimate_file} ================"
+log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
 cp ../${rwfnestimate_file} .
+
 ### rwfnestimate
 if check_step_should_run "rwfnestimate" "$loop"; then
     if ! check_step_completed "rwfnestimate" "$loop" "$conf"; then
@@ -611,15 +537,13 @@ ${rwfnestimate_file}
 else
     log_with_timestamp "[SKIP] Skip step: rwfnestimate (according to step control configuration)"
 fi
-
+rm rcsf.inp
 cp rwfn.inp ${conf}_${loop}.w
 
 cal_method='rci'
 
 # rci
-if check_step_should_run "rci" "$loop"; then
-    if ! check_step_completed "rci" "$loop" "$conf"; then
-        input_commands="y
+input_commands="y
 ${conf}_${loop}
 y
 y
@@ -630,92 +554,58 @@ n
 y
 5
 ${cal_levels}"
-        safe_grasp_execute "rci_mpi" "$input_commands" mpirun -np ${processor} rci_mpi
-    fi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "rci"; then
-        log_with_timestamp "[STOP] Stop execution after rci step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: rci (according to step control configuration)"
-fi
+safe_grasp_execute "rci_mpi" "$input_commands" mpirun -np ${processor} rci_mpi
 
 ### jj2lsj rci
-if check_step_should_run "jj2lsj" "$loop"; then
-    if ! check_step_completed "jj2lsj" "$loop" "$conf"; then
-        input_commands="${conf}_${loop}
+input_commands="${conf}_${loop}
 y
 y
 y"
-        safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
-    fi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "jj2lsj"; then
-        log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
-fi
+safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
 
-# Generate energy level data file
-if check_step_should_run "rlevels" "$loop"; then
-    if ! check_step_completed "rlevels" "$loop" "$conf"; then
-        safe_grasp_execute "rlevels" "" bash -c "rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level"
-    fi
-    
-    # Check if should stop after this step
-    if check_should_stop_after_step "rlevels"; then
-        log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
-        exit 0
-    fi
-else
-    log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
-fi
+# 生成能级数据文件
+safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level"
 
 fi
 
-# Clean up temporary folder
+# 清理临时文件夹
 if [ -d "mpi_tmp" ]; then
-    log_with_timestamp "Found temporary folder mpi_tmp, cleaning up..."
+    log_with_timestamp "发现临时文件夹 mpi_tmp，正在清理..."
     rm -rf mpi_tmp
     if [ $? -eq 0 ]; then
-        log_with_timestamp "[SUCCESS] Temporary folder mpi_tmp cleanup completed"
+        log_with_timestamp "✅ 临时文件夹 mpi_tmp 清理完成"
     else
-        log_with_timestamp "[WARN] Temporary folder mpi_tmp cleanup failed"
+        log_with_timestamp "⚠️ 临时文件夹 mpi_tmp 清理失败"
     fi
 else
-    log_with_timestamp "Temporary folder mpi_tmp not found"
+    log_with_timestamp "未发现临时文件夹 mpi_tmp"
 fi
 
-log_with_timestamp "Returning to parent directory..."
+log_with_timestamp "返回上级目录..."
 cd ..
 run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method ${cal_method} -f "${config_file}"
-## Machine learning training
+## 机器学习训练
 if check_step_should_run "train" "$loop"; then
-    log_stage "Execute machine learning training" "START"
+    log_stage "执行机器学习训练" "START"
     
-    # Execute directly, allowing real-time output display (run_python_with_env already includes error handling)
+    # 直接执行，让输出实时显示（run_python_with_env已包含错误处理）
     run_python_with_env "${ML_PYTHON_DIR}/train.py"
     
-    log_with_timestamp "[SUCCESS] Machine learning training completed"
+    log_with_timestamp "✅ 机器学习训练完成"
     
-    # Check if should stop after this step
+    # 检查是否应该在此步骤后停止
     if check_should_stop_after_step "train"; then
-        log_with_timestamp "[STOP] Stop execution after train step according to configuration"
+        log_with_timestamp "🛑 根据配置在train步骤后停止执行"
         exit 0
     fi
     
-    # If train step is completed, check if step control reset is needed
+    # 如果完成了train步骤，检查是否需要重置步骤控制
     do_step_control_reset
 else
-    log_with_timestamp "[SKIP] Skip step: train (according to step control configuration)"
+    log_with_timestamp "⏭️ 跳过步骤: train (根据步骤控制配置)"
 fi
 
-log_with_timestamp "Loop $loop completed, preparing for next iteration..."
+log_with_timestamp "循环 $loop 完成，准备下一次迭代..."
 done
 
-log_with_timestamp "========== sbatch script execution completed =========="
+log_with_timestamp "========== sbatch 脚本执行完成 =========="

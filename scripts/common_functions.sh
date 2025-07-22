@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Set proper locale and encoding for Chinese characters
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-
 # Common shell function library
 # Eliminate duplicate code, provide unified logging and utility functions
 
