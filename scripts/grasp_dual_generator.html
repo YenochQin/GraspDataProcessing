@@ -964,10 +964,6 @@ random_state = 42
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
-# Set proper locale and encoding for Chinese characters
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-
 # Set GraspDataProcessing root directory path for script portability
 GRASP_DATA_PROCESSING_ROOT="${config.grasp_data_processing_root}"
 export PYTHONPATH="\${GRASP_DATA_PROCESSING_ROOT}/src:\${PYTHONPATH}"
@@ -1426,7 +1422,7 @@ fi
 ### rcsf
 
 cp ../isodata .
-
+cp \${conf}_\${loop}.c rcsf.inp
 if [ $loop -eq 1 ]; then
 log_with_timestamp "================第一次循环，使用\${loop1_rwfn_file}================"
 cp ../\${loop1_rwfn_file} \${conf}.w
@@ -1497,6 +1493,7 @@ else
     log_with_timestamp "[SKIP] Skip step: rwfnestimate (according to step control configuration)"
 fi
 
+rm rcsf.inp
 cp rwfn.inp \${conf}_\${loop}.w
 
 cal_method='rci'
