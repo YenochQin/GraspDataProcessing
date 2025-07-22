@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 # Common shell function library
 # Eliminate duplicate code, provide unified logging and utility functions
@@ -296,13 +296,8 @@ check_grasp_errors() {
         
         # Convert file list to array for processing
         local files_array
-        if [[ -n "${ZSH_VERSION:-}" ]]; then
-            # Use special syntax under zsh
-            files_array=(${=expected_files})
-        else
-            # Direct splitting under bash
-            files_array=($expected_files)
-        fi
+        # Use zsh special syntax for parameter expansion
+        files_array=(${=expected_files})
         local file_count=${#files_array[@]}
         
         # If splitting fails, try using read command
@@ -310,7 +305,7 @@ check_grasp_errors() {
             log_with_timestamp "[WARN] Detected file list may not be correctly split, trying read command..."
             files_array=()
             local IFS=' '
-            read -r -a files_array <<< "$expected_files"
+            read -A files_array <<< "$expected_files"
             file_count=${#files_array[@]}
         fi
         
