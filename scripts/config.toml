@@ -43,7 +43,6 @@ end_step = "auto"                # 结束步骤（auto表示执行到最后）
 skip_completed_steps = true      # 是否跳过已完成的步骤
 
 [ml_config]
-expansion_ratio = 2
 high_prob_percentile = 95
 overfitting_threshold = 0.1
 underfitting_threshold = -0.05
