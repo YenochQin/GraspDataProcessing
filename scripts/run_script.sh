@@ -473,11 +473,25 @@ cp ../${loop1_rwfn_file} ${conf}.w
 orbital_params=${Active_space}
 cal_method='rmcdhf'
 
-### rangular
-safe_grasp_execute "rangular_mpi" "y" mpirun -np ${processor} rangular_mpi
+# rangular step
+if check_step_should_run "rangular" "$loop"; then
+    if ! check_step_completed "rangular" "$loop" "$conf"; then
+        safe_grasp_execute "rangular_mpi" "y" mpirun -np ${processor} rangular_mpi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rangular"; then
+        log_with_timestamp "[STOP] Stop execution after rangular step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rangular (according to step control configuration)"
+fi
 
-### rwfnestimate
-input_commands="y
+# rwfnestimate step (loop 1)
+if check_step_should_run "rwfnestimate" "$loop"; then
+    if ! check_step_completed "rwfnestimate" "$loop" "$conf"; then
+        input_commands="y
 1
 ${conf}.w
 *
@@ -485,31 +499,92 @@ ${conf}.w
 *
 3
 *"
-safe_grasp_execute "rwfnestimate" "$input_commands" rwfnestimate
+        safe_grasp_execute "rwfnestimate" "$input_commands" rwfnestimate
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rwfnestimate"; then
+        log_with_timestamp "[STOP] Stop execution after rwfnestimate step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rwfnestimate (according to step control configuration)"
+fi
 
-### rmcdhf
-input_commands="y
+# rmcdhf step
+if check_step_should_run "rmcdhf" "$loop"; then
+    if ! check_step_completed "rmcdhf" "$loop" "$conf"; then
+        input_commands="y
 ${cal_levels}
 5
 ${orbital_params}
 
 100"
-safe_grasp_execute "rmcdhf_mem_mpi" "$input_commands" mpirun -np ${processor} rmcdhf_mem_mpi
+        safe_grasp_execute "rmcdhf_mem_mpi" "$input_commands" mpirun -np ${processor} rmcdhf_mem_mpi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rmcdhf"; then
+        log_with_timestamp "[STOP] Stop execution after rmcdhf step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rmcdhf (according to step control configuration)"
+fi
 
-### rsave
-safe_grasp_execute "rsave" "" rsave ${conf}_${loop}
+# rsave step
+if check_step_should_run "rsave" "$loop"; then
+    if ! check_step_completed "rsave" "$loop" "$conf"; then
+        safe_grasp_execute "rsave" "" rsave ${conf}_${loop}
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rsave"; then
+        log_with_timestamp "[STOP] Stop execution after rsave step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rsave (according to step control configuration)"
+fi
 
-cp ${conf}_${loop}.w ..
+# Copy wavefunction file if rsave step was executed
+if check_step_should_run "rsave" "$loop"; then
+    cp ${conf}_${loop}.w ..
+fi
 
-### jj2lsj rmcdhf
-input_commands="${conf}_${loop}
+# jj2lsj step (loop 1)
+if check_step_should_run "jj2lsj" "$loop"; then
+    if ! check_step_completed "jj2lsj" "$loop" "$conf"; then
+        input_commands="${conf}_${loop}
 n
 y
 y"
-safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
+        safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "jj2lsj"; then
+        log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
+fi
 
-# 生成能级数据文件
-safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.m > ${conf}_${loop}.level"
+# rlevels step (loop 1)
+if check_step_should_run "rlevels" "$loop"; then
+    if ! check_step_completed "rlevels" "$loop" "$conf"; then
+        safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.m > ${conf}_${loop}.level"
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rlevels"; then
+        log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
+fi
 
 else
 log_with_timestamp "================第${loop}次循环，使用${rwfnestimate_file}================"
@@ -542,8 +617,10 @@ cp rwfn.inp ${conf}_${loop}.w
 
 cal_method='rci'
 
-# rci
-input_commands="y
+# rci step
+if check_step_should_run "rci" "$loop"; then
+    if ! check_step_completed "rci" "$loop" "$conf"; then
+        input_commands="y
 ${conf}_${loop}
 y
 y
@@ -554,17 +631,51 @@ n
 y
 5
 ${cal_levels}"
-safe_grasp_execute "rci_mpi" "$input_commands" mpirun -np ${processor} rci_mpi
+        safe_grasp_execute "rci_mpi" "$input_commands" mpirun -np ${processor} rci_mpi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rci"; then
+        log_with_timestamp "[STOP] Stop execution after rci step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rci (according to step control configuration)"
+fi
 
-### jj2lsj rci
-input_commands="${conf}_${loop}
+# jj2lsj step (non-loop-1)
+if check_step_should_run "jj2lsj" "$loop"; then
+    if ! check_step_completed "jj2lsj" "$loop" "$conf"; then
+        input_commands="${conf}_${loop}
 y
 y
 y"
-safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
+        safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "jj2lsj"; then
+        log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
+fi
 
-# 生成能级数据文件
-safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level"
+# rlevels step (non-loop-1)
+if check_step_should_run "rlevels" "$loop"; then
+    if ! check_step_completed "rlevels" "$loop" "$conf"; then
+        safe_grasp_execute "rlevels" "${conf}_${loop}" bash -c "rlevels ${conf}_${loop}.cm > ${conf}_${loop}.level"
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rlevels"; then
+        log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
+fi
 
 fi
 
