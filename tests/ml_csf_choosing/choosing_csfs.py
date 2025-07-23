@@ -21,20 +21,40 @@ except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
 
-# =============================================================================
-# 日志格式增强函数（与shell脚本中的common_functions.sh保持一致）
-# =============================================================================
+def should_use_colors():
+    """检测是否应该使用颜色输出"""
+    # 检查是否在终端中运行
+    if not sys.stdout.isatty():
+        return False
+    # 检查环境变量（某些CI/脚本环境可能设置）
+    if os.environ.get('NO_COLOR', '').lower() in ('1', 'true', 'yes'):
+        return False
+    if os.environ.get('TERM', '').lower() == 'dumb':
+        return False
+    return True
 
-# 颜色代码定义
-COLOR_RED = '\033[0;31m'
-COLOR_GREEN = '\033[0;32m'
-COLOR_YELLOW = '\033[1;33m'
-COLOR_BLUE = '\033[0;34m'
-COLOR_PURPLE = '\033[0;35m'
-COLOR_CYAN = '\033[0;36m'
-COLOR_WHITE = '\033[1;37m'
-COLOR_BOLD = '\033[1m'
-COLOR_RESET = '\033[0m'
+# 根据环境决定是否使用颜色
+if should_use_colors():
+    COLOR_RED = '\033[0;31m'
+    COLOR_GREEN = '\033[0;32m'
+    COLOR_YELLOW = '\033[1;33m'
+    COLOR_BLUE = '\033[0;34m'
+    COLOR_PURPLE = '\033[0;35m'
+    COLOR_CYAN = '\033[0;36m'
+    COLOR_WHITE = '\033[1;37m'
+    COLOR_BOLD = '\033[1m'
+    COLOR_RESET = '\033[0m'
+else:
+    # 禁用颜色代码（在脚本或非终端环境中）
+    COLOR_RED = ''
+    COLOR_GREEN = ''
+    COLOR_YELLOW = ''
+    COLOR_BLUE = ''
+    COLOR_PURPLE = ''
+    COLOR_CYAN = ''
+    COLOR_WHITE = ''
+    COLOR_BOLD = ''
+    COLOR_RESET = ''
 
 def simplify_path_python(full_path, root_path=None):
     """

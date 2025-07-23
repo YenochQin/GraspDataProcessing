@@ -98,6 +98,12 @@ run_python_with_env() {
     else
         # Failure log is always output (including config scripts)
         log_error_with_timestamp "Python script execution failed: $python_script (exit code: $exit_code)"
+        
+        # For critical scripts, exit immediately on failure
+        if [[ "$is_config_script" == "true" || "$script_basename" == "initial_csfs.py" || "$script_basename" == "choosing_csfs.py" || "$script_basename" == "train.py" ]]; then
+            log_error_with_timestamp "Critical Python script failed, terminating execution!"
+            exit $exit_code
+        fi
     fi
     
     return $exit_code

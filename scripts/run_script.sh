@@ -421,10 +421,6 @@ fi
 if check_step_should_run "choosing_csfs" "$loop"; then
     log_stage "Execute configuration selection" "START"
     run_python_with_env "${ML_PYTHON_DIR}/choosing_csfs.py"
-    if [ $? -ne 0 ]; then
-        log_with_timestamp "[ERROR] Configuration selection failed!"
-        exit 1
-    fi
     log_with_timestamp "[SUCCESS] Configuration selection completed"
     
     # Check if should stop after this step
@@ -699,7 +695,7 @@ run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_conf
 if check_step_should_run "train" "$loop"; then
     log_stage "执行机器学习训练" "START"
     
-    # 直接执行，让输出实时显示（run_python_with_env已包含错误处理）
+    # 执行训练（run_python_with_env函数会自动处理错误）
     run_python_with_env "${ML_PYTHON_DIR}/train.py"
     
     log_with_timestamp "✅ 机器学习训练完成"
