@@ -144,9 +144,25 @@ def load_selected_indices(config, target_pool_csfs_data_block_num):
         tuple: (selected_csfs_indices_dict, status_info)
     """
     root_path = Path(config.root_path)
+    selected_indices_path = root_path / f"{config.conf}_selected_indices.pkl"
     
-    # 尝试从原始selected_csfs_file加载
-    if hasattr(config, 'selected_csfs_file') and config.selected_csfs_file:
+    # 优先尝试加载预处理的indices文件（initial_csfs.py生成的）
+    if selected_indices_path.exists():
+        try:
+            selected_csfs_indices_dict = gdp.csfs_index_load(selected_indices_path)
+            return selected_csfs_indices_dict, {
+                'success': True,
+                'message': f"加载预处理的初筛CSFs indices",
+                'file_path': str(selected_indices_path),
+                'found_existing': True,
+                'source': 'preprocessed'
+            }
+        except Exception as e:
+            # 预处理文件损坏，继续尝试从原始文件加载
+            pass
+    
+    # 如果预处理文件不存在或损坏，尝试从原始selected_csfs_file加载
+    elif hasattr(config, 'selected_csfs_file') and config.selected_csfs_file:
         selected_csfs_file_path = root_path / config.selected_csfs_file
         if selected_csfs_file_path.exists():
             try:
@@ -186,11 +202,11 @@ def load_selected_indices(config, target_pool_csfs_data_block_num):
                     'source': 'original_file'
                 }
     
-    # 如果没有配置selected_csfs_file或文件不存在，创建空的indices
+    # 如果都没有找到，创建空的indices
     selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data_block_num)}
     return selected_csfs_indices_dict, {
         'success': True,
-        'message': "未找到初筛CSFs文件，使用空的indices",
+        'message': "未找到任何初筛CSFs文件，使用空的indices",
         'file_path': "none",
         'found_existing': False,
         'source': 'empty'
