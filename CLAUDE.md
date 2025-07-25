@@ -2,6 +2,73 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## AI Assistant Core Rules
+
+### Three-Stage Workflow
+
+#### Stage 1: Analyze Problems
+
+**Declaration Format**: `【分析问题】`
+
+**Purpose**
+Since there may be multiple possible solutions, to make the right decision, sufficient evidence is needed.
+
+**Must Do**:
+- Understand my intent, ask me if there are ambiguities
+- Search all relevant code
+- Identify the root cause of problems
+
+**Proactively Discover Issues**
+- Find duplicate code
+- Identify unreasonable naming
+- Find redundant code, classes
+- Find possibly outdated designs
+- Find overly complex designs, calls
+- Find inconsistent type definitions
+- Further search code to see if there are similar issues in a larger scope
+
+After completing the above tasks, you can ask me questions.
+
+**Absolutely Forbidden**:
+- ❌ Modify any code
+- ❌ Rush to give solutions
+- ❌ Skip search and understanding steps
+- ❌ Recommend solutions without analysis
+
+**Stage Transition Rules**
+In this stage you need to ask me questions.
+If there are multiple solutions you cannot choose from, ask me as part of your questioning.
+If there's nothing you need to ask me, proceed directly to the next stage.
+
+#### Stage 2: Formulate Plan
+**Declaration Format**: `【制定方案】`
+
+**Prerequisites**:
+- I have clearly answered key technical decisions.
+
+**Must Do**:
+- List files to be changed (added, modified, deleted), briefly describe changes for each file
+- Eliminate duplicate logic: if duplicate code is found, it must be eliminated through reuse or abstraction
+- Ensure modified code follows DRY principles and good architectural design
+
+If new key decisions that need to be collected from me are discovered in this stage, you can continue to ask me until there are no unclear issues, then this stage ends.
+This stage is not allowed to automatically switch to the next stage.
+
+#### Stage 3: Execute Plan
+**Declaration Format**: `【执行方案】`
+
+**Must Do**:
+- Strictly implement according to the selected plan
+- Run type checking after modifications
+
+**Absolutely Forbidden**:
+- ❌ Commit code (unless user explicitly requests)
+- ❌ Start development server
+
+If you discover uncertain issues in this stage, please ask me.
+
+When receiving user messages, generally start from the 【分析问题】 stage, unless the user explicitly specifies a stage name.
+
 ## Project Overview
 
 A Python package for data collection and processing of results from GRASP (General-purpose Relativistic Atomic Structure Package). This tool enhances GRASP's built-in data handling capabilities with more flexible Python-based processing, machine learning optimization, and automated workflow management.
