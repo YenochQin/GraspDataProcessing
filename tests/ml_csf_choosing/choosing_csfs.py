@@ -144,35 +144,57 @@ def load_selected_indices(config, target_pool_csfs_data_block_num):
         tuple: (selected_csfs_indices_dict, status_info)
     """
     root_path = Path(config.root_path)
-    selected_indices_path = root_path / f"{config.conf}_selected_indices.pkl"
     
-    # 加载selected indices
-    if selected_indices_path.exists():
-        try:
-            selected_csfs_indices_dict = gdp.csfs_index_load(selected_indices_path)
-            return selected_csfs_indices_dict, {
-                'success': True,
-                'message': f"加载初筛CSFs indices",
-                'file_path': str(selected_indices_path),
-                'found_existing': True
-            }
-        except Exception as e:
-            selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data_block_num)}
-            return selected_csfs_indices_dict, {
-                'success': False,
-                'error': f"加载indices文件失败: {str(e)}",
-                'file_path': str(selected_indices_path),
-                'fallback': True
-            }
-    else:
-        # 如果没有selected indices，创建空的
-        selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data_block_num)}
-        return selected_csfs_indices_dict, {
-            'success': True,
-            'message': "未找到初筛CSFs indices文件，使用空的indices",
-            'file_path': str(selected_indices_path),
-            'found_existing': False
-        }
+    # 尝试从原始selected_csfs_file加载
+    if hasattr(config, 'selected_csfs_file') and config.selected_csfs_file:
+        selected_csfs_file_path = root_path / config.selected_csfs_file
+        if selected_csfs_file_path.exists():
+            try:
+                # 从原始.c文件读取CSFs
+                selected_csfs_load = gdp.GraspFileLoad.from_filepath(selected_csfs_file_path, file_type='CSF')
+                selected_csfs_data = selected_csfs_load.data_file_process()
+                
+                # 加载目标池数据用于映射
+                target_pool_binary_path = root_path / f"{config.conf}.pkl"
+                if target_pool_binary_path.exists():
+                    # 使用哈希映射生成indices
+                    selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
+                        selected_csfs_data.CSFs_block_data, 
+                        target_pool_binary_path
+                    )
+                    
+                    return selected_csfs_indices_dict, {
+                        'success': True,
+                        'message': f"从原始初筛CSFs文件生成indices",
+                        'file_path': str(selected_csfs_file_path),
+                        'found_existing': True,
+                        'source': 'original_file'
+                    }
+                else:
+                    return {block: [] for block in range(target_pool_csfs_data_block_num)}, {
+                        'success': False,
+                        'error': f"找不到目标池数据文件: {target_pool_binary_path}",
+                        'file_path': str(selected_csfs_file_path),
+                        'source': 'original_file'
+                    }
+            except Exception as e:
+                return {block: [] for block in range(target_pool_csfs_data_block_num)}, {
+                    'success': False,
+                    'error': f"从原始文件加载初筛CSFs失败: {str(e)}",
+                    'file_path': str(selected_csfs_file_path),
+                    'fallback': True,
+                    'source': 'original_file'
+                }
+    
+    # 如果没有配置selected_csfs_file或文件不存在，创建空的indices
+    selected_csfs_indices_dict = {block: [] for block in range(target_pool_csfs_data_block_num)}
+    return selected_csfs_indices_dict, {
+        'success': True,
+        'message': "未找到初筛CSFs文件，使用空的indices",
+        'file_path': "none",
+        'found_existing': False,
+        'source': 'empty'
+    }
 
 def truncate_initial_selected_with_weights(config, selected_csfs_indices_dict, target_pool_csfs_data):
     """
