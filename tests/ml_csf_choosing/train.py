@@ -440,7 +440,25 @@ def main(config):
 
     else:
         logger.info("************************************************")
-        gdp.handle_calculation_error(config, logger)
+        logger.info("检测到配置不匹配，启动回退到上一轮重新训练机制")
+        
+        if config.cal_loop_num <= 1:
+            logger.error("已经是第一轮计算，无法回退到上一轮，使用原有错误处理机制")
+            gdp.handle_calculation_error(config, logger)
+        else:
+            logger.info(f"从第 {config.cal_loop_num} 轮回退到第 {config.cal_loop_num - 1} 轮重新训练")
+            
+            # 设置回退标志和目标轮次
+            gdp.update_config(config_file_path, {
+                'backward_loop_needed': True,
+                'target_backward_loop': config.cal_loop_num - 1,
+                'cal_loop_num': config.cal_loop_num - 1,
+                'continue_cal': True,
+                'cal_error_num': 0
+            })
+            
+            logger.info("已设置回退标志，脚本将回退到上一轮重新执行train.py")
+            logger.info("================================================")
 
 
 if __name__ == "__main__":

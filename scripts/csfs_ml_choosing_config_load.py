@@ -106,6 +106,25 @@ except ImportError:
 # if __debug__:
 #     print(f"调试: 使用TOML支持方案: {TOML_SUPPORT}", file=sys.stderr)
 
+def convert_string_to_type(value_str):
+    """将字符串转换为适当的类型"""
+    # 布尔值转换
+    if value_str.lower() in ('true', 'false'):
+        return value_str.lower() == 'true'
+    
+    # 数字转换
+    try:
+        # 尝试转换为整数
+        if '.' not in value_str:
+            return int(value_str)
+        else:
+            return float(value_str)
+    except ValueError:
+        pass
+    
+    # 保持字符串
+    return value_str
+
 def get_config_value(key, config_file="config.toml"):
     """从TOML配置文件中读取指定键的值"""
     try:
@@ -157,8 +176,9 @@ def set_config_value(key, value, config_file="config.toml"):
                 current[k] = {}
             current = current[k]
         
-        # 设置值
-        current[keys[-1]] = value
+        # 设置值（自动类型转换）
+        converted_value = convert_string_to_type(value)
+        current[keys[-1]] = converted_value
         
         # 保存配置
         dump_toml(config, config_path)

@@ -392,6 +392,32 @@ log_with_timestamp "Getting loop count..."
 loop=$(safe_get_config_value "${config_file}" "cal_loop_num" "loop count")
 log_with_timestamp "Current loop: $(highlight_number "$loop" "$COLOR_CYAN")"
 
+# Check for backward loop needed flag
+backward_loop_needed=$(safe_get_config_value "${config_file}" "backward_loop_needed" "backward loop needed")
+if [[ "$backward_loop_needed" == "true" ]]; then
+    target_backward_loop=$(safe_get_config_value "${config_file}" "target_backward_loop" "target backward loop")
+    log_with_timestamp "🔄 检测到回退标志: 需要回退到第 $target_backward_loop 轮重新训练"
+    
+    # 验证回退的合理性
+    if [[ "$loop" == "$target_backward_loop" ]]; then
+        log_with_timestamp "✅ 已回退到目标轮次 $target_backward_loop，开始重新执行train.py"
+        
+        # 清除回退标志
+        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set backward_loop_needed false -f "${config_file}"
+        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set target_backward_loop 0 -f "${config_file}"
+        
+        # 直接跳转到train.py执行
+        log_with_timestamp "🚀 跳转到第 $loop 轮train.py重新训练..."
+        goto_train_step=true
+    else
+        log_with_timestamp "❌ 错误: 当前轮次 $loop 与目标回退轮次 $target_backward_loop 不匹配"
+        log_with_timestamp "这可能是配置错误，停止执行以防止无限循环"
+        exit 1
+    fi
+else
+    goto_train_step=false
+fi
+
 if [ $loop -eq 1 ]; then
     # Initialize necessary CSF file data
     if check_step_should_run "initial_csfs" "$loop"; then
@@ -418,7 +444,7 @@ if [[ "$cal_status" == "false" ]]; then
 fi
 ###########################################
 ## Configuration selection processing
-if check_step_should_run "choosing_csfs" "$loop"; then
+if check_step_should_run "choosing_csfs" "$loop" && [[ "$goto_train_step" != "true" ]]; then
     log_stage "Execute configuration selection" "START"
     run_python_with_env "${ML_PYTHON_DIR}/choosing_csfs.py"
     log_with_timestamp "[SUCCESS] Configuration selection completed"
@@ -429,13 +455,18 @@ if check_step_should_run "choosing_csfs" "$loop"; then
         exit 0
     fi
 else
-    log_with_timestamp "[SKIP] Skip step: choosing_csfs (according to step control configuration)"
+    if [[ "$goto_train_step" == "true" ]]; then
+        log_with_timestamp "[SKIP] Skip step: choosing_csfs (backward loop mode - jumping to train)"
+    else
+        log_with_timestamp "[SKIP] Skip step: choosing_csfs (according to step control configuration)"
+    fi
 fi
 ###########################################
 ## grasp calculation routine
 
-log_with_timestamp_and_path "Enter calculation directory" "${conf}_${loop}"
-cd ${conf}_${loop}
+if [[ "$goto_train_step" != "true" ]]; then
+    log_with_timestamp_and_path "Enter calculation directory" "${conf}_${loop}"
+    cd ${conf}_${loop}
 
 # mkdisks step
 if check_step_should_run "mkdisks" "$loop"; then
@@ -691,9 +722,16 @@ fi
 log_with_timestamp "返回上级目录..."
 cd ..
 run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method ${cal_method} -f "${config_file}"
+else
+    log_with_timestamp "🔄 跳过所有GRASP计算步骤 (backward loop mode - jumping to train)"
+fi
 ## 机器学习训练
-if check_step_should_run "train" "$loop"; then
+if check_step_should_run "train" "$loop" || [[ "$goto_train_step" == "true" ]]; then
     log_stage "执行机器学习训练" "START"
+    
+    if [[ "$goto_train_step" == "true" ]]; then
+        log_with_timestamp "🔄 执行回退模式训练 - 重新训练第 $loop 轮模型"
+    fi
     
     # 执行训练（run_python_with_env函数会自动处理错误）
     run_python_with_env "${ML_PYTHON_DIR}/train.py"
