@@ -42,7 +42,7 @@ enable_step_control = false      # 是否启用步骤级控制
 target_loop = 0                  # 目标循环编号（0表示使用当前cal_loop_num）
 start_step = "auto"              # 起始步骤（auto/initial_csfs/choosing_csfs/mkdisks/rangular/rwfnestimate/rmcdhf/rsave/jj2lsj/rlevels/train）
 end_step = "auto"                # 结束步骤（auto表示执行到最后）
-skip_completed_steps = true      # 是否跳过已完成的步骤
+skip_completed_steps = false      # 是否跳过已完成的步骤，默认不跳过
 
 [ml_config]
 high_prob_percentile = 95
