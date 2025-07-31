@@ -14,7 +14,7 @@ from types import SimpleNamespace
 from dataclasses import dataclass
 import gzip
 import pickle
-import tomllib
+import rtoml
 
 import numpy as np
 import pandas as pd
@@ -113,7 +113,7 @@ def load_config(
     
     # 使用标准库 tomllib 读取TOML文件
     with open(config_path, 'rb') as f:
-        config = tomllib.load(f)
+        config = rtoml.load(f)
     
     # 类型转换和数据处理
     config = _process_config_data(config)

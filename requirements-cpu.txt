@@ -31,4 +31,4 @@ bitarray>=2.0.0
 
 # 配置文件处理
 pyyaml>=6.0
-toml>=0.10.2
+rtoml>=0.9.0

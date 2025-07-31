@@ -56,55 +56,7 @@ csfs_ml_choosing_config_load set continue_cal false -f /path/to/config.toml
 import sys
 import argparse
 from pathlib import Path
-
-# 使用多层级TOML库支持，提供最大兼容性
-TOML_SUPPORT = None
-
-# 尝试不同的TOML库，按优先级排序
-try:
-    # 方案1: Python 3.11+ 标准库 tomllib (读) + toml (写)
-    import tomllib
-    import toml
-    def load_toml(file_path):
-        with open(file_path, 'rb') as f:
-            return tomllib.load(f)
-    def dump_toml(data, file_path):
-        with open(file_path, 'w') as f:
-            toml.dump(data, f)
-    TOML_SUPPORT = "tomllib+toml"
-except ImportError:
-    try:
-        # 方案2: 使用toml库
-        import toml
-        def load_toml(file_path):
-            return toml.load(file_path)
-        def dump_toml(data, file_path):
-            with open(file_path, 'w') as f:
-                toml.dump(data, f)
-        TOML_SUPPORT = "toml"
-    except ImportError:
-        try:
-            # 方案3: 使用tomli (读) + tomli_w (写)
-            import tomli
-            import tomli_w
-            def load_toml(file_path):
-                with open(file_path, 'rb') as f:
-                    return tomli.load(f)
-            def dump_toml(data, file_path):
-                with open(file_path, 'wb') as f:
-                    tomli_w.dump(data, f)
-            TOML_SUPPORT = "tomli+tomli_w"
-        except ImportError:
-            print("错误: 需要安装TOML库支持TOML文件操作", file=sys.stderr)
-            print("请选择以下任一方案安装:", file=sys.stderr)
-            print("  方案1: pip install toml", file=sys.stderr)
-            print("  方案2: pip install tomli tomli-w", file=sys.stderr)
-            print("  方案3: 升级到Python 3.11+并安装: pip install toml", file=sys.stderr)
-            sys.exit(1)
-
-# 输出调试信息（可选，仅在详细模式下显示）
-# if __debug__:
-#     print(f"调试: 使用TOML支持方案: {TOML_SUPPORT}", file=sys.stderr)
+import rtoml
 
 def convert_string_to_type(value_str):
     """将字符串转换为适当的类型"""
@@ -133,7 +85,7 @@ def get_config_value(key, config_file="config.toml"):
             print(f"错误: 配置文件 {config_file} 不存在", file=sys.stderr)
             sys.exit(1)
         
-        config = load_toml(config_path)
+        config = rtoml.load(config_path)
         
         # 支持嵌套键，如 "model_params.n_estimators"
         keys = key.split('.')
@@ -164,7 +116,7 @@ def set_config_value(key, value, config_file="config.toml"):
             print(f"错误: 配置文件 {config_file} 不存在", file=sys.stderr)
             sys.exit(1)
         
-        config = load_toml(config_path)
+        config = rtoml.load(config_path)
         
         # 支持嵌套键
         keys = key.split('.')
@@ -181,7 +133,7 @@ def set_config_value(key, value, config_file="config.toml"):
         current[keys[-1]] = converted_value
         
         # 保存配置
-        dump_toml(config, config_path)
+        rtoml.dump(config, config_path)
         
         print(f"✅ 已设置 {key} = {value}")
         

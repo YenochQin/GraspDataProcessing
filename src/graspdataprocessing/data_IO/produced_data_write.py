@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from dataclasses import dataclass
 import gzip
 import pickle
-import tomllib
+import rtoml
 
 import numpy as np
 import pandas as pd
@@ -127,21 +127,13 @@ def update_config(config_path, updates):
     """
     # 使用标准库 tomllib 读取TOML文件
     with open(config_path, 'rb') as f:
-        config = tomllib.load(f)
+        config = rtoml.load(f)
     
     # 更新配置值
     config.update(updates)
     
-    # 写入配置文件（标准库 tomllib 不支持写入，使用 tomli-w）
-    try:
-        import tomli_w
-        with open(config_path, 'wb') as f:
-            tomli_w.dump(config, f)
-    except ImportError:
-        raise ImportError(
-            "需要安装 tomli-w 库来写入TOML文件。请运行：\n"
-            "pip install tomli-w"
-        )
+    # 写入配置文件
+    rtoml.dump(config, config_path)
 
 #######################################################################
 
