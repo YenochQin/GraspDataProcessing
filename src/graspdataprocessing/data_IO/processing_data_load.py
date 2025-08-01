@@ -111,9 +111,8 @@ def load_config(
     # 转换为Path对象
     config_path = Path(config_path)
     
-    # 使用标准库 tomllib 读取TOML文件
-    with open(config_path, 'rb') as f:
-        config = rtoml.load(f)
+    # 使用 rtoml 读取TOML文件
+    config = rtoml.load(config_path)
     
     # 类型转换和数据处理
     config = _process_config_data(config)

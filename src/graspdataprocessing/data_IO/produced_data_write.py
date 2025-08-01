@@ -125,9 +125,8 @@ def update_config(config_path, updates):
         config_path: 配置文件路径
         updates: 要更新的键值对字典
     """
-    # 使用标准库 tomllib 读取TOML文件
-    with open(config_path, 'rb') as f:
-        config = rtoml.load(f)
+    # 使用 rtoml 读取TOML文件
+    config = rtoml.load(config_path)
     
     # 更新配置值
     config.update(updates)
