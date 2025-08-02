@@ -48,7 +48,7 @@ def main(config):
     gdp.validate_initial_files(config, logger)
 
     logger.info(f"初始比例: {config.chosen_ratio}")
-    logger.info(f"光谱项: {config.spetral_term}")
+    logger.info(f"光谱项: {config.spectral_term}")
 
     try:
         # 加载数据文件

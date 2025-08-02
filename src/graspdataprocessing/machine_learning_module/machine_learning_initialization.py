@@ -178,17 +178,17 @@ def check_configuration_coupling(config, energy_level_data_pd, logger):
     """检查组态耦合是否正确"""
     cal_configuration_list = energy_level_data_pd['configuration'].tolist()
     
-    # 统计config.spetral_term中每个谱项的出现次数
-    spetral_term_counts = {}
-    for term in config.spetral_term:
-        spetral_term_counts[term] = spetral_term_counts.get(term, 0) + 1
+    # 统计config.spectral_term中每个谱项的出现次数
+    spectral_term_counts = {}
+    for term in config.spectral_term:
+        spectral_term_counts[term] = spectral_term_counts.get(term, 0) + 1
     
     # 检查每个光谱项的出现次数是否与配置中的要求一致，并记录位置
     spectral_term_positions = []
     all_found_correctly = True
     
-    for term in set(config.spetral_term):  # 使用set去重，避免重复检查
-        expected_count = spetral_term_counts[term]
+    for term in set(config.spectral_term):  # 使用set去重，避免重复检查
+        expected_count = spectral_term_counts[term]
         actual_count = cal_configuration_list.count(term)
         
         if actual_count == expected_count:

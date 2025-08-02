@@ -178,9 +178,9 @@ def _validate_config_data(config):
             raise ValueError("expansion_ratio 必须大于等于 1")
     
     # 验证光谱项列表
-    if 'spetral_term' in config:
-        if not isinstance(config['spetral_term'], list) or len(config['spetral_term']) == 0:
-            raise ValueError("spetral_term 必须是非空列表")
+    if 'spectral_term' in config:
+        if not isinstance(config['spectral_term'], list) or len(config['spectral_term']) == 0:
+            raise ValueError("spectral_term 必须是非空列表")
     
     print(f"配置验证通过: cutoff_value={config.get('cutoff_value')}, chosen_ratio={config.get('chosen_ratio')}")
 

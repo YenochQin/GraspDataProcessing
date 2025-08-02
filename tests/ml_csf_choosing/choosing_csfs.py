@@ -515,7 +515,7 @@ def perform_csfs_selection(config):
     
     logger.info("CSFs选择程序启动")
     logger.info(f'计算循环次数: {config.cal_loop_num}')
-    logger.info(f"光谱项: {config.spetral_term}")
+    logger.info(f"光谱项: {config.spectral_term}")
     
     # 步骤2：创建输出目录
     root_path = Path(config.root_path)
