@@ -60,7 +60,7 @@ from .utils import (
     log_stage_end
 )
 
-from .CSFs_choosing import (
+from .CSFs_processing import (
     batch_asfs_mix_square_above_threshold,
     asf_mix_square_above_threshold_coupling_info,
     CSFs_block_get_CSF,
@@ -171,8 +171,7 @@ __all__ = [
     'chunk_string',
     'level_data_compare',
 
-    # CSFs_choosing
-    ## CSFs_choosing
+    ## CSFs_processing
     'batch_asfs_mix_square_above_threshold',
     'asf_mix_square_above_threshold_coupling_info',
     'CSFs_block_get_CSF',

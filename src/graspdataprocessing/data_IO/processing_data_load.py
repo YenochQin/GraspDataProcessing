@@ -22,8 +22,8 @@ import pandas as pd
 
 from ..utils.tool_function import *
 from ..utils.data_modules import *
-from ..CSFs_choosing.CSFs_choosing import *
-from ..CSFs_choosing.CSFs_compress_extract import *
+from ..CSFs_processing.CSFs_choosing import *
+from ..CSFs_processing.CSFs_compress_extract import *
 
 
 

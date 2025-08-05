@@ -595,7 +595,7 @@ def parse_csf_2_descriptor_with_subshell(peel_subshells_List: List[str], csf: Li
 #######################################################################
 
 def batch_process_csfs_to_descriptors(CSFs_file_data: CSFs, 
-                                     with_subshell_info: bool = False) -> np.ndarray:
+                                    with_subshell_info: bool = False) -> np.ndarray:
     """
     批量处理CSFs文件中的所有CSF数据，转换为描述符数组
     

@@ -1,3 +1,3 @@
 # version.py
-__version__ = '2.2.6'
+__version__ = '2.5dev1'
 

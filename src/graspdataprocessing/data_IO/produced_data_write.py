@@ -22,8 +22,8 @@ from ..utils.progress_manager import progress_context
 
 from ..utils.tool_function import *
 from ..utils.data_modules import *
-from ..CSFs_choosing.CSFs_choosing import *
-from ..CSFs_choosing.CSFs_compress_extract import *
+from ..CSFs_processing.CSFs_choosing import *
+from ..CSFs_processing.CSFs_compress_extract import *
 
 # TODO not good enough
 def write_sorted_CSFs_to_cfile(CSFs_file_info: List, sorted_CSFs_data_list: List, output_file: str):

@@ -15,7 +15,7 @@ from typing import Dict, Tuple, List, Optional
 
 from ..data_IO import GraspFileLoad, load_csfs_binary, load_descriptors, csfs_index_load, save_descriptors, load_descriptors_with_multi_block
 from ..processing.ASF_data_collection import LevelsEnergyData
-from ..CSFs_choosing import batch_asfs_mix_square_above_threshold
+from ..CSFs_processing import batch_asfs_mix_square_above_threshold
 from ..utils.data_modules import MixCoefficientData
 from ..utils.environment_config import get_environment_config
 
