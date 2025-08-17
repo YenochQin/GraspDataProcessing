@@ -55,14 +55,6 @@ Install from Test PyPI repository:
 pip install -i https://test.pypi.org/simple/ grasp-data-processing
 ```
 
-### Method 3: Development Installation
-For development or custom modifications:
-```bash
-git clone https://github.com/YenochQin/graspdataprocessing.git
-cd graspdataprocessing
-pip install -e .
-```
-
 ## 📦 System Requirements
 
 ### Python Dependencies
