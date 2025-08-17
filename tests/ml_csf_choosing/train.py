@@ -169,7 +169,7 @@ def main(config):
     gdp.setup_directories(config)
 
     # 验证初始文件
-    gdp.validate_initial_files(config, logger)
+    # gdp.validate_initial_files(config, logger)
 
     logger.info(f"初始比例: {config.chosen_ratio}")
     logger.info(f"光谱项: {config.spectral_term}")
