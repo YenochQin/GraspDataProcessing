@@ -82,19 +82,16 @@ pip install seaborn>=0.11.0 joblib>=1.1.0 pyyaml>=6.0 rtoml>=0.9.0
 
 #### GRASP Library
 **Required**: GRASP2018 installation
-- Download from: https://grasp.wp.st-andrews.ac.uk/
+- Download from: https://github.com/compas/grasp.git 
+- Installation: follow the instructions in the README
 - Ensure GRASP binaries are in system PATH
 - Verify installation: `which rangular_mpi` should return path
 
 #### CSFs_2_descripors Library
 **Required**: CSFs descriptor generation library
 - Repository: https://github.com/YenochQin/CSFs_2_descripors
-- Installation:
-  ```bash
-  git clone https://github.com/YenochQin/CSFs_2_descripors.git
-  cd CSFs_2_descripors
-  # Follow installation instructions in README
-  ```
+- Installation: download package from releases page, use package manager to install or unpack the tar.gz file and add the directory to PATH 
+- Verify installation: `csf_descriptor --help` should return usage information
 
 ## 🤖 Machine Learning CSF Selection
 
@@ -197,7 +194,7 @@ python -c "import graspdataprocessing; print('✅ Package OK')"
 which rangular_mpi && echo "✅ GRASP OK"
 
 # Test CSFs descriptors
-python -c "from CSFs_processing import CSFs_descriptor_parallel; print('✅ Descriptors OK')"
+which csf_descriptor && echo "✅ Descriptors OK"
 
 # Test web interface
 ls scripts/grasp_dual_generator.html && echo "✅ Web interface OK"
