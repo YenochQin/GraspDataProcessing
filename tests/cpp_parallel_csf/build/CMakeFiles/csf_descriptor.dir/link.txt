@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wextra -O3 -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/llvm/lib CMakeFiles/csf_descriptor.dir/src/main.cpp.o -o csf_descriptor  -Wl,-rpath,/opt/homebrew/lib libcsf_lib.a /opt/homebrew/lib/libhdf5_cpp.310.0.6.dylib /opt/homebrew/lib/libhdf5.310.5.1.dylib

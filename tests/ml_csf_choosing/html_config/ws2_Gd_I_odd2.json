@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-08-01T06:28:12.668Z",
+  "config": {
+    "atom": "Gd_I",
+    "conf": "cv6even2_j4as5",
+    "spectral_terms": [
+      "5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.6p_9P"
+    ],
+    "modules": [
+      "mpi/openmpi-x86_64"
+    ],
+    "root_path": "/home/workstation2/nvmesdd2T/graspcal/Gd/GdI/ml_csfs_choosing/cv6odd2/j2/as5",
+    "selected_csfs": "GdIevenIcvIas2_even2",
+    "loop1_rwfn_file": "cv6even2_j3as5_1.w",
+    "grasp_data_processing_root": "/home/workstation2/AppFiles/GraspDataProcessing",
+    "conda_path": "/home/workstation2/AppFiles/miniconda3",
+    "chosen_ratio": "0.08",
+    "cutoff_value": "1e-09",
+    "active_space": "11s,10p,9d,8f,7g,6h",
+    "cal_levels": "1-5",
+    "atomic_number": "64",
+    "mass_number": "157",
+    "atomic_mass": "157",
+    "nuclear_spin": "1",
+    "nuclear_dipole": "1",
+    "nuclear_quadrupole": "1",
+    "pytorch_threads": "32",
+    "std_threshold": "2e-5",
+    "csfs_num_relative_std_threshold": "2e-3",
+    "partition": "batch",
+    "tasks_per_node": "46",
+    "mpi_tmp_path": "/home/workstation2/caltmp",
+    "conda_env": "grasp-env"
+  }
+}

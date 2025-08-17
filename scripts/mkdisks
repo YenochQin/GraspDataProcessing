@@ -1,0 +1,70 @@
+#!/bin/sh
+
+# mkdisks - 创建GRASP计算的disks文件
+# 用法: 
+#   mkdisks <processor_count>                    # 使用当前目录下的mpi_tmp
+#   mkdisks <processor_count> <mpi_tmp_path>     # 使用指定路径作为mpi_tmp位置
+
+# set -x
+rm -f disks
+processor=$1
+
+# 检查参数数量
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    echo "用法: $0 <processor_count> [mpi_tmp_path]"
+    echo "  processor_count: 处理器数量"
+    echo "  mpi_tmp_path:    可选，指定mpi_tmp的基础路径（默认使用当前目录）"
+    echo ""
+    echo "示例:"
+    echo "  $0 4                              # 使用 \${PWD}/mpi_tmp"
+    echo "  $0 4 /tmp/calc                    # 使用 /tmp/calc/mpi_tmp"
+    echo "  $0 8 /home/workstation3/caltmp    # 使用 /home/workstation3/caltmp/mpi_tmp"
+    exit 1
+fi
+
+echo "处理器数量: $1"
+
+# 第一行总是当前工作目录
+cat >>disks <<EOF
+'${PWD}'
+EOF
+
+# 确定mpi_tmp的基础路径
+if [ $# -eq 1 ]; then
+    # 只有一个参数：使用当前目录
+    mpi_base_path="${PWD}"
+    echo "使用默认mpi_tmp路径: ${mpi_base_path}/mpi_tmp"
+elif [ $# -eq 2 ]; then
+    # 两个参数：使用指定路径
+    mpi_base_path="$2"
+    echo "使用指定mpi_tmp路径: ${mpi_base_path}/mpi_tmp"
+    
+    # 确保指定的基础路径存在
+    if [ ! -d "$mpi_base_path" ]; then
+        echo "创建基础目录: $mpi_base_path"
+        mkdir -p "$mpi_base_path" || {
+            echo "错误: 无法创建目录 $mpi_base_path"
+            exit 1
+        }
+    fi
+    
+    # 清理旧的mpi_tmp内容（如果存在）
+    if [ -d "${mpi_base_path}/mpi_tmp" ]; then
+        echo "清理旧的mpi_tmp内容: ${mpi_base_path}/mpi_tmp/*"
+        rm -rf "${mpi_base_path}/mpi_tmp"/*
+    fi
+fi
+
+# 为每个处理器添加mpi_tmp路径
+for ((i=1; i<=$1; i++)); do
+    cat >>disks <<EOF
+'${mpi_base_path}/mpi_tmp'
+EOF
+done
+
+echo "disks文件已创建，包含 $((processor + 1)) 行:"
+echo "- 工作目录: ${PWD}"
+echo "- mpi_tmp路径 (x${processor}): ${mpi_base_path}/mpi_tmp"
+echo ""
+echo "disks文件内容:"
+cat disks

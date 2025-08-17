@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDP_ml_CSFS_choosing_Config_Script_generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: linear-gradient(135deg, #f8fafc 0%, #e7edf3 100%);
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            color: white;
+            padding: 32px 24px;
+            text-align: center;
+            margin-bottom: 24px;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='7' cy='7' r='7'/%3E%3Ccircle cx='53' cy='7' r='7'/%3E%3Ccircle cx='7' cy='53' r='7'/%3E%3Ccircle cx='53' cy='53' r='7'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            position: relative;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.25);
+        }
+
+        .header p {
+            font-size: 1.125rem;
+            opacity: 0.95;
+            position: relative;
+            font-weight: 500;
+        }
+
+        .main-content {
+            display: block;
+            margin-bottom: 24px;
+        }
+
+        .config-management-bar {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .config-management-title {
+            font-size: 1rem;
+            color: #374151;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .config-management-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .config-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .config-column {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .output-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 32px;
+        }
+
+        .config-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .config-panel h2 {
+            color: #111827;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #6366f1;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .config-column h3 {
+            color: #111827;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #6366f1;
+            font-size: 1.125rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+
+        .form-group input:hover,
+        .form-group select:hover,
+        .form-group textarea:hover {
+            border-color: #d1d5db;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .spectral-term-input {
+            margin-bottom: 10px;
+        }
+
+        .spectral-term-input:last-child {
+            margin-bottom: 0;
+        }
+
+        .module-input {
+            margin-bottom: 10px;
+        }
+
+        .module-input:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 14px;
+        }
+
+        .output-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
+            height: fit-content;
+        }
+
+        .output-panel h2 {
+            color: #111827;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #10b981;
+            font-size: 1.125rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .output-content {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 18px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            min-height: 350px;
+            max-height: 500px;
+            overflow-y: auto;
+            color: #1f2937;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-align: center;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5856eb 0%, #7c3aed 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .section:hover {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            transform: translateY(-1px);
+        }
+
+        .section h3 {
+            color: #1f2937;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .help-text {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 32px 20px;
+            color: #6b7280;
+            font-size: 14px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-top: 32px;
+        }
+
+        @media (max-width: 1200px) {
+            .config-columns {
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+            
+            .output-section {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+            
+            .header {
+                padding: 24px 20px;
+                border-radius: 12px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .config-management-bar {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+            
+            .config-management-buttons {
+                justify-content: center;
+            }
+            
+            .config-columns {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .config-column,
+            .output-panel {
+                padding: 16px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .config-management-bar {
+                padding: 12px 16px;
+            }
+            
+            .config-column,
+            .output-panel {
+                padding: 14px;
+            }
+            
+            .section {
+                padding: 12px;
+                margin-bottom: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 GRASP CSFs choosing 机器学习配置生成器</h1>
+            <p>智能化 Config.toml 和 SLURM 脚本生成工具</p>
+            <div id="config-status" style="margin-top: 16px; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 14px; color: rgba(255,255,255,0.9); display: none;"></div>
+        </div>
+
+        <!-- <div class="main-content"> -->
+            <!-- 配置管理栏 -->
+            <!-- <div class="config-management-bar"> -->
+                <!-- <h2 class="config-management-title">配置管理与生成</h2> -->
+                
+            <!-- </div> -->
+            <div class="config-management-buttons" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px;">
+                    <button class="btn btn-success" onclick="saveConfig()">💾 保存配置</button>
+                    <button class="btn btn-warning" onclick="loadConfigFromFile()">📂 加载配置</button>
+                    <button class="btn btn-primary" onclick="generateFiles()">🔄 生成文件</button>
+            </div>
+
+            <!-- 三栏配置输入 -->
+            <div class="config-columns">
+                <!-- 第一栏：基本配置 -->
+                <div class="config-column">
+                    <h3>📋 基本配置</h3>
+                    
+                    <div class="form-group">
+                        <label for="root_path">根路径 *</label>
+                        <input type="text" id="root_path" placeholder="例如: /home/workstation3/caldata/GdI/cvodd1/as3_odd4">
+                        <div class="help-text">计算目标CSFs的根目录，计算结果会保存在这个目录下</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="grasp_data_processing_root">GraspDataProcessing根路径 *</label>
+                        <input type="text" id="grasp_data_processing_root" placeholder="例如: /home/workstation3/AppFiles/GraspDataProcessing">
+                        <div class="help-text">GraspDataProcessing库的根目录路径</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="conda_path">Conda路径 *</label>
+                        <input type="text" id="conda_path" placeholder="例如: /home/workstation3/AppFiles/miniconda3">
+                        <div class="help-text">conda的安装位置（注意是根目录，不是bin目录）</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="partition">SLURM分区</label>
+                        <input type="text" id="partition" placeholder="例如: work3">
+                        <div class="help-text">使用sinfo获得可用分区</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tasks_per_node">每节点任务数</label>
+                        <input type="number" id="tasks_per_node" min="1" max="128" placeholder="例如: 46">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mpi_tmp_path">MPI临时文件路径</label>
+                        <input type="text" id="mpi_tmp_path" placeholder="例如: /home/workstation3/caltmp">
+                        <div class="help-text">MPI计算临时文件存储路径，如果不设置则使用当前目录</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="conda_env">Conda环境名</label>
+                        <input type="text" id="conda_env" placeholder="例如: grasp-env">
+                        <div class="help-text">Python环境名称</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="pytorch_threads">PyTorch CPU线程数</label>
+                        <input type="number" id="pytorch_threads" min="1" max="128" placeholder="例如: 32">
+                        <div class="help-text">PyTorch使用的CPU线程数量</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modules">环境模块 *</label>
+                        <div id="modules-container">
+                            <input type="text" class="module-input" placeholder="例如: mpi/openmpi-x86_64-gcc" oninput="handleModuleInput(this)">
+                        </div>
+                        <div class="help-text">输入模块名后会自动生成新的输入框</div>
+                    </div>
+                </div>
+
+                <!-- 第二栏：计算与核参数 -->
+                <div class="config-column">
+                    <h3>⚛️ 计算参数</h3>
+                    
+                    <div class="form-group">
+                        <label for="atom">原子符号 *</label>
+                        <input type="text" id="atom" placeholder="例如: GdI">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="conf">组态名称 *</label>
+                        <input type="text" id="conf" placeholder="例如: cv4odd1as3_odd4">
+                        <div class="help-text">电子关联+奇偶宇称+活性空间_能级数</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="spectral_term">光谱项 *</label>
+                        <div id="spectral-terms-container">
+                            <input type="text" class="spectral-term-input" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D" oninput="handleSpectralTermInput(this)">
+                        </div>
+                        <div class="help-text">rlevels 获得的能级组态，一个框输入一个能级。</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="active_space">活性空间轨道</label>
+                        <input type="text" id="active_space" placeholder="例如: 10s,9p,8d,7f,6g">
+                        <div class="help-text">活性空间轨道定义</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cal_levels">计算能级</label>
+                        <input type="text" id="cal_levels" placeholder="例如: 1-4">
+                        <div class="help-text">计算的能级范围</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="selected_csfs">初筛CSFs文件名 *</label>
+                        <input type="text" id="selected_csfs" placeholder="例如: ${conf}_as${active_space-1}">
+                        <div class="help-text">初筛的CSFs组态文件名（不含扩展名，最好包含.c, .[c]m文件，一般使用上一个活性空间的结果）</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loop1_rwfn_file">预备径向波函数</label>
+                        <input type="text" id="loop1_rwfn_file" placeholder="例如: ${conf}_as${active_space-1}.w">
+                        <div class="help-text">预备径向波函数，上一层活性空间计算得到的径向波函数</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="chosen_ratio">CSFs选择比例</label>
+                            <input type="number" id="chosen_ratio" step="0.01" min="0.01" max="1.0" placeholder="例如: 0.085">
+                            <div class="help-text">初始CSFs选择比例</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cutoff_value">截断值</label>
+                            <input type="number" id="cutoff_value" step="1e-12" min="1e-12" max="1e-6" placeholder="例如: 1e-09">
+                            <div class="help-text">混合系数截断值</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="std_threshold">标准差阈值</label>
+                            <input type="number" id="std_threshold" step="1e-6" min="1e-6" max="1e-3" placeholder="例如: 2e-5">
+                            <div class="help-text">能级计算的标准差收敛阈值</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="csfs_num_relative_std_threshold">相对标准差阈值</label>
+                            <input type="number" id="csfs_num_relative_std_threshold" step="1e-4" min="1e-4" max="1e-2" placeholder="例如: 0.002">
+                            <div class="help-text">CSFs数量变化的相对标准差阈值</div>
+                        </div>
+                    </div>
+                </div>
+
+                
+
+                <!-- 第三栏：原子核与系统参数 -->
+                <div class="config-column">
+                    <h3>⚛️ 原子核参数</h3>
+                    
+                    <div class="form-group">
+                        <label for="atomic_number">原子序数 *</label>
+                        <input type="number" id="atomic_number" min="1" max="118" placeholder="例如: 64">
+                        <div class="help-text">原子的质子数</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mass_number">质量数 *</label>
+                        <input type="number" id="mass_number" min="1" max="300" placeholder="例如: 157">
+                        <div class="help-text">原子核的质量数</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="atomic_mass">原子质量</label>
+                        <input type="number" id="atomic_mass" step="0.01" min="1" max="300" placeholder="例如: 157.25">
+                        <div class="help-text">中性原子的质量 (amu)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nuclear_spin">核自旋量子数</label>
+                        <input type="number" id="nuclear_spin" step="0.5" min="0" max="10" placeholder="例如: 1">
+                        <div class="help-text">核自旋量子数 I (单位: ℏ/2π)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nuclear_dipole">核偶极矩</label>
+                        <input type="number" id="nuclear_dipole" step="0.1" placeholder="例如: 1">
+                        <div class="help-text">核偶极矩 (单位: 核磁子)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="nuclear_quadrupole">核四极矩</label>
+                        <input type="number" id="nuclear_quadrupole" step="0.1" placeholder="例如: 1">
+                        <div class="help-text">核四极矩 (单位: barn)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部输出区域 -->
+        <div class="output-section">
+            <div class="output-panel">
+                <h2>📄 Config.toml</h2>
+                <div class="button-group">
+                    <button class="btn btn-success" onclick="downloadFile('config')">💾 下载Config</button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard('config')">📋 复制</button>
+                </div>
+                <div class="output-content" id="config-output">
+# 请填写配置参数后，配置文件将在这里生成
+                </div>
+            </div>
+
+            <div class="output-panel">
+                <h2>📜 Shell脚本</h2>
+                <div class="button-group">
+                    <button class="btn btn-warning" onclick="downloadFile('script')">💾 下载脚本</button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard('script')">📋 复制</button>
+                </div>
+                <div class="output-content" id="script-output">
+# 请填写配置参数后，Shell脚本将在这里生成
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🔬 <strong>GRASP DataProcessing</strong> 机器学习 CSFs 配置生成器 | 设计与开发：<strong>秦毅 (Yenoch Qin)</strong></p>
+            <p style="margin-top: 8px; font-size: 12px;">
+                <a href="https://github.com/YenochQin" target="_blank" style="color: #6366f1; text-decoration: none; opacity: 0.8;">
+                    🚀 GitHub: https://github.com/YenochQin
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件输入框用于加载配置 -->
+    <input type="file" id="config-file-input" accept=".json,.toml" style="display: none;" onchange="handleConfigFileLoad(event)">
+
+    <script>
+
+
+        // 处理光谱项输入
+        function handleSpectralTermInput(input) {
+            // 如果输入框有内容且是最后一个输入框，则添加新的输入框
+            if (input.value.trim() !== '' && input === document.querySelector('.spectral-term-input:last-child')) {
+                addSpectralTermInput();
+            }
+            
+            // 如果输入框内容为空且不是最后一个输入框，删除空的输入框
+            if (input.value.trim() === '' && input !== document.querySelector('.spectral-term-input:last-child')) {
+                removeEmptySpectralTermInput(input);
+            }
+            
+            // 延迟触发文件生成，避免输入过程中频繁更新
+            clearTimeout(window.spectralTermTimeout);
+            window.spectralTermTimeout = setTimeout(() => {
+                generateFiles();
+            }, 300);
+        }
+
+        // 添加新的光谱项输入框
+        function addSpectralTermInput() {
+            const container = document.getElementById('spectral-terms-container');
+            const newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.className = 'spectral-term-input';
+            newInput.placeholder = '继续输入下一个光谱项';
+            newInput.oninput = function() { handleSpectralTermInput(this); };
+            container.appendChild(newInput);
+        }
+
+        // 删除空的光谱项输入框
+        function removeEmptySpectralTermInput(input) {
+            const container = document.getElementById('spectral-terms-container');
+            // 确保至少保留一个输入框
+            if (container.querySelectorAll('.spectral-term-input').length > 1) {
+                container.removeChild(input);
+            }
+        }
+
+        // 获取所有光谱项
+        function getSpectralTerms() {
+            const inputs = document.querySelectorAll('.spectral-term-input');
+            const terms = [];
+            inputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    terms.push(input.value.trim());
+                }
+            });
+            return terms;
+        }
+
+        // 处理模块输入
+        function handleModuleInput(input) {
+            // 如果输入框有内容且是最后一个输入框，则添加新的输入框
+            if (input.value.trim() !== '' && input === document.querySelector('.module-input:last-child')) {
+                addModuleInput();
+            }
+            
+            // 如果输入框内容为空且不是最后一个输入框，删除空的输入框
+            if (input.value.trim() === '' && input !== document.querySelector('.module-input:last-child')) {
+                removeEmptyModuleInput(input);
+            }
+            
+            // 延迟触发文件生成，避免输入过程中频繁更新
+            clearTimeout(window.moduleTimeout);
+            window.moduleTimeout = setTimeout(() => {
+                generateFiles();
+            }, 300);
+        }
+
+        // 添加新的模块输入框
+        function addModuleInput() {
+            const container = document.getElementById('modules-container');
+            const newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.className = 'module-input';
+            newInput.placeholder = '继续输入下一个模块';
+            newInput.oninput = function() { handleModuleInput(this); };
+            container.appendChild(newInput);
+        }
+
+        // 删除空的模块输入框
+        function removeEmptyModuleInput(input) {
+            const container = document.getElementById('modules-container');
+            // 确保至少保留一个输入框
+            if (container.querySelectorAll('.module-input').length > 1) {
+                container.removeChild(input);
+            }
+        }
+
+        // 获取所有模块
+        function getModules() {
+            const inputs = document.querySelectorAll('.module-input');
+            const modules = [];
+            inputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    modules.push(input.value.trim());
+                }
+            });
+            return modules;
+        }
+
+        // 生成配置文件和脚本
+        function generateFiles() {
+            const config = getFormData();
+            
+            // 检查必填字段
+            const missingFields = [];
+            if (!config.atom) missingFields.push('原子符号');
+            if (!config.conf) missingFields.push('组态名称');
+            if (config.spectral_terms.length === 0) missingFields.push('光谱项');
+            if (config.modules.length === 0) missingFields.push('环境模块');
+            if (!config.root_path) missingFields.push('根路径');
+            if (!config.selected_csfs) missingFields.push('初筛CSFs文件名');
+            if (!config.loop1_rwfn_file) missingFields.push('预备径向波函数');
+            if (!config.grasp_data_processing_root) missingFields.push('GraspDataProcessing根路径');
+            if (!config.atomic_number) missingFields.push('原子序数');
+            if (!config.mass_number) missingFields.push('质量数');
+            
+            if (missingFields.length > 0) {
+                document.getElementById('config-output').textContent = '# 请先填写必填字段：' + missingFields.join(', ');
+                document.getElementById('script-output').textContent = '# 请先填写必填字段：' + missingFields.join(', ');
+                return;
+            }
+            
+            // 生成合成参数
+            const jobName = config.atom + '_ml_' + config.conf;
+            const loop1RwfnFile = `${config.loop1_rwfn_file}`;
+            const rwfnEstimateFile = `${config.conf}_1.w`;
+            
+            // 生成config.toml
+            const configContent = generateConfigToml(config);
+            document.getElementById('config-output').textContent = configContent;
+            
+            // 生成shell脚本
+            const scriptContent = generateShellScript(config, jobName, rwfnEstimateFile);
+            document.getElementById('script-output').textContent = scriptContent;
+        }
+
+        // 获取表单数据
+        function getFormData() {
+            return {
+                atom: document.getElementById('atom').value,
+                conf: document.getElementById('conf').value,
+                spectral_terms: getSpectralTerms(),
+                modules: getModules(),
+                root_path: document.getElementById('root_path').value,
+                selected_csfs: document.getElementById('selected_csfs').value,
+                loop1_rwfn_file: document.getElementById('loop1_rwfn_file').value,
+                grasp_data_processing_root: document.getElementById('grasp_data_processing_root').value,
+                conda_path: document.getElementById('conda_path').value || '/home/workstation3/AppFiles/miniconda3',
+                chosen_ratio: document.getElementById('chosen_ratio').value || '0.085',
+                cutoff_value: document.getElementById('cutoff_value').value || '1e-09',
+                active_space: document.getElementById('active_space').value || '10s,9p,8d,7f,6g',
+                cal_levels: document.getElementById('cal_levels').value || '1-4',
+                atomic_number: document.getElementById('atomic_number').value,
+                mass_number: document.getElementById('mass_number').value,
+                atomic_mass: document.getElementById('atomic_mass').value || document.getElementById('mass_number').value,
+                nuclear_spin: document.getElementById('nuclear_spin').value || '1',
+                nuclear_dipole: document.getElementById('nuclear_dipole').value || '1',
+                nuclear_quadrupole: document.getElementById('nuclear_quadrupole').value || '1',
+                pytorch_threads: document.getElementById('pytorch_threads').value || '32',
+                std_threshold: document.getElementById('std_threshold').value || '2e-5',
+                csfs_num_relative_std_threshold: document.getElementById('csfs_num_relative_std_threshold').value || '0.002',
+                
+                partition: document.getElementById('partition').value || 'work3',
+                tasks_per_node: document.getElementById('tasks_per_node').value || '46',
+                mpi_tmp_path: document.getElementById('mpi_tmp_path').value,
+                conda_env: document.getElementById('conda_env').value || 'grasp-env'
+            };
+        }
+
+        // 生成config.toml内容
+        function generateConfigToml(config) {
+            let spectralTermsString;
+            if (config.spectral_terms.length === 0) {
+                spectralTermsString = '';
+            } else {
+                spectralTermsString = config.spectral_terms.map(term => `    "${term}"`).join(',\n');
+                if (spectralTermsString) {
+                    spectralTermsString += ',';
+                }
+            }
+            
+            return `atom = "${config.atom}"
+conf = "${config.conf}"
+spectral_term = [
+${spectralTermsString}
+]
+continue_cal = true
+cal_loop_num = 1
+cal_error_num = 0
+backward_loop_needed = false
+target_backward_loop = 0
+difference = 0
+cutoff_value = ${config.cutoff_value}
+chosen_ratio = ${config.chosen_ratio}
+expansion_ratio = 2
+target_pool_file = "${config.conf}.c"
+root_path = "${config.root_path}"
+selected_csfs_file = "${config.selected_csfs}.c"
+selected_csfs_mix_file = "${config.selected_csfs}.cm"
+loop1_rwfn_file = "${config.loop1_rwfn_file}"
+energy_std_threshold = ${config.std_threshold}
+csfs_num_relative_std_threshold = ${config.csfs_num_relative_std_threshold}
+cal_method = "rmcdhf"
+
+# GRASP计算参数
+loop1_rwfn_file = "${config.loop1_rwfn_file}"
+active_space = "${config.active_space}"
+cal_levels = "${config.cal_levels}"
+tasks_per_node = ${config.tasks_per_node}
+${config.mpi_tmp_path ? `mpi_tmp_path = "${config.mpi_tmp_path}"  # MPI临时文件存储路径，如果不设置则使用当前目录` : '# mpi_tmp_path = "/path/to/mpi/tmp"  # MPI临时文件存储路径，如果不设置则使用当前目录'}
+
+# 原子核参数
+atomic_number = ${config.atomic_number}
+mass_number = ${config.mass_number}
+atomic_mass = ${config.atomic_mass}
+nuclear_spin = ${config.nuclear_spin}
+nuclear_dipole = ${config.nuclear_dipole}
+nuclear_quadrupole = ${config.nuclear_quadrupole}
+
+# 步骤级断点重启控制（默认配置）
+[step_control]
+enable_step_control = false      # 是否启用步骤级控制
+target_loop = 0                  # 目标循环编号（0表示使用当前cal_loop_num）
+start_step = "auto"              # 起始步骤（auto/initial_csfs/choosing_csfs/mkdisks/rangular/rwfnestimate/rmcdhf/rsave/jj2lsj/rlevels/train）
+end_step = "auto"                # 结束步骤（auto表示执行到最后）
+skip_completed_steps = false      # 是否跳过已完成的步骤
+
+[cpu_config]
+pytorch_threads = ${config.pytorch_threads}
+
+# 日志控制配置（支持环境感知的日志优化）
+[log_config]
+# 生产环境自动检测：SLURM环境且非调试模式
+# 可通过设置 DEBUG=1 环境变量强制启用调试模式
+enable_production_mode = "auto"        # auto/true/false - 自动检测生产环境
+production_log_level = "INFO"          # 生产环境日志级别
+debug_log_level = "DEBUG"              # 调试环境日志级别
+show_progress_in_debug = true          # 调试模式下显示进度条
+hide_progress_in_production = true     # 生产模式下隐藏进度条
+enable_stage_logging = true            # 启用阶段性日志（🔧开始、✅完成等）
+max_log_file_size_mb = 100             # 日志文件最大大小（MB）
+log_rotation_enabled = true            # 启用日志轮转
+
+[ml_config]
+descriptors_with_subshell_info = true
+high_prob_percentile = 95
+overfitting_threshold = 0.1
+underfitting_threshold = -0.05
+include_wrong_level_negatives = true
+
+# 机器学习模型参数（默认配置）
+[model_params]
+n_estimators = 1000
+random_state = 42
+
+[model_params.class_weight]
+0 = 1
+1 = 3`;
+        }
+
+        // 生成module load语句
+        function generateModuleLoads(config) {
+            if (!config.modules || config.modules.length === 0) {
+                // 如果没有指定模块，使用默认的模块
+                return `module load mpi/openmpi-x86_64-gcc`;
+            }
+            
+            return config.modules.map(module => `module load ${module}`).join('\n');
+        }
+
+        // 生成shell脚本内容
+        function generateShellScript(config, jobName, rwfnEstimateFile) {
+            return `#!/bin/zsh
+#SBATCH -J ${jobName}
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=${config.tasks_per_node}
+#SBATCH -p ${config.partition}
+#SBATCH --output=%j_%x.log
+#SBATCH --error=%j_%x.log
+. /usr/share/Modules/init/zsh
+
+# Set GraspDataProcessing root directory path for script portability
+GRASP_DATA_PROCESSING_ROOT="${config.grasp_data_processing_root}"
+export PYTHONPATH="\${GRASP_DATA_PROCESSING_ROOT}/src:\${PYTHONPATH}"
+export PATH="\${GRASP_DATA_PROCESSING_ROOT}/scripts:\${PATH}"
+
+# Load common function library (absolute path to eliminate code duplication)
+source "\${GRASP_DATA_PROCESSING_ROOT}/scripts/common_functions.sh"
+
+
+log_with_timestamp "========== Starting sbatch script execution ========="
+log_with_timestamp "Job name: \${SLURM_JOB_NAME:-Not set}"
+log_with_timestamp "Job ID: \${SLURM_JOB_ID:-Not set}"
+
+###########################################
+## module load
+log_with_timestamp "Loading required modules..."
+${generateModuleLoads(config)}
+###########################################
+# Critical fix: Ensure proper Conda loading (zsh requires manual initialization)
+log_with_timestamp "Initializing Conda environment..."
+source ${config.conda_path}/etc/profile.d/conda.sh  || {
+    log_with_timestamp "ERROR: Failed to load Conda! Please check if path is correct."
+    exit 1
+}
+conda activate ${config.conda_env} || {
+    log_with_timestamp "ERROR: Failed to activate environment! Please confirm environment name is correct."
+    exit 1
+}
+log_with_timestamp "SUCCESS: Conda environment activated successfully"
+
+# Print environment information (using correct Python version)
+print_environment_info
+
+###########################################
+# GraspDataProcessing package path and tool script paths set at script beginning
+log_with_timestamp "Set PYTHONPATH: \$PYTHONPATH"
+log_with_timestamp "Set PATH: \$PATH"
+###########################################
+# Check Python path and configuration tools
+log_with_timestamp "Checking Python environment..."
+which python
+python --version
+which csfs_ml_choosing_config_load.py
+###########################################
+## Read configuration parameters from config.toml (in calculation root directory)
+log_with_timestamp "Reading configuration parameters from config.toml..."
+cal_dir=\${PWD}
+config_file="\${cal_dir}/config.toml"
+
+# Check if configuration file exists
+if [ ! -f "\$config_file" ]; then
+    log_error_with_timestamp "Configuration file does not exist: \$config_file"
+    exit 1
+fi
+
+atom=\$(safe_get_config_value "\${config_file}" "atom" "atomic symbol")
+conf=\$(safe_get_config_value "\${config_file}" "conf" "configuration name")
+processor=\$(safe_get_config_value "\${config_file}" "tasks_per_node" "processor count")
+Active_space=\$(safe_get_config_value "\${config_file}" "active_space" "active space")
+cal_levels=\$(safe_get_config_value "\${config_file}" "cal_levels" "calculation levels")
+selected_csfs_file=\$(safe_get_config_value "\${config_file}" "selected_csfs_file" "initial CSFs file")
+
+# Read mpi_tmp_path configuration parameter (before entering subdirectory)
+mpi_tmp_path=\$(safe_get_config_value "\${config_file}" "mpi_tmp_path" "MPI temp path")
+log_with_timestamp "MPI temporary file path configuration: \$mpi_tmp_path"
+
+# Generate derived filenames
+loop1_rwfn_file=\$(safe_get_config_value "\${config_file}" "loop1_rwfn_file" "previous got RWFN file")
+rwfnestimate_file="\${conf}_1.w"
+
+log_config_params "\$atom" "\$conf" "\$processor" "\$Active_space" "\$cal_levels"
+log_with_timestamp "Initial wavefunction file: \$loop1_rwfn_file"
+###########################################
+# Update root_path in configuration file
+run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set root_path \${cal_dir} -f "\${config_file}"
+log_with_timestamp_and_path "Calculation directory" "\$cal_dir"
+###########################################
+log_with_timestamp "Setting absolute paths for Python programs..."
+ML_PYTHON_DIR="\${GRASP_DATA_PROCESSING_ROOT}/tests/ml_csf_choosing"
+log_with_timestamp "SUCCESS: Python program path setup complete: \$ML_PYTHON_DIR"
+
+###########################################
+# Read step control parameters
+log_with_timestamp "Reading step control configuration..."
+enable_step_control=\$(safe_get_config_value "\${config_file}" "step_control.enable_step_control" "Enable step control")
+target_loop=\$(safe_get_config_value "\${config_file}" "step_control.target_loop" "Target loop")
+start_step=\$(safe_get_config_value "\${config_file}" "step_control.start_step" "Start step")
+end_step=\$(safe_get_config_value "\${config_file}" "step_control.end_step" "End step")
+skip_completed_steps=\$(safe_get_config_value "\${config_file}" "step_control.skip_completed_steps" "Skip completed steps")
+
+log_with_timestamp "Step control configuration:"
+log_with_timestamp "  Enable step control: \$enable_step_control"
+log_with_timestamp "  Target loop: \$target_loop"
+log_with_timestamp "  Start step: \$start_step"
+log_with_timestamp "  End step: \$end_step"
+log_with_timestamp "  Skip completed steps: \$skip_completed_steps"
+
+# Step check function
+check_step_should_run() {
+    local current_step="\$1"
+    local current_loop="\$2"
+    
+    # If step control is not enabled, always execute
+    if [[ "\$enable_step_control" != "true" ]]; then
+        return 0
+    fi
+    
+    # Check target loop
+    if [[ "\$target_loop" != "0" && "\$current_loop" != "\$target_loop" ]]; then
+        return 1  # Skip steps not in target loop
+    fi
+    
+    # Check start step
+    if [[ "\$start_step" != "auto" ]]; then
+        case "\$current_step" in
+            "initial_csfs")
+                if [[ "\$start_step" != "initial_csfs" ]]; then return 1; fi
+                ;;
+            "choosing_csfs")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "mkdisks")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rangular")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rwfnestimate")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rmcdhf"|"rci")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate"|"rmcdhf"|"rci") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rsave")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate"|"rmcdhf"|"rci"|"rsave") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "jj2lsj")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate"|"rmcdhf"|"rci"|"rsave"|"jj2lsj") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "rlevels")
+                case "\$start_step" in
+                    "initial_csfs"|"choosing_csfs"|"mkdisks"|"rangular"|"rwfnestimate"|"rmcdhf"|"rci"|"rsave"|"jj2lsj"|"rlevels") ;;
+                    *) return 1 ;;
+                esac
+                ;;
+            "train")
+                # train can always be executed (unless explicitly skipped)
+                ;;
+        esac
+    fi
+    
+    # Check end step
+    if [[ "\$end_step" != "auto" ]]; then
+        case "\$current_step" in
+            "initial_csfs")
+                if [[ "\$end_step" == "initial_csfs" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "choosing_csfs")
+                if [[ "\$end_step" == "choosing_csfs" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "mkdisks")
+                if [[ "\$end_step" == "mkdisks" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rangular")
+                if [[ "\$end_step" == "rangular" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rwfnestimate")
+                if [[ "\$end_step" == "rwfnestimate" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rmcdhf"|"rci")
+                if [[ "\$end_step" == "rmcdhf" || "\$end_step" == "rci" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rsave")
+                if [[ "\$end_step" == "rsave" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "jj2lsj")
+                if [[ "\$end_step" == "jj2lsj" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "rlevels")
+                if [[ "\$end_step" == "rlevels" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+            "train")
+                if [[ "\$end_step" == "train" ]]; then
+                    log_with_timestamp "[TARGET] Reached ending step: \$end_step, will stop after this step"
+                fi
+                ;;
+        esac
+    fi
+    
+    return 0
+}
+
+# Check if should stop after step completion
+check_should_stop_after_step() {
+    local current_step="\$1"
+    
+    if [[ "\$enable_step_control" != "true" ]]; then
+        return 1  # Don't stop
+    fi
+    
+    if [[ "\$end_step" != "auto" && "\$current_step" == "\$end_step" ]]; then
+        return 0  # Should stop
+    fi
+    
+    return 1  # Don't stop
+}
+
+# File existence check function (for skipping completed steps)
+check_step_completed() {
+    local step_name="\$1"
+    local loop_num="\$2"
+    local conf_name="\$3"
+    
+    if [[ "\$skip_completed_steps" != "true" ]]; then
+        return 1  # Don't skip
+    fi
+    
+    case "\$step_name" in
+        "mkdisks")
+            if [[ -f "disks" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found file: disks)"
+                return 0
+            fi
+            ;;
+        "rangular")
+            # rangular has no direct output files, check prerequisite files for subsequent steps
+            # The judgment logic can be adjusted according to actual conditions
+            ;;
+        "rwfnestimate")
+            if [[ -f "rwfn.inp" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found file: rwfn.inp)"
+                return 0
+            fi
+            ;;
+        "rmcdhf"|"rci")
+            if [[ -f "rwfn.out" && -f "rmix.out" ]] || [[ -f "\${conf_name}_\${loop_num}.cm" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found output files)"
+                return 0
+            fi
+            ;;
+        "rsave")
+            if [[ -f "\${conf_name}_\${loop_num}.w" && -f "\${conf_name}_\${loop_num}.c" && -f "\${conf_name}_\${loop_num}.m" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found saved files)"
+                return 0
+            fi
+            ;;
+        "jj2lsj")
+            if [[ -f "\${conf_name}_\${loop_num}.lsj.lbl" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found file: \${conf_name}_\${loop_num}.lsj.lbl)"
+                return 0
+            fi
+            ;;
+        "rlevels")
+            if [[ -f "\${conf_name}_\${loop_num}.level" ]]; then
+                log_with_timestamp "[SKIP] Skip completed step: \$step_name (found file: \${conf_name}_\${loop_num}.level)"
+                return 0
+            fi
+            ;;
+    esac
+    
+    return 1  # Not completed, do not skip
+}
+###########################################
+### rnucleus - Setting nuclear parameters
+log_with_timestamp "Setting nuclear parameters..."
+atomic_number=\$(safe_get_config_value "\${config_file}" "atomic_number" "atomic number")
+mass_number=\$(safe_get_config_value "\${config_file}" "mass_number" "mass number")
+atomic_mass=\$(safe_get_config_value "\${config_file}" "atomic_mass" "atomic mass")
+nuclear_spin=\$(safe_get_config_value "\${config_file}" "nuclear_spin" "nuclear spin quantum number")
+nuclear_dipole=\$(safe_get_config_value "\${config_file}" "nuclear_dipole" "nuclear dipole moment")
+nuclear_quadrupole=\$(safe_get_config_value "\${config_file}" "nuclear_quadrupole" "nuclear quadrupole moment")
+
+# Verify the validity of numeric values
+local timestamp=\$(date '+%Y-%m-%d %H:%M:%S')
+echo -e "[\$timestamp] Nuclear parameters: \$(highlight_param "Z" "\$atomic_number") \$(highlight_param "A" "\$mass_number") \$(highlight_param "mass" "\$atomic_mass")"
+echo -e "[\$timestamp] Nuclear properties: \$(highlight_param "I" "\$nuclear_spin") \$(highlight_param "mu" "\$nuclear_dipole") \$(highlight_param "Q" "\$nuclear_quadrupole")"
+
+input_commands="\$atomic_number
+\$mass_number
+n
+\$atomic_mass
+\$nuclear_spin
+\$nuclear_dipole
+\$nuclear_quadrupole"
+safe_grasp_execute "rnucleus" "\$input_commands" rnucleus
+log_with_timestamp "[SUCCESS] Nuclear parameter setup completed"
+###########################################
+# Automatically reset step control settings after breakpoint restart (to avoid infinite loops)
+reset_step_control_if_needed() {
+    # Check if step control is enabled and current settings are not default
+    if [[ "\$enable_step_control" == "true" && "\$start_step" != "auto" ]]; then
+        log_with_timestamp "[RESTART] Detected breakpoint restart mode, checking if step control reset is needed..."
+        
+        # If the specified breakpoint restart step has been completed, reset to normal mode
+        local should_reset=false
+        
+        # Check various reset conditions
+        if [[ "\$end_step" != "auto" ]]; then
+            log_with_timestamp "[WARN] Detected specified end step (\$end_step), will reset step control after completion"
+            should_reset=true
+        elif [[ "\$start_step" == "train" ]]; then
+            log_with_timestamp "[WARN] Detected start from train step, will reset step control after train completion"
+            should_reset=true
+        fi
+        
+        if [[ "\$should_reset" == "true" ]]; then
+            # Set a flag indicating reset is needed at appropriate time
+            export SHOULD_RESET_STEP_CONTROL="true"
+            log_with_timestamp "[MARK] Marked: Will automatically reset step control after completing current breakpoint restart"
+        fi
+    fi
+}
+
+# Execute step control reset
+do_step_control_reset() {
+    if [[ "\$SHOULD_RESET_STEP_CONTROL" == "true" ]]; then
+        log_with_timestamp "[RESTART] Breakpoint restart completed, resetting step control settings to normal mode..."
+        
+        # Reset step control settings
+        run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.start_step "auto" -f "\${config_file}"
+        run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.end_step "auto" -f "\${config_file}"
+        run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.enable_step_control "false" -f "\${config_file}"
+        
+        # Update local variables
+        start_step="auto"
+        end_step="auto"
+        enable_step_control="false"
+        
+        # Clear reset flag
+        export SHOULD_RESET_STEP_CONTROL=""
+        
+        log_with_timestamp "[SUCCESS] Step control has been reset, subsequent loops will execute all steps normally"
+    fi
+}
+
+# Check if reset is needed before main loop starts
+reset_step_control_if_needed
+
+while true
+do
+###########################################
+log_with_timestamp "Getting loop count..."
+loop=\$(safe_get_config_value "\${config_file}" "cal_loop_num" "loop count")
+log_with_timestamp "Current loop: \$(highlight_number "\$loop" "\$COLOR_CYAN")"
+
+# Check for backward loop needed flag
+backward_loop_needed=\$(safe_get_config_value "\${config_file}" "backward_loop_needed" "backward loop needed")
+if [[ "\$backward_loop_needed" == "true" ]]; then
+    target_backward_loop=\$(safe_get_config_value "\${config_file}" "target_backward_loop" "target backward loop")
+    cal_error_num=\$(safe_get_config_value "\${config_file}" "cal_error_num" "calculation error count")
+    log_with_timestamp "🔄 检测到回退标志: 需要回退到第 \$target_backward_loop 轮重新训练"
+    
+    # 重命名当前轮次目录为错误目录
+    current_dir="\${conf}_\${loop}"
+    error_dir="\${conf}_\${loop}_err_\${cal_error_num}"
+    
+    if [[ -d "\$current_dir" ]]; then
+        log_with_timestamp "📁 重命名当前计算目录: \$current_dir -> \$error_dir"
+        mv "\$current_dir" "\$error_dir"
+        if [[ \$? -eq 0 ]]; then
+            log_with_timestamp "✅ 目录重命名成功"
+        else
+            log_with_timestamp "❌ 目录重命名失败"
+            exit 1
+        fi
+    fi
+    
+    # 验证回退的合理性
+    if [[ "\$loop" == "\$target_backward_loop" ]]; then
+        log_with_timestamp "✅ 已回退到目标轮次 \$target_backward_loop，开始重新执行train.py"
+        
+        # 清除回退标志
+        run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set backward_loop_needed false -f "\${config_file}"
+        run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set target_backward_loop 0 -f "\${config_file}"
+        
+        # 直接跳转到train.py执行
+        log_with_timestamp "🚀 跳转到第 \$loop 轮train.py重新训练..."
+        goto_train_step=true
+    else
+        log_with_timestamp "❌ 错误: 当前轮次 \$loop 与目标回退轮次 \$target_backward_loop 不匹配"
+        log_with_timestamp "这可能是配置错误，停止执行以防止无限循环"
+        exit 1
+    fi
+else
+    goto_train_step=false
+fi
+
+if [ $loop -eq 1 ]; then
+    # Initialize necessary CSF file data
+    if check_step_should_run "initial_csfs" "\$loop"; then
+        log_stage "Initialize necessary CSF file data" "START"
+        run_python_with_env "\${ML_PYTHON_DIR}/initial_csfs.py"
+        
+        # Check if should stop after this step
+        if check_should_stop_after_step "initial_csfs"; then
+            log_with_timestamp "[STOP] Stop execution after initial_csfs step according to configuration"
+            exit 0
+        fi
+    else
+        log_with_timestamp "[SKIP] Skip step: initial_csfs (according to step control configuration)"
+    fi
+fi
+###########################################
+log_with_timestamp "Checking calculation status..."
+cal_status=\$(safe_get_config_value "\${config_file}" "continue_cal" "calculation continue status")
+log_with_timestamp "Calculation status: \$cal_status"
+
+if [[ "\$cal_status" == "false" ]]; then
+    log_with_timestamp "================ Calculation terminated ================"
+    break
+fi
+###########################################
+## Configuration selection processing
+if check_step_should_run "choosing_csfs" "\$loop" && [[ "\$goto_train_step" != "true" ]]; then
+    log_stage "Execute configuration selection" "START"
+    run_python_with_env "\${ML_PYTHON_DIR}/choosing_csfs.py"
+    if [ \$? -ne 0 ]; then
+        log_with_timestamp "[ERROR] Configuration selection failed!"
+        exit 1
+    fi
+    log_with_timestamp "[SUCCESS] Configuration selection completed"
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "choosing_csfs"; then
+        log_with_timestamp "[STOP] Stop execution after choosing_csfs step according to configuration"
+        exit 0
+    fi
+else
+    if [[ "\$goto_train_step" == "true" ]]; then
+        log_with_timestamp "[SKIP] Skip step: choosing_csfs (backward loop mode - jumping to train)"
+    else
+        log_with_timestamp "[SKIP] Skip step: choosing_csfs (according to step control configuration)"
+    fi
+fi
+###########################################
+## grasp calculation routine
+
+if [[ "\$goto_train_step" != "true" ]]; then
+    log_with_timestamp_and_path "Enter calculation directory" "\${conf}_\${loop}"
+    cd \${conf}_\${loop}
+
+# mkdisks step
+if check_step_should_run "mkdisks" "\$loop"; then
+    if ! check_step_completed "mkdisks" "\$loop" "\$conf"; then
+        # Use mpi_tmp_path configuration parameter read outside loop
+        if [[ -n "\$mpi_tmp_path" && "\$mpi_tmp_path" != "null" && ! "\$mpi_tmp_path" =~ ^ERROR: ]]; then
+            log_with_timestamp "Use configured mpi_tmp path: \$mpi_tmp_path"
+            safe_grasp_execute "mkdisks" "" mkdisks \${processor} "\$mpi_tmp_path"
+        else
+            log_with_timestamp "mpi_tmp_path not configured or failed to read, using default path (current directory)"
+            safe_grasp_execute "mkdisks" "" mkdisks \${processor}
+        fi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "mkdisks"; then
+        log_with_timestamp "[STOP] Stop execution after mkdisks step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: mkdisks (according to step control configuration)"
+fi
+
+### rcsf
+
+cp ../isodata .
+cp \${conf}_\${loop}.c rcsf.inp
+if [ $loop -eq 1 ]; then
+log_with_timestamp "================第一次循环，使用\${loop1_rwfn_file}================"
+cp ../\${loop1_rwfn_file} \${conf}.w
+orbital_params=\${Active_space}
+cal_method='rmcdhf'
+
+# rangular step
+if check_step_should_run "rangular" "\$loop"; then
+    if ! check_step_completed "rangular" "\$loop" "\$conf"; then
+        safe_grasp_execute "rangular_mpi" "y" mpirun -np \${processor} rangular_mpi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rangular"; then
+        log_with_timestamp "[STOP] Stop execution after rangular step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rangular (according to step control configuration)"
+fi
+
+# rwfnestimate step (loop 1)
+if check_step_should_run "rwfnestimate" "\$loop"; then
+    if ! check_step_completed "rwfnestimate" "\$loop" "\$conf"; then
+        input_commands="y
+1
+\${conf}.w
+*
+2
+*
+3
+*"
+        safe_grasp_execute "rwfnestimate" "\$input_commands" rwfnestimate
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rwfnestimate"; then
+        log_with_timestamp "[STOP] Stop execution after rwfnestimate step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rwfnestimate (according to step control configuration)"
+fi
+
+# rmcdhf step
+if check_step_should_run "rmcdhf" "\$loop"; then
+    if ! check_step_completed "rmcdhf" "\$loop" "\$conf"; then
+        input_commands="y
+\${cal_levels}
+5
+\${orbital_params}
+
+100"
+        safe_grasp_execute "rmcdhf_mem_mpi" "\$input_commands" mpirun -np \${processor} rmcdhf_mem_mpi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rmcdhf"; then
+        log_with_timestamp "[STOP] Stop execution after rmcdhf step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rmcdhf (according to step control configuration)"
+fi
+
+# rsave step
+if check_step_should_run "rsave" "\$loop"; then
+    if ! check_step_completed "rsave" "\$loop" "\$conf"; then
+        safe_grasp_execute "rsave" "" rsave \${conf}_\${loop}
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rsave"; then
+        log_with_timestamp "[STOP] Stop execution after rsave step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rsave (according to step control configuration)"
+fi
+
+# Copy wavefunction file if rsave step was executed
+if check_step_should_run "rsave" "\$loop"; then
+    cp \${conf}_\${loop}.w ..
+fi
+
+# jj2lsj step (loop 1)
+if check_step_should_run "jj2lsj" "\$loop"; then
+    if ! check_step_completed "jj2lsj" "\$loop" "\$conf"; then
+        input_commands="\${conf}_\${loop}
+n
+y
+y"
+        safe_grasp_execute "jj2lsj" "\$input_commands" jj2lsj
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "jj2lsj"; then
+        log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
+fi
+
+# rlevels step (loop 1)
+if check_step_should_run "rlevels" "\$loop"; then
+    if ! check_step_completed "rlevels" "\$loop" "\$conf"; then
+        safe_grasp_execute "rlevels" "\${conf}_\${loop}" bash -c "rlevels \${conf}_\${loop}.m > \${conf}_\${loop}.level"
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rlevels"; then
+        log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
+fi
+
+else
+log_with_timestamp "================第\${loop}次循环，使用\${rwfnestimate_file}================"
+cp ../\${rwfnestimate_file} .
+### rwfnestimate
+if check_step_should_run "rwfnestimate" "$loop"; then
+    if ! check_step_completed "rwfnestimate" "$loop" "$conf"; then
+        input_commands="y
+1
+\${rwfnestimate_file}
+*
+2
+*
+3
+*"
+        safe_grasp_execute "rwfnestimate" "$input_commands" rwfnestimate
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rwfnestimate"; then
+        log_with_timestamp "[STOP] Stop execution after rwfnestimate step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rwfnestimate (according to step control configuration)"
+fi
+
+rm rcsf.inp
+cp rwfn.inp \${conf}_\${loop}.w
+
+cal_method='rci'
+
+# rci step
+if check_step_should_run "rci" "\$loop"; then
+    if ! check_step_completed "rci" "\$loop" "\$conf"; then
+        input_commands="y
+\${conf}_\${loop}
+y
+y
+1.d-6
+y
+n
+n
+y
+5
+\${cal_levels}"
+        safe_grasp_execute "rci_mpi" "\$input_commands" mpirun -np \${processor} rci_mpi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rci"; then
+        log_with_timestamp "[STOP] Stop execution after rci step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rci (according to step control configuration)"
+fi
+
+# jj2lsj step (non-loop-1)
+if check_step_should_run "jj2lsj" "\$loop"; then
+    if ! check_step_completed "jj2lsj" "\$loop" "\$conf"; then
+        input_commands="\${conf}_\${loop}
+y
+y
+y"
+        safe_grasp_execute "jj2lsj" "\$input_commands" jj2lsj
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "jj2lsj"; then
+        log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
+fi
+
+# rlevels step (non-loop-1)
+if check_step_should_run "rlevels" "\$loop"; then
+    if ! check_step_completed "rlevels" "\$loop" "\$conf"; then
+        safe_grasp_execute "rlevels" "\${conf}_\${loop}" bash -c "rlevels \${conf}_\${loop}.cm > \${conf}_\${loop}.level"
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rlevels"; then
+        log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
+fi
+
+fi
+
+# 清理临时文件夹
+if [ -d "mpi_tmp" ]; then
+    log_with_timestamp "发现临时文件夹 mpi_tmp，正在清理..."
+    rm -rf mpi_tmp
+    if [ $? -eq 0 ]; then
+        log_with_timestamp "✅ 临时文件夹 mpi_tmp 清理完成"
+    else
+        log_with_timestamp "⚠️ 临时文件夹 mpi_tmp 清理失败"
+    fi
+else
+    log_with_timestamp "未发现临时文件夹 mpi_tmp"
+fi
+
+log_with_timestamp "返回上级目录..."
+cd ..
+run_python_with_env "\${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method \${cal_method} -f "\${config_file}"
+else
+    log_with_timestamp "🔄 跳过所有GRASP计算步骤 (backward loop mode - jumping to train)"
+fi
+## 机器学习训练
+if check_step_should_run "train" "\$loop" || [[ "\$goto_train_step" == "true" ]]; then
+    log_stage "执行机器学习训练" "START"
+    
+    if [[ "\$goto_train_step" == "true" ]]; then
+        log_with_timestamp "🔄 执行回退模式训练 - 重新训练第 \$loop 轮模型"
+    fi
+    
+    # 直接执行，让输出实时显示（run_python_with_env已包含错误处理）
+    run_python_with_env "\${ML_PYTHON_DIR}/train.py"
+    
+    log_with_timestamp "✅ 机器学习训练完成"
+    
+    # 检查是否应该在此步骤后停止
+    if check_should_stop_after_step "train"; then
+        log_with_timestamp "🛑 根据配置在train步骤后停止执行"
+        exit 0
+    fi
+    
+    # 如果完成了train步骤，检查是否需要重置步骤控制
+    do_step_control_reset
+else
+    log_with_timestamp "⏭️ 跳过步骤: train (根据步骤控制配置)"
+fi
+
+log_with_timestamp "循环 $loop 完成，准备下一次迭代..."
+done
+
+log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
+        }
+
+        // 重置表单
+        function resetForm() {
+            document.querySelectorAll('input, select, textarea').forEach(element => {
+                element.value = '';
+            });
+            
+            // 重置光谱项输入框
+            const spectralContainer = document.getElementById('spectral-terms-container');
+            spectralContainer.innerHTML = '<input type="text" class="spectral-term-input" placeholder="例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D" oninput="handleSpectralTermInput(this)">';
+            
+            // 重置模块输入框
+            const moduleContainer = document.getElementById('modules-container');
+            moduleContainer.innerHTML = '<input type="text" class="module-input" placeholder="例如: mpi/openmpi-x86_64-gcc" oninput="handleModuleInput(this)">';
+            
+            // 清空输出内容
+            document.getElementById('config-output').textContent = '# 请填写左侧参数后，配置文件将在这里生成';
+            document.getElementById('script-output').textContent = '# 请填写左侧参数后，Shell脚本将在这里生成';
+        }
+
+        // 下载文件
+        function downloadFile(type) {
+            let content, filename;
+            
+            if (type === 'config') {
+                content = document.getElementById('config-output').textContent;
+                filename = 'config.toml';
+            } else if (type === 'script') {
+                content = document.getElementById('script-output').textContent;
+                filename = 'csfs_choosing_SCF_cal_ml_choosing.sh';
+            }
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(type) {
+            const content = document.getElementById(type + '-output').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                alert('内容已复制到剪贴板！');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制内容。');
+            });
+        }
+
+        // 实时更新
+        document.addEventListener('input', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+                // 对于光谱项和模块输入框，已经在各自的handler中处理了
+                if (!e.target.classList.contains('spectral-term-input') && !e.target.classList.contains('module-input')) {
+                    generateFiles();
+                }
+            }
+        });
+
+        // 页面加载时显示提示信息
+        window.onload = function() {
+            document.getElementById('config-output').textContent = '# 请填写左侧参数后，配置文件将在这里生成';
+            document.getElementById('script-output').textContent = '# 请填写左侧参数后，Shell脚本将在这里生成';
+        };
+
+        // ============ 配置暂存机制 ============
+        
+        // 保存配置到文件
+        function saveConfig() {
+            const config = getFormData();
+            const configData = {
+                version: "1.0",
+                timestamp: new Date().toISOString(),
+                config: config
+            };
+            
+            const configJson = JSON.stringify(configData, null, 2);
+            const blob = new Blob([configJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `grasp_config_${config.atom || 'unnamed'}_${config.conf || 'unnamed'}_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            updateConfigStatus('配置已保存到文件', 'success');
+        }
+        
+        // 加载配置文件
+        function loadConfigFromFile() {
+            document.getElementById('config-file-input').click();
+        }
+        
+        // 处理配置文件加载
+        function handleConfigFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const configData = JSON.parse(e.target.result);
+                    
+                    // 验证配置数据格式
+                    if (!configData.config) {
+                        throw new Error('配置文件格式无效：缺少config字段');
+                    }
+                    
+                    // 填充表单
+                    fillFormWithConfig(configData.config);
+                    
+                    // 重新生成文件
+                    generateFiles();
+                    
+                    updateConfigStatus(`配置文件加载成功 (${configData.version || '未知版本'})`, 'success');
+                    
+                } catch (error) {
+                    alert('配置文件加载失败：' + error.message);
+                    console.error('配置加载错误：', error);
+                }
+            };
+            reader.readAsText(file);
+            
+            // 清空文件输入框，允许重复选择相同文件
+            event.target.value = '';
+        }
+        
+        // 用配置数据填充表单
+        function fillFormWithConfig(config) {
+            // 填充基本字段
+            const simpleFields = [
+                'atom', 'conf', 'root_path', 'selected_csfs', 'loop1_rwfn_file',
+                'grasp_data_processing_root', 'conda_path', 'chosen_ratio',
+                'cutoff_value', 'active_space', 'cal_levels',
+                'atomic_number', 'mass_number', 'atomic_mass', 'nuclear_spin', 'nuclear_dipole',
+                'nuclear_quadrupole', 'pytorch_threads', 'std_threshold', 'csfs_num_relative_std_threshold',
+                'partition', 'tasks_per_node', 'mpi_tmp_path', 'conda_env'
+            ];
+            
+            simpleFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element && config[field] !== undefined) {
+                    element.value = config[field];
+                }
+            });
+            
+            // 处理光谱项数组
+            if (config.spectral_terms && Array.isArray(config.spectral_terms)) {
+                const container = document.getElementById('spectral-terms-container');
+                container.innerHTML = '';
+                
+                config.spectral_terms.forEach((term, index) => {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'spectral-term-input';
+                    input.placeholder = index === 0 ? '例如: 5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D' : '继续输入下一个光谱项';
+                    input.value = term;
+                    input.oninput = function() { handleSpectralTermInput(this); };
+                    container.appendChild(input);
+                });
+                
+                // 添加一个空的输入框用于继续输入
+                addSpectralTermInput();
+            }
+            
+            // 处理模块数组
+            if (config.modules && Array.isArray(config.modules)) {
+                const container = document.getElementById('modules-container');
+                container.innerHTML = '';
+                
+                config.modules.forEach((module, index) => {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'module-input';
+                    input.placeholder = index === 0 ? '例如: mpi/openmpi-x86_64-gcc' : '继续输入下一个模块';
+                    input.value = module;
+                    input.oninput = function() { handleModuleInput(this); };
+                    container.appendChild(input);
+                });
+                
+                // 添加一个空的输入框用于继续输入
+                addModuleInput();
+            }
+        }
+        
+        // 更新配置状态显示
+        function updateConfigStatus(message, type = 'info') {
+            const statusElement = document.getElementById('config-status');
+            const icons = {
+                success: '✅',
+                warning: '⚠️',
+                error: '❌',
+                info: 'ℹ️'
+            };
+            
+            if (statusElement) {
+                statusElement.innerHTML = `${icons[type] || icons.info} ${message}`;
+                statusElement.style.display = 'block';
+                
+                // 根据类型设置不同的背景色
+                const bgColors = {
+                    success: 'rgba(16, 185, 129, 0.2)',
+                    warning: 'rgba(245, 158, 11, 0.2)',
+                    error: 'rgba(239, 68, 68, 0.2)',
+                    info: 'rgba(99, 102, 241, 0.2)'
+                };
+                statusElement.style.background = bgColors[type] || bgColors.info;
+                
+                // 3秒后淡出隐藏
+                setTimeout(() => {
+                    statusElement.style.transition = 'opacity 0.5s ease';
+                    statusElement.style.opacity = '0';
+                    setTimeout(() => {
+                        statusElement.style.display = 'none';
+                        statusElement.style.opacity = '1';
+                        statusElement.style.transition = '';
+                    }, 500);
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wextra -O3 -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/llvm/lib CMakeFiles/test_csf_parser.dir/test_parser.cpp.o -o test_csf_parser  ../libcsf_lib.a

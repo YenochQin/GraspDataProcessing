@@ -1,0 +1,60 @@
+atom = "Gd_I"
+conf = "cv6odd1_j3as5"
+spectral_term = [ "5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_9D", "5s(2).4d(10)1S0_1S.5p(6).6s(2).4f(7)8S0_8S.5d_7D",]
+continue_cal = true
+cal_loop_num = 4
+cal_error_num = 0
+backward_loop_needed = false
+target_backward_loop = 0
+difference = 0
+cutoff_value = 1e-9
+chosen_ratio = 0.085
+expansion_ratio = 2
+target_pool_file = "cv6odd1_j3as5.c"
+root_path = "/home/workstation3/caldata/GdI/cv6odd1/as5/j3"
+selected_csfs_file = "mJ-1-90chosenas3_odd3.c"
+selected_csfs_mix_file = "mJ-1-90chosenas3_odd3.cm"
+energy_std_threshold = 2e-5
+csfs_num_relative_std_threshold = 0.002
+cal_method = "rci"
+
+# GRASP计算参数
+loop1_rwfn_file = "Gd_I_1.w"
+active_space = "11s,10p,9d,8f,7g,6h"
+cal_levels = "1-3"
+tasks_per_node = 46
+mpi_tmp_path = "/home/workstation3/caltmp"  # MPI临时文件存储路径，如果不设置则使用当前目录
+
+# 原子核参数
+atomic_number = 64
+mass_number = 157
+atomic_mass = 157.25
+nuclear_spin = 1
+nuclear_dipole = 1
+nuclear_quadrupole = 1
+
+[cpu_config]
+pytorch_threads = 32
+
+# 步骤级断点重启控制
+[step_control]
+enable_step_control = false      # 是否启用步骤级控制
+target_loop = 0                  # 目标循环编号（0表示使用当前cal_loop_num）
+start_step = "auto"              # 起始步骤（auto/initial_csfs/choosing_csfs/mkdisks/rangular/rwfnestimate/rmcdhf/rsave/jj2lsj/rlevels/train）
+end_step = "auto"                # 结束步骤（auto表示执行到最后）
+skip_completed_steps = false      # 是否跳过已完成的步骤，默认不跳过
+
+[ml_config]
+descriptors_with_subshell_info = true
+high_prob_percentile = 95
+overfitting_threshold = 0.1
+underfitting_threshold = -0.05
+include_wrong_level_negatives = true
+
+[model_params]
+n_estimators = 1000
+random_state = 42
+
+[model_params.class_weight]
+0 = 1
+1 = 3
