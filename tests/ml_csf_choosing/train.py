@@ -169,7 +169,7 @@ def main(config):
     gdp.setup_directories(config)
 
     # 验证初始文件
-    gdp.validate_initial_files(config, logger)
+    # gdp.validate_initial_files(config, logger)
 
     logger.info(f"初始比例: {config.chosen_ratio}")
     logger.info(f"光谱项: {config.spectral_term}")
@@ -301,9 +301,9 @@ def main(config):
         # 过拟合监控
         overfitting_check = train_f1 - test_f1
         logger.info(f'             过拟合检查差异(训练-测试): {overfitting_check:.4f}')
-        if overfitting_check > config.ml_config['overfitting_threshold']:
+        if overfitting_check > config.ml_config.get('overfitting_threshold', 0.1):
             logger.warning("检测到可能的过拟合现象")
-        elif overfitting_check < config.ml_config['underfitting_threshold']:
+        elif overfitting_check < config.ml_config.get('underfitting_threshold', -0.05):
             logger.warning("检测到可能的欠拟合现象")
         
         # 模型推理 - 仅对未选择的CSF进行推理（借鉴ann3_proba.py的高效策略）
@@ -617,24 +617,6 @@ def main(config):
         gdp.update_config(config_file_path, {'continue_cal': True})
         gdp.update_config(config_file_path, {'cal_error_num': 0})
         gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
-        
-        # ============ 取消动态选择率修改 ============
-        # 注释掉原有的动态选择率计算，保持chosen_ratio不变
-        logger.info(f"保持选择率不变: {config.chosen_ratio}")
-        logger.info(f"下次计算将使用固定的组态索引，不依赖选择率")
-        
-        # 不再调用动态选择率计算函数
-        # dynamic_ratio = gdp.calculate_dynamic_chosen_ratio(
-        #     config, 
-        #     caled_csfs_indices_dict[0], 
-        #     target_pool_csfs_data, 
-        #     y_all_probability, 
-        #     evaluation_results, 
-        #     energy_level_data_pd, 
-        #     logger
-        # )
-        # config.chosen_ratio = dynamic_ratio
-        # gdp.update_config(config_file_path, {'chosen_ratio': dynamic_ratio})
 
     else:
         logger.info("************************************************")
