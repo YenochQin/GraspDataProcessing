@@ -78,7 +78,7 @@ def process_target_pool_csfs(config):
         if use_cpp:
             # 使用C++并行计算
             descriptors_array, labels_array = gdp.batch_process_csfs_with_multi_block_cpp(
-                target_pool_file_path, 
+                target_pool_file_path.__str__() , 
                 label_type='sequential',
                 with_subshell_info=config.ml_config.get('descriptors_with_subshell_info', True),
                 cpu_threads=config.ml_config.get('cpu_threads', None)
