@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 """
-测试pytorch_threads配置参数是否生效
+测试cpu_threads配置参数是否生效
 """
 
 import sys
@@ -14,8 +14,8 @@ project_root = script_dir.parent
 src_path = project_root / 'src'
 sys.path.insert(0, str(src_path))
 
-def test_pytorch_threads_config():
-    """测试pytorch_threads配置"""
+def test_cpu_threads_config():
+    """测试cpu_threads配置"""
     print("=" * 60)
     print("测试PyTorch线程数配置")
     print("=" * 60)
@@ -25,8 +25,8 @@ def test_pytorch_threads_config():
     
     # 创建一个简单的配置对象测试
     class TestConfig:
-        def __init__(self, pytorch_threads=None):
-            self.pytorch_threads = pytorch_threads
+        def __init__(self, cpu_threads=None):
+            self.cpu_threads = cpu_threads
     
     # 测试不同的配置值
     test_cases = [
@@ -41,12 +41,12 @@ def test_pytorch_threads_config():
         print(f"\n测试用例: {description}")
         print(f"配置值: {threads_value}")
         
-        config = TestConfig(pytorch_threads=threads_value)
+        config = TestConfig(cpu_threads=threads_value)
         
         # 模拟train_model中的逻辑
         cpu_count = os.cpu_count() or 4
         
-        config_threads = getattr(config, 'pytorch_threads', None)
+        config_threads = getattr(config, 'cpu_threads', None)
         if config_threads is not None:
             try:
                 config_threads = int(config_threads)
@@ -98,14 +98,14 @@ def test_with_real_config():
         print(f"找到配置文件: {config_file}")
         try:
             config = gdp.load_config(str(config_file))
-            pytorch_threads = getattr(config, 'pytorch_threads', None)
-            print(f"配置文件中的pytorch_threads: {pytorch_threads}")
+            cpu_threads = getattr(config, 'cpu_threads', None)
+            print(f"配置文件中的cpu_threads: {cpu_threads}")
             
             # 模拟设置过程
             cpu_count = os.cpu_count() or 4
-            if pytorch_threads is not None:
+            if cpu_threads is not None:
                 try:
-                    config_threads = int(pytorch_threads)
+                    config_threads = int(cpu_threads)
                     optimal_threads = min(config_threads, cpu_count)
                     print(f"计算得出的optimal_threads: {optimal_threads}")
                 except (ValueError, TypeError):
@@ -126,7 +126,7 @@ def test_with_real_config():
         print("未找到配置文件")
 
 if __name__ == "__main__":
-    test_pytorch_threads_config()
+    test_cpu_threads_config()
     test_with_real_config()
     
     print("\n" + "=" * 60)

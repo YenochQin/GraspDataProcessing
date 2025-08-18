@@ -25,7 +25,7 @@
     "nuclear_spin": "1",
     "nuclear_dipole": "1",
     "nuclear_quadrupole": "1",
-    "pytorch_threads": "32",
+    "cpu_threads": "32",
     "std_threshold": "2e-5",
     "csfs_num_relative_std_threshold": "2e-3",
     "partition": "batch",

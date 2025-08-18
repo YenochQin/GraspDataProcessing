@@ -34,7 +34,7 @@ nuclear_dipole = 1
 nuclear_quadrupole = 1
 
 [cpu_config]
-pytorch_threads = 32
+cpu_threads = 32
 
 # 步骤级断点重启控制
 [step_control]

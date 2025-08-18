@@ -507,8 +507,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="pytorch_threads">PyTorch CPU线程数</label>
-                        <input type="number" id="pytorch_threads" min="1" max="128" placeholder="例如: 32">
+                        <label for="cpu_threads">PyTorch CPU线程数</label>
+                        <input type="number" id="cpu_threads" min="1" max="128" placeholder="例如: 32">
                         <div class="help-text">PyTorch使用的CPU线程数量</div>
                     </div>
 
@@ -843,7 +843,7 @@
                 nuclear_spin: document.getElementById('nuclear_spin').value || '1',
                 nuclear_dipole: document.getElementById('nuclear_dipole').value || '1',
                 nuclear_quadrupole: document.getElementById('nuclear_quadrupole').value || '1',
-                pytorch_threads: document.getElementById('pytorch_threads').value || '32',
+                cpu_threads: document.getElementById('cpu_threads').value || '32',
                 std_threshold: document.getElementById('std_threshold').value || '2e-5',
                 csfs_num_relative_std_threshold: document.getElementById('csfs_num_relative_std_threshold').value || '0.002',
                 
@@ -913,7 +913,7 @@ end_step = "auto"                # 结束步骤（auto表示执行到最后）
 skip_completed_steps = false      # 是否跳过已完成的步骤
 
 [cpu_config]
-pytorch_threads = ${config.pytorch_threads}
+cpu_threads = ${config.cpu_threads}
 
 # 日志控制配置（支持环境感知的日志优化）
 [log_config]
@@ -1875,7 +1875,7 @@ log_with_timestamp "========== sbatch 脚本执行完成 =========="`;
                 'grasp_data_processing_root', 'conda_path', 'chosen_ratio',
                 'cutoff_value', 'active_space', 'cal_levels',
                 'atomic_number', 'mass_number', 'atomic_mass', 'nuclear_spin', 'nuclear_dipole',
-                'nuclear_quadrupole', 'pytorch_threads', 'std_threshold', 'csfs_num_relative_std_threshold',
+                'nuclear_quadrupole', 'cpu_threads', 'std_threshold', 'csfs_num_relative_std_threshold',
                 'partition', 'tasks_per_node', 'mpi_tmp_path', 'conda_env'
             ];
             

@@ -32,7 +32,7 @@
     "random_state": "42",
     "class_weight_0": "1",
     "class_weight_1": "3",
-    "pytorch_threads": "12",
+    "cpu_threads": "12",
     "std_threshold": "2e-5",
     "csfs_num_relative_std_threshold": "2e-3",
     "partition": "batch",
