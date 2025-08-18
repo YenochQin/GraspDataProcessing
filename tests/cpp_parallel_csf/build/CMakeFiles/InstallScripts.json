@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/tests/cpp_parallel_csf/build/cmake_install.cmake",
-		"/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/tests/cpp_parallel_csf/build/tests/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

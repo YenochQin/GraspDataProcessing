@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcsf_lib.a CMakeFiles/csf_lib.dir/src/csf_parser.cpp.o CMakeFiles/csf_lib.dir/src/descriptor_generator.cpp.o CMakeFiles/csf_lib.dir/src/parallel_processor.cpp.o CMakeFiles/csf_lib.dir/src/hdf5_writer.cpp.o
-/usr/bin/ranlib libcsf_lib.a

@@ -81,7 +81,7 @@ def process_target_pool_csfs(config):
                 target_pool_csfs_data, 
                 label_type='sequential',
                 with_subshell_info=config.ml_config.get('descriptors_with_subshell_info', True),
-                num_threads=config.ml_config.get('cpp_threads', None)
+                cpp_threads=config.ml_config.get('cpp_threads', None)
             )
         else:
             # 回退到Python版本
