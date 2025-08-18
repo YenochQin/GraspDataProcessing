@@ -74,14 +74,18 @@ def process_target_pool_csfs(config):
         })
         
         # 步骤2：计算描述符 (使用C++并行版本)
+        target_pool_path = root_path.joinpath(config.conf)
         use_cpp = config.ml_config.get('use_cpp_descriptor_generator', True)
         if use_cpp:
             # 使用C++并行计算
-            descriptors_array, labels_array = gdp.batch_process_csfs_with_multi_block_cpp(
-                target_pool_file_path.__str__() , 
-                label_type='sequential',
-                with_subshell_info=config.ml_config.get('descriptors_with_subshell_info', True),
-                cpu_threads=config.ml_config.get('cpu_threads', None)
+            descriptor_file_path = target_pool_path.with_suffix('.h5')
+
+            gdp.batch_process_csfs_with_multi_block_cpp(
+                input_files = [target_pool_file_path.__str__()],  # 这个函数可以一次处理多个文件，这里暂时使用这个形式来运行
+                output_dir = descriptor_file_path.__str__(),
+                with_subshell_info = config.ml_config.get('descriptors_with_subshell_info', True),
+                cpu_threads = config.ml_config.get('cpu_threads', None),
+                verbose = True
             )
         else:
             # 回退到Python版本
@@ -90,26 +94,18 @@ def process_target_pool_csfs(config):
                 label_type='sequential',
                 with_subshell_info=config.ml_config.get('descriptors_with_subshell_info', False)
             )
+
+            gdp.save_descriptors_with_multi_block(descriptors_array, labels_array, target_pool_path, 'npy')
+            logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符保存成功")
+            processing_steps.append({
+                'step': 'descriptor_saving',
+                'success': True,
+                'message': f'{config.target_pool_file} CSFs 描述符保存成功',
+                'output_path': str(target_pool_path)
+            })
         backend = "C++并行" if use_cpp else "Python"
         logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符计算成功 (使用{backend}版本)")
-        processing_steps.append({
-            'step': 'descriptor_calculation',
-            'success': True,
-            'message': f'{config.target_pool_file} CSFs 描述符计算成功 (使用{backend}版本)',
-            'descriptor_shape': [arr.shape for arr in descriptors_array],
-            'backend_used': backend
-        })
-
-        # 步骤3：保存描述符
-        target_pool_path = root_path.joinpath(config.conf)
-        gdp.save_descriptors_with_multi_block(descriptors_array, labels_array, target_pool_path, 'npy')
-        logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符保存成功")
-        processing_steps.append({
-            'step': 'descriptor_saving',
-            'success': True,
-            'message': f'{config.target_pool_file} CSFs 描述符保存成功',
-            'output_path': str(target_pool_path)
-        })
+        
 
         # 步骤4：保存CSFs二进制文件
         gdp.save_csfs_binary(target_pool_csfs_data, target_pool_path)
