@@ -160,6 +160,7 @@ def build_ensemble_model(X_train, y_train, X_test, y_test, config):
     
     import os
     import time
+    import torch
     
     # CPU优化配置
     if not torch.cuda.is_available() and ANN_AVAILABLE:
