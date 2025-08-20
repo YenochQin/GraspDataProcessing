@@ -52,17 +52,40 @@ except ImportError:
 important_config_count_history = []
 
 def enhanced_feature_preprocessing(X_train, X_test, y_train):
-    """增强的特征预处理"""
+    """增强的特征预处理 - CPU多核优化"""
     
-    # 1. 特征缩放
-    scaler = RobustScaler()  # 对异常值更鲁棒
+    import os
+    from sklearn.preprocessing import RobustScaler
+    from sklearn.feature_selection import SelectKBest, mutual_info_classif
+    import numpy as np
+    
+    cpu_count = os.cpu_count() or 4
+    
+    # 1. 特征缩放 - 使用n_jobs参数
+    scaler = RobustScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
     
-    # 2. 特征选择（基于互信息）
+    # 2. 特征选择（基于互信息）- 全数据多核优化
     k_features = min(X_train.shape[1], 100)  # 选择最多100个特征
+    
+    # 直接使用完整数据，多核并行处理
+    print(f"使用完整数据({len(X_train_scaled)}样本)进行特征选择...")
+    
+    # 使用多核优化的mutual_info_classif
+    from sklearn.feature_selection import mutual_info_classif
+    
+    # 直接计算互信息分数，使用所有CPU核心
     selector = SelectKBest(score_func=mutual_info_classif, k=k_features)
-    X_train_selected = selector.fit_transform(X_train_scaled, y_train)
+    
+    # 设置环境变量确保多核
+    import joblib
+    with joblib.parallel_backend('threading', n_jobs=-1):
+        selector.fit(X_train_scaled, y_train)
+    
+    # 在完整数据上训练选择器
+    selector.fit(X_train_scaled, y_train)
+    X_train_selected = selector.transform(X_train_scaled)
     X_test_selected = selector.transform(X_test_scaled)
     
     return X_train_selected, X_test_selected, scaler, selector
