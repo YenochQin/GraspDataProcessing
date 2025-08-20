@@ -341,33 +341,19 @@ def optimize_threshold(y_true, y_proba, metric='f1'):
     return optimal_threshold, optimal_score
 
 def monitor_cpu_usage():
-    """监控CPU使用情况"""
+    """监控CPU使用情况（简化版，不显示详细信息）"""
     import psutil
     import os
     
     cpu_count = psutil.cpu_count(logical=True)
     physical_cores = psutil.cpu_count(logical=False)
     
-    print("=== CPU信息 ===")
-    print(f"总逻辑核心数: {cpu_count}")
-    print(f"物理核心数: {physical_cores}")
-    print(f"当前进程ID: {os.getpid()}")
-    
-    # 当前CPU使用率
-    cpu_percent = psutil.cpu_percent(interval=1)
-    print(f"当前CPU使用率: {cpu_percent}%")
-    
-    # 每个核心的使用率
-    per_cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
-    print("各核心使用率:")
-    for i, percent in enumerate(per_cpu_percent):
-        print(f"  CPU {i}: {percent}%")
-    
+    # 仅记录关键信息到日志，不打印详细CPU使用率
     return {
         'total_cores': cpu_count,
         'physical_cores': physical_cores,
-        'cpu_percent': cpu_percent,
-        'per_cpu_percent': per_cpu_percent
+        'cpu_percent': psutil.cpu_percent(),
+        'per_cpu_percent': []
     }
 
 
