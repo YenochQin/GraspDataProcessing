@@ -380,10 +380,12 @@ def main(config):
         # ... (保持原有回退逻辑)
 
 if __name__ == "__main__":
+    # 解析命令行参数
     parser = argparse.ArgumentParser(description='增强版机器学习训练程序')
     parser.add_argument('--config', type=str, default='config.toml', help='配置文件路径')
     args = parser.parse_args()
     
+    # 加载配置
     try:
         cfg = gdp.load_config(args.config)
         main(cfg)
