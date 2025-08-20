@@ -288,12 +288,12 @@ def main(config):
         if isinstance(caled_csfs_descriptors, pd.DataFrame):
             # DataFrame格式（原始格式）
             X = caled_csfs_descriptors.drop('label', axis=1)
-            y = caled_csfs_descriptors['label']
+            y = caled_csfs_descriptors['label'].astype(int)  # 确保标签是整数
         else:
             # numpy.ndarray格式
             # 假设最后一列是标签
             X = caled_csfs_descriptors[:, :-1]
-            y = caled_csfs_descriptors[:, -1]
+            y = caled_csfs_descriptors[:, -1].astype(int)  # 确保标签是整数
         
         # 数据分割
         X_train, X_test, y_train, y_test = train_test_split(
