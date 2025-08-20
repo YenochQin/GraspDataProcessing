@@ -284,9 +284,16 @@ def main(config):
         
         unselected_csfs_descriptors = gdp.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
         
-        # 分离特征和标签
-        X = caled_csfs_descriptors.drop('label', axis=1)
-        y = caled_csfs_descriptors['label']
+        # 处理数据格式 - 支持DataFrame和ndarray两种格式
+        if isinstance(caled_csfs_descriptors, pd.DataFrame):
+            # DataFrame格式（原始格式）
+            X = caled_csfs_descriptors.drop('label', axis=1)
+            y = caled_csfs_descriptors['label']
+        else:
+            # numpy.ndarray格式
+            # 假设最后一列是标签
+            X = caled_csfs_descriptors[:, :-1]
+            y = caled_csfs_descriptors[:, -1]
         
         # 数据分割
         X_train, X_test, y_train, y_test = train_test_split(
@@ -349,9 +356,12 @@ def main(config):
             logger.info("当前模型不支持特征重要性分析")
         
         # 对未选择的CSF进行预测
-        X_unselected = unselected_csfs_descriptors.copy()
-        X_unselected_scaled = scaler.transform(selector.transform(X_unselected))
-        
+        if isinstance(unselected_csfs_descriptors, pd.DataFrame):
+            X_unselected = unselected_csfs_descriptors.values
+        else:
+            X_unselected = unselected_csfs_descriptors
+            
+        X_unselected_scaled = selector.transform(scaler.transform(X_unselected))
         y_unselected_proba = best_model.predict_proba(X_unselected_scaled)[:, 1]
         
         # 后续逻辑与原版保持一致，但使用改进的模型
