@@ -18,13 +18,15 @@ import pandas as pd
 import time
 import joblib
 from tabulate import tabulate 
-from imblearn.over_sampling import ADASYN
+from imblearn.over_sampling import ADASYN, SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.model_selection import train_test_split, RandomizedSearchCV, StratifiedKFold
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.metrics import f1_score, roc_auc_score, precision_score, recall_score, accuracy_score
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
+import torch
+import os
 
 try:
     import graspdataprocessing as gdp
@@ -39,6 +41,13 @@ try:
 except ImportError:
     XGBOOST_AVAILABLE = False
     print("警告: XGBoost不可用，将使用RandomForest替代")
+
+try:
+    from graspdataprocessing.machine_learning_module.ANN import ANNClassifier
+    ANN_AVAILABLE = True
+except ImportError:
+    ANN_AVAILABLE = False
+    print("警告: ANN不可用，将使用sklearn模型")
 
 important_config_count_history = []
 
@@ -62,7 +71,6 @@ def advanced_imbalance_handling(X_train, y_train, method='adasyn'):
     """高级类别不平衡处理"""
     
     strategies = {
-        'smote': SMOTE(random_state=42, k_neighbors=5),
         'adasyn': ADASYN(random_state=42, n_neighbors=5),
         'random_under': RandomUnderSampler(random_state=42)
     }
@@ -106,81 +114,126 @@ def optimize_hyperparameters(model, X_train, y_train, model_type='random_forest'
     search.fit(X_train, y_train)
     return search.best_estimator_, search.best_params_
 
-def build_ensemble_model(X_train, y_train, X_test, y_test):
-    """构建集成模型"""
+def build_ensemble_model(X_train, y_train, X_test, y_test, config):
+    """构建集成模型 - CPU优化的ANN版本"""
     
-    models = {}
+    import os
+    import time
     
-    # 1. Random Forest (优化后)
-    rf_params = {
-        'n_estimators': 500,
-        'max_depth': 20,
-        'min_samples_split': 5,
-        'min_samples_leaf': 2,
-        'max_features': 'sqrt',
-        'class_weight': 'balanced',
-        'random_state': 42,
-        'n_jobs': -1
-    }
-    rf = RandomForestClassifier(**rf_params)
-    
-    # 2. Gradient Boosting
-    gb_params = {
-        'n_estimators': 300,
-        'max_depth': 7,
-        'learning_rate': 0.1,
-        'min_samples_split': 5,
-        'min_samples_leaf': 2,
-        'random_state': 42
-    }
-    gb = GradientBoostingClassifier(**gb_params)
-    
-    # 3. XGBoost (如果可用)
-    if XGBOOST_AVAILABLE:
-        xgb_params = {
-            'n_estimators': 500,
-            'max_depth': 6,
-            'learning_rate': 0.1,
-            'subsample': 0.8,
-            'colsample_bytree': 0.8,
-            'scale_pos_weight': max(1, len(y_train) // (2 * np.sum(y_train))),
-            'random_state': 42
-        }
-        xgb_model = xgb.XGBClassifier(**xgb_params)
-        models['xgboost'] = xgb_model
-    
-    models['random_forest'] = rf
-    models['gradient_boosting'] = gb
-    
-    # 训练所有模型
-    results = {}
-    for name, model in models.items():
-        print(f"训练 {name}...")
+    # CPU优化配置
+    if not torch.cuda.is_available() and ANN_AVAILABLE:
+        cpu_count = os.cpu_count() or 4
         
-        # 超参数优化
-        if name == 'random_forest':
-            best_model, best_params = optimize_hyperparameters(model, X_train, y_train, 'random_forest')
-        elif name == 'xgboost' and XGBOOST_AVAILABLE:
-            best_model, best_params = optimize_hyperparameters(model, X_train, y_train, 'xgboost')
+        # 从配置读取CPU线程数
+        config_threads = getattr(config, 'ml_config', {}).get('cpu_threads', None)
+        if config_threads is not None:
+            try:
+                config_threads = int(config_threads)
+                optimal_threads = min(config_threads, cpu_count)
+            except (ValueError, TypeError):
+                optimal_threads = min(32, cpu_count)
         else:
-            best_model = model
-            best_params = {}
+            optimal_threads = min(32, cpu_count)
+        
+        # 设置PyTorch CPU优化
+        torch.set_num_threads(optimal_threads)
+        os.environ['OMP_NUM_THREADS'] = str(optimal_threads)
+        os.environ['MKL_NUM_THREADS'] = str(optimal_threads)
+        os.environ['NUMEXPR_NUM_THREADS'] = str(optimal_threads)
+        
+        print(f"启用CPU多线程优化 - 线程数: {optimal_threads}")
+        
+        # ANN参数优化
+        batch_size = 4096
+        max_epochs = 150
+        hidden_size = 96
+    else:
+        batch_size = 2048
+        max_epochs = 150
+        hidden_size = 128
+    
+    results = {}
+    
+    if ANN_AVAILABLE:
+        # 使用PyTorch ANN模型（支持多核CPU并行）
+        print("使用PyTorch ANN模型（CPU优化版）")
+        
+        # 计算类别权重
+        class_counts = np.bincount(y_train.astype(int))
+        pos_weight = class_counts[0] / class_counts[1] if len(class_counts) > 1 else 1.0
+        class_weights = [1.0, pos_weight]
+        
+        # 创建ANN模型
+        model = ANNClassifier(
+            input_size=X_train.shape[1],
+            hidden_size=hidden_size,
+            learning_rate=0.001,
+            class_weights=class_weights,
+            device='cpu'  # 强制使用CPU
+        )
         
         # 训练
-        best_model.fit(X_train, y_train)
+        print(f"开始训练 - 数据量: {len(X_train):,}, 特征维度: {X_train.shape[1]}")
+        start_time = time.time()
+        
+        history = model.fit(
+            X_train, y_train,
+            X_test, y_test,
+            batch_size=batch_size,
+            max_epochs=max_epochs,
+            early_stopping_patience=20
+        )
+        
+        training_time = time.time() - start_time
+        print(f"训练完成，耗时: {training_time:.2f}秒")
         
         # 评估
-        y_pred = best_model.predict(X_test)
-        y_proba = best_model.predict_proba(X_test)[:, 1]
+        y_pred = model.predict(X_test)
+        y_proba = model.predict_proba(X_test)[:, 1]
         
-        results[name] = {
-            'model': best_model,
-            'parameters': best_params,
+        metrics = model.evaluate(X_test, y_test, verbose=False)
+        
+        results['ann'] = {
+            'model': model,
+            'parameters': {'hidden_size': hidden_size, 'batch_size': batch_size, 'max_epochs': max_epochs},
+            'f1': metrics['f1_score'],
+            'roc_auc': metrics['roc_auc'],
+            'precision': metrics['precision'],
+            'recall': metrics['recall'],
+            'accuracy': metrics['accuracy'],
+            'training_time': training_time
+        }
+    
+    # 备用：使用sklearn模型作为补充
+    if not ANN_AVAILABLE or len(results) == 0:
+        print("使用sklearn模型作为备用")
+        
+        # 优化的Random Forest
+        rf_params = {
+            'n_estimators': 300,
+            'max_depth': 15,
+            'class_weight': 'balanced',
+            'random_state': 42,
+            'n_jobs': min(8, os.cpu_count() or 4)  # 控制CPU使用
+        }
+        rf = RandomForestClassifier(**rf_params)
+        
+        start_time = time.time()
+        rf.fit(X_train, y_train)
+        training_time = time.time() - start_time
+        
+        y_pred = rf.predict(X_test)
+        y_proba = rf.predict_proba(X_test)[:, 1]
+        
+        results['random_forest'] = {
+            'model': rf,
+            'parameters': rf_params,
             'f1': f1_score(y_test, y_pred),
             'roc_auc': roc_auc_score(y_test, y_proba),
             'precision': precision_score(y_test, y_pred),
             'recall': recall_score(y_test, y_pred),
-            'accuracy': accuracy_score(y_test, y_pred)
+            'accuracy': accuracy_score(y_test, y_pred),
+            'training_time': training_time
         }
     
     return results
@@ -323,7 +376,7 @@ def main(config):
         start_time = time.time()
         
         ensemble_results = build_ensemble_model(
-            X_train_balanced, y_train_balanced, X_test_processed, y_test
+            X_train_balanced, y_train_balanced, X_test_processed, y_test, config
         )
         
         training_time = time.time() - start_time
