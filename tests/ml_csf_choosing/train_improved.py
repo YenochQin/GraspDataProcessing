@@ -420,16 +420,39 @@ def main(config):
         logger.info(f"优化后的分类阈值: {optimal_threshold:.3f}")
         logger.info(f"优化后的F1分数: {optimal_score:.4f}")
         
-        # 特征重要性分析
-        if hasattr(best_model, 'feature_importances_'):
-            importances = best_model.feature_importances_
-            indices = np.argsort(importances)[::-1]
-            
-            logger.info("前20个重要特征:")
-            for i in range(min(20, len(indices))):
-                logger.info(f"{i+1}. 特征{indices[i]}: {importances[indices[i]]:.4f}")
-        else:
-            logger.info("当前模型不支持特征重要性分析")
+        # 特征重要性分析 - 支持ANN和sklearn模型
+        try:
+            if hasattr(best_model, 'get_feature_importance'):
+                # ANNClassifier支持特征重要性
+                importances = best_model.get_feature_importance(X_train_processed, method='permutation')
+                indices = np.argsort(importances)[::-1]
+                
+                logger.info("前20个重要特征 (ANN permutation importance):")
+                for i in range(min(20, len(indices))):
+                    logger.info(f"{i+1}. 特征{indices[i]}: {importances[indices[i]]:.4f}")
+                    
+            elif hasattr(best_model, 'feature_importances_'):
+                # sklearn模型特征重要性
+                importances = best_model.feature_importances_
+                indices = np.argsort(importances)[::-1]
+                
+                logger.info("前20个重要特征 (sklearn feature importance):")
+                for i in range(min(20, len(indices))):
+                    logger.info(f"{i+1}. 特征{indices[i]}: {importances[indices[i]]:.4f}")
+            else:
+                logger.info("当前模型不支持标准特征重要性分析")
+                
+                # 对于ANN，尝试使用梯度重要性
+                if hasattr(best_model, 'get_feature_importance'):
+                    grad_importance = best_model.get_feature_importance(X_train_processed, method='gradient')
+                    top_indices = np.argsort(np.abs(grad_importance))[-20:][::-1]
+                    logger.info("前20个重要特征 (ANN gradient importance):")
+                    for i, idx in enumerate(top_indices):
+                        logger.info(f"{i+1}. 特征{idx}: {grad_importance[idx]:.4f}")
+                        
+        except Exception as e:
+            logger.warning(f"特征重要性分析失败: {str(e)}")
+            logger.info("跳过特征重要性分析")
         
         # 对未选择的CSF进行预测
         if isinstance(unselected_csfs_descriptors, pd.DataFrame):
@@ -439,6 +462,11 @@ def main(config):
             
         X_unselected_scaled = selector.transform(scaler.transform(X_unselected))
         y_unselected_proba = best_model.predict_proba(X_unselected_scaled)[:, 1]
+        
+        # 记录未选择CSF的预测统计信息
+        logger.info(f"未选择CSF预测概率统计: min={y_unselected_proba.min():.3f}, max={y_unselected_proba.max():.3f}, mean={y_unselected_proba.mean():.3f}")
+        high_prob_count = np.sum(y_unselected_proba >= optimal_threshold)
+        logger.info(f"未选择CSF中高概率样本数: {high_prob_count}/{len(y_unselected_proba)}")
         
         # 后续逻辑与原版保持一致，但使用改进的模型
         # ... (保持原有CSF选择逻辑)
