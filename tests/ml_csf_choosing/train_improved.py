@@ -632,6 +632,44 @@ def main(config):
         logger.info(f"PyTorch训练优化: {training_time:.2f}秒")
         logger.info("✓ CPU多核优化已全部启用")
         
+        # 绘制拟合图（从train.py添加的功能）
+        logger.info("开始绘制性能图表...")
+        try:
+            # 获取当前计算CSF的索引
+            if not caled_csfs_indices_dict or 0 not in caled_csfs_indices_dict:
+                logger.warning("无法获取当前计算CSF索引，跳过绘图")
+            else:
+                current_calc_indices = caled_csfs_indices_dict[0]
+                X_current_calc = raw_csfs_descriptors[current_calc_indices]
+                y_current_calc_probability = best_model.predict_proba(X_current_calc)[:, 1]
+                
+                # 获取混合系数数据用于绘图
+                mix_coeff = rmix_file_data.mix_coefficient_List[0][asfs_position]
+                if len(mix_coeff.shape) > 1:
+                    cal_mix_coeff_list = np.sqrt(np.sum(mix_coeff**2, axis=0))
+                else:
+                    cal_mix_coeff_list = np.abs(mix_coeff)
+                
+                # 使用标准化的保存和绘图函数
+                saved_files = gdp.save_and_plot_results(
+                    evaluation_results=evaluation_results,
+                    model=best_model,
+                    config=config,
+                    rmix_file_data=rmix_file_data,
+                    asfs_position=asfs_position,
+                    caled_csfs_indices_dict=caled_csfs_indices_dict,
+                    y_current_calc_probability=y_current_calc_probability,
+                    save_model=True,
+                    save_data=True,
+                    plot_curves=True,
+                    logger=logger
+                )
+                
+                logger.info("性能图表绘制完成")
+            
+        except Exception as e:
+            logger.warning(f"绘图过程出现错误: {e}")
+        
         # 数据保存完成，更新配置继续下一轮计算
         gdp.update_config(config_file_path, {'continue_cal': True})
         gdp.update_config(config_file_path, {'cal_error_num': 0})
