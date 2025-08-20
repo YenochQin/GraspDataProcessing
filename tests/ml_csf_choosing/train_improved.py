@@ -488,6 +488,11 @@ def main(config):
         logger.info(f"改进模型已保存到: {model_save_path}")
         logger.info(f"总执行时间: {total_execution_time:.2f}秒")
         
+        # 数据保存完成，更新配置继续下一轮计算
+        gdp.update_config(config_file_path, {'continue_cal': True})
+        gdp.update_config(config_file_path, {'cal_error_num': 0})
+        gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
+        
     else:
         # 处理配置不匹配的回退逻辑
         logger.info("配置不匹配，启动回退机制...")
