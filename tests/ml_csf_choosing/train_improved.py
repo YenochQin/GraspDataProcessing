@@ -44,7 +44,7 @@ except ImportError:
     print("警告: XGBoost不可用，将使用RandomForest替代")
 
 try:
-    from gdp.machine_learning_module.ANN import ANNClassifier
+    from graspdataprocessing.machine_learning_module.ANN import ANNClassifier
     ANN_AVAILABLE = True
 except ImportError:
     ANN_AVAILABLE = False
