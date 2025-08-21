@@ -79,14 +79,13 @@ def process_target_pool_csfs(config):
         if use_cpp:
             # 使用C++并行计算
             descriptor_file_path = target_pool_path.with_suffix('.h5')
+            descriptor_run = gdp.CppDescriptorGenerator(config.ml_config.get('csf_descriptor_executable', None))
+            descriptor_run.generate_descriptors(input_file = target_pool_file_path.__str__(),
+                            output_file = descriptor_file_path.__str__(),
+                            with_subshell_info = config.ml_config.get('descriptors_with_subshell_info', True),
+                            cpu_threads = config.cpu_config.get('cpu_threads', 16),
+                            quiet = True)
 
-            gdp.batch_process_csfs_with_multi_block_cpp(
-                input_files = [target_pool_file_path.__str__()],  # 这个函数可以一次处理多个文件，这里暂时使用这个形式来运行
-                output_dir = descriptor_file_path.__str__(),
-                with_subshell_info = config.ml_config.get('descriptors_with_subshell_info', True),
-                cpu_threads = config.ml_config.get('cpu_threads', None),
-                verbose = True
-            )
         else:
             # 回退到Python版本
             descriptors_array, labels_array = gdp.batch_process_csfs_with_multi_block(
