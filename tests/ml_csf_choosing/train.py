@@ -485,13 +485,10 @@ def main(config):
             if previous_important_indices_path.exists():
                 try:
                     previous_important_indices_dict = gdp.csfs_index_load(previous_important_indices_path)
-                    # 验证字典结构
-                    if not previous_important_indices_dict:
-                        raise ValueError("previous_important_indices_dict为空")
-                    
+                    if not isinstance(previous_important_indices_dict, dict):
+                        raise TypeError(f"Expected dict, got {type(previous_important_indices_dict)}")
                     if 0 not in previous_important_indices_dict:
-                        raise KeyError(f"previous_important_indices_dict中缺少键0，可用键: {list(previous_important_indices_dict.keys())}")
-                    
+                        raise KeyError(f"Key 0 not found in previous_important_indices_dict. Available keys: {list(previous_important_indices_dict.keys())}")
                     previous_important_indices = previous_important_indices_dict[0]
                     
                     # 标准组态留存率计算：交集/上轮重要组态数
