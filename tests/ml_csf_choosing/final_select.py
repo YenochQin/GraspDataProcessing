@@ -39,11 +39,17 @@ def final_csfs_select(config, logger):
     cal_csfs_file_laod = gdp.GraspFileLoad.from_filepath(str(cal_csfs_file_path), 'CSFs')
     cal_csfs_data = cal_csfs_file_laod.data_file_process()
     logger.info(f"加载本轮计算 CSFs 文件: {cal_csfs_file_path}")
+
+    energy_level_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.level'
+    energy_level_file_load = gdp.LevelsEnergyData.from_filepath(str(energy_level_file_path), 'LEVEL')
+    energy_level_data_pd = energy_level_file_load.energy_level_2_pd()
+    logger.info(f"加载能级数据: {energy_level_file_path}")
+    # 检查组态耦合
+    cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
     
-    csfs_final_coupling_J_collection = gdp.batch_blocks_CSFs_final_coupling_J_collection(cal_csfs_data.CSFs_block_data, rmix_file_data.mix_coefficient_list)
+    csfs_final_coupling_J_collection = gdp.single_block_batch_asfs_CSFs_final_coupling_J_collection(cal_csfs_data.CSFs_block_data[0], rmix_file_data.mix_coefficient_List[0], asfs_position)
     
     levels_import_csfs_indices = gdp.batch_asfs_mix_square_above_threshold(rmix_file_data, config.cutoff_value)
-    import_csfs_indices = gdp.merge_csfs_indices_lists_by_block_key(levels_import_csfs_indices)
 
     selected_csfs = []
     for block_key, indices in import_csfs_indices.items():
