@@ -8,7 +8,6 @@
 import argparse
 import logging
 from typing import Dict, Tuple, List
-from collections import defaultdict
 from pathlib import Path
 import re
 
@@ -32,70 +31,66 @@ def final_csfs_select(config, logger):
     
     rmix_file_load = gdp.GraspFileLoad.from_filepath(str(rmix_file_path), 'mix')
     rmix_file_data = rmix_file_load.data_file_process()
-    logger.info(f"加载 mix coefficient 数据文件: {rmix_file_path}")
+    logger.info(f"加载 mix coefficient 数据文件: {rmix_file_path=}")
     
     # 加载本轮计算CSFs文件
     cal_csfs_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.c'
     cal_csfs_file_laod = gdp.GraspFileLoad.from_filepath(str(cal_csfs_file_path), 'CSFs')
     cal_csfs_data = cal_csfs_file_laod.data_file_process()
-    logger.info(f"加载本轮计算 CSFs 文件: {cal_csfs_file_path}")
+    logger.info(f"加载本轮计算 CSFs 文件: {cal_csfs_file_path=}")
 
     energy_level_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.level'
     energy_level_file_load = gdp.LevelsEnergyData.from_filepath(str(energy_level_file_path), 'LEVEL')
     energy_level_data_pd = energy_level_file_load.energy_level_2_pd()
-    logger.info(f"加载能级数据: {energy_level_file_path}")
+    logger.info(f"加载能级数据: {energy_level_file_path=}")
     # 检查组态耦合
     cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
     
-    csfs_final_coupling_J_collection = gdp.single_block_batch_asfs_CSFs_final_coupling_J_collection(cal_csfs_data.CSFs_block_data[0], rmix_file_data.mix_coefficient_List[0], asfs_position)
+    csfs_final_coupling_J_collection = gdp.single_block_batch_asfs_CSFs_final_coupling_J_collection(
+                                                    cal_csfs_data.CSFs_block_data[0], 
+                                                    rmix_file_data.mix_coefficient_List[0], 
+                                                    asfs_position
+                                                    )
     
-    levels_import_csfs_indices = gdp.batch_asfs_mix_square_above_threshold(rmix_file_data, config.cutoff_value)
-
-    selected_csfs = []
-    for block_key, indices in import_csfs_indices.items():
-        block_selected_csfs = []
-        for idx in indices:
-            # 获取对应组态，这里假设组态列表是按block组织的
-            csf = gdp.CSFs_block_get_CSF(cal_csfs_data.CSFs_block_data[block_key], (block_key,))
-            block_selected_csfs.append(csf)
-            
-        selected_csfs.append(block_selected_csfs)
+    levels_import_csfs_indices = gdp.batch_asfs_mix_square_above_threshold(
+                                            asfs_mix_data=rmix_file_data, 
+                                            threshold=config.cutoff_value, 
+                                            asfs_position=asfs_position
+                                            )
+    block=0 ## temporary use
+    logger.info(f" important csfs (mix coeff > {config.cutoff_value=}) num: {len(levels_import_csfs_indices[block])}")
 
     chosen_middle_J_index = {}
-    for block, value in csfs_final_coupling_J_collection.items():
-        for level in range(rmix_file_load.block_energy_count_list[block]):
-            max_ci_key = max(value, key=lambda k: value[k]['sum_ci'][level])
-            print(f"    Chosen middle J for block {block}, level {level}: {max_ci_key}")
-            print(f"    Max CI: {value[max_ci_key]['sum_ci'][level]}")
-            chosen_middle_J_index[(block, level)] = value[max_ci_key]['indices']
-
-    merged_dict = defaultdict(list)
-    for key, indices_list in chosen_middle_J_index.items():
-        block = key[0]
-        merged_dict[block].extend(indices_list)
-
+    for level in asfs_position:
+        max_ci_key = max(csfs_final_coupling_J_collection, key=lambda k: csfs_final_coupling_J_collection[k]['sum_ci'][level])
+        logger.info(f"    Chosen middle J for level {level=}: {max_ci_key=}")
+        logger.info(f"    Max CI: {csfs_final_coupling_J_collection[max_ci_key]['sum_ci'][level]}")
+        chosen_middle_J_index[(block, level)] = np.array(csfs_final_coupling_J_collection[max_ci_key]['indices'])
+        
+    asfs_chosen_middle_J_indices = {}
+    asfs_chosen_middle_J_indices[block] = [
+                chosen_middle_J_index[(block, lvl)]             # 这里也可以先 .ravel() 如果数组是多维
+                for lvl in asfs_position
+                if (block, lvl) in chosen_middle_J_index
+                ]
+    logger.info(f" select asfs middle J chosen indices length: {len(asfs_chosen_middle_J_indices[block])}")
+    
     final_selected_csfs_indices = {}
-    for (block, chosen_index), (block1, middle_j_index) in zip(import_csfs_indices.items(), merged_dict.items()):
-        print(f"Block {block}")
-        if block == block1:
-            final_selected_csfs_indices[block] = gdp.union_lists_with_order(chosen_index, middle_j_index)
+    final_selected_csfs_indices[block] = np.union1d(levels_import_csfs_indices[block], asfs_chosen_middle_J_indices[block])
 
-    sorted_csfs_data = []
-    for block, csfs_indices in final_selected_csfs_indices.items():
-        block_csfs_data =[]
-        for index in csfs_indices:
-            # print(index)
-            # print(cal_csfs_data.CSFs_block_length[block])
-            if not index > cal_csfs_data.CSFs_block_length[block]:
-                block_csfs_data.extend(cal_csfs_data.CSFs_block_data[block][index])
-        sorted_csfs_data.append(block_csfs_data)
+    selected_csfs = []
+    for block in range(cal_csfs_data.block_num):
+        block_csfs = gdp.CSFs_block_get_CSF(cal_csfs_data.CSFs_block_data[block], final_selected_csfs_indices[block])
+        logger.info(f" {block=} selected csfs num: {len(block_csfs)=}")
+        selected_csfs.append(block_csfs)
         
     sorted_csfs_file_path = config.scf_cal_path / f"{config.conf}_{config.cal_loop_num}_mJ-1_im{config.cutoff_value:.0e}.c"
 
     new_csfs_data = gdp.write_sorted_CSFs_to_cfile(
                         cal_csfs_data.subshell_info_raw, 
-                        sorted_csfs_data, 
+                        selected_csfs, 
                         output_file=sorted_csfs_file_path)
+    logger.info(f" csfs file writed to path: {sorted_csfs_file_path=}")
 
     return new_csfs_data
 
