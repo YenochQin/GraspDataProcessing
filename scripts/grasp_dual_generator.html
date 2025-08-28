@@ -1559,11 +1559,73 @@ if check_step_should_run "rsave" "\$loop"; then
     cp \${conf}_\${loop}.w ..
 fi
 
-# jj2lsj step (loop 1)
+# # jj2lsj step (loop 1)
+# if check_step_should_run "jj2lsj" "$loop"; then
+#     if ! check_step_completed "jj2lsj" "$loop" "$conf"; then
+#         input_commands="${conf}_${loop}
+# n
+# y
+# y"
+#         safe_grasp_execute "jj2lsj" "$input_commands" jj2lsj
+#     fi
+#     
+#     # Check if should stop after this step
+#     if check_should_stop_after_step "jj2lsj"; then
+#         log_with_timestamp "[STOP] Stop execution after jj2lsj step according to configuration"
+#         exit 0
+#     fi
+# else
+#     log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
+# fi
+
+# # rlevels step (loop 1)
+# if check_step_should_run "rlevels" "\$loop"; then
+#     if ! check_step_completed "rlevels" "\$loop" "\$conf"; then
+#         safe_grasp_execute "rlevels" "\${conf}_\${loop}" bash -c "rlevels \${conf}_\${loop}.m > \${conf}_\${loop}.level"
+#     fi
+#     
+#     # Check if should stop after this step
+#     if check_should_stop_after_step "rlevels"; then
+#         log_with_timestamp "[STOP] Stop execution after rlevels step according to configuration"
+#         exit 0
+#     fi
+# else
+#      log_with_timestamp "[SKIP] Skip step: rlevels (according to step control configuration)"
+#  fi
+
+cal_method='rci'
+
+# rci step
+if check_step_should_run "rci" "\$loop"; then
+    if ! check_step_completed "rci" "\$loop" "\$conf"; then
+        input_commands="y
+\${conf}_\${loop}
+y
+y
+1.d-6
+y
+n
+n
+y
+5
+\${cal_levels}"
+        safe_grasp_execute "rci_mpi" "\$input_commands" mpirun -np \${processor} rci_mpi
+    fi
+    
+    # Check if should stop after this step
+    if check_should_stop_after_step "rci"; then
+        log_with_timestamp "[STOP] Stop execution after rci step according to configuration"
+        exit 0
+    fi
+else
+    log_with_timestamp "[SKIP] Skip step: rci (according to step control configuration)"
+fi
+
+# jj2lsj step (non-loop-1)
 if check_step_should_run "jj2lsj" "\$loop"; then
     if ! check_step_completed "jj2lsj" "\$loop" "\$conf"; then
         input_commands="\${conf}_\${loop}
-n
+y
 y
 y"
         safe_grasp_execute "jj2lsj" "\$input_commands" jj2lsj
@@ -1578,10 +1640,10 @@ else
     log_with_timestamp "[SKIP] Skip step: jj2lsj (according to step control configuration)"
 fi
 
-# rlevels step (loop 1)
+# rlevels step (non-loop-1)
 if check_step_should_run "rlevels" "\$loop"; then
     if ! check_step_completed "rlevels" "\$loop" "\$conf"; then
-        safe_grasp_execute "rlevels" "\${conf}_\${loop}" bash -c "rlevels \${conf}_\${loop}.m > \${conf}_\${loop}.level"
+        safe_grasp_execute "rlevels" "\${conf}_\${loop}" bash -c "rlevels \${conf}_\${loop}.cm > \${conf}_\${loop}.level"
     fi
     
     # Check if should stop after this step
