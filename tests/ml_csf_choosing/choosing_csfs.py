@@ -542,7 +542,7 @@ def perform_csfs_selection(config):
     selection_method = "unknown"
     
     if config.cal_loop_num == 1:
-        # 第一轮使用initial_selected_indices（来自selected_csfs_file或空）
+        # 第一轮使用改进的选择策略
         selected_csfs_indices_dict, indices_status = load_selected_indices(config, target_pool_csfs_data.block_num)
         
         # 记录加载状态
@@ -556,55 +556,108 @@ def perform_csfs_selection(config):
                 logger.warning(f"{indices_status['error']}，使用空的indices")
             else:
                 logger.error(indices_status['error'])
-        selection_method = "initial_selected"
-        logger.info("第一轮选择，使用基础selected indices")
         
-        # 第一轮initial_selected数量过多的情况
+        selection_method = "improved_first_round"
+        logger.info("🎯 第一轮选择，使用改进策略")
+        
+        # 计算目标选择数量
         total_target_pool = sum(len(target_pool_csfs_data.CSFs_block_data[block]) 
-        for block in range(target_pool_csfs_data.block_num))
+                              for block in range(target_pool_csfs_data.block_num))
         total_target_chosen = math.ceil(total_target_pool * config.chosen_ratio)
         
-        # 检查initial_selected的总数量
+        # 计算当前selected数量
         total_initial_selected = sum(len(selected_csfs_indices_dict.get(block, [])) 
-                    for block in range(target_pool_csfs_data.block_num))
+                                   for block in range(target_pool_csfs_data.block_num))
         
-        # 检查是否需要扩展选择（当selected_csfs数量远小于total_target_pool时）
-        ratio_selected_to_pool = total_initial_selected / total_target_pool if total_target_pool > 0 else 0
+        logger.info(f"📊 Target pool总数量: {total_target_pool}")
+        logger.info(f"📊 目标选择数量: {total_target_chosen}")
+        logger.info(f"📊 初筛CSFs数量: {total_initial_selected}")
         
-        # 如果selected_csfs数量比total_target_pool小两个数量级或更多，则使用expansion_ratio扩展
-        if ratio_selected_to_pool < 0.01:  # 小于1%，约两个数量级
+        # 如果有selected_csfs_indices_dict，使用改进策略
+        if selected_csfs_indices_dict and any(len(indices) > 0 for indices in selected_csfs_indices_dict.values()):
+            # 获取扩展比例
             expansion_ratio = getattr(config, 'expansion_ratio', 2)
-            expanded_target_chosen = math.ceil(total_target_chosen * expansion_ratio)
             
-            logger.warning(f"⚠️ Selected CSFs数量远小于target pool: {total_initial_selected} / {total_target_pool} = {ratio_selected_to_pool:.4%}")
-            logger.info(f"🔧 应用扩展比例 {expansion_ratio}，扩展目标数量: {total_target_chosen} -> {expanded_target_chosen}")
+            # 计算需要从未选择池中选择的数量
+            expansion_count = math.ceil(total_initial_selected * expansion_ratio)
+            logger.info(f"🔧 扩展比例: {expansion_ratio}, 扩展数量: {expansion_count}")
             
-            # 更新目标选择数量
-            total_target_chosen = expanded_target_chosen
-        
-        if total_initial_selected > total_target_chosen:
-            logger.warning(f"⚠️ Initial selected CSFs数量过多: {total_initial_selected} > 目标数量: {total_target_chosen}")
-            logger.info(f"🔧 使用cutoff_value={config.cutoff_value}进行截断处理")
+            total_selected_after_expansion = total_initial_selected + expansion_count
             
-            # 对每个块进行截断处理
-            truncated_indices_dict, truncate_status = truncate_initial_selected_with_weights(config, selected_csfs_indices_dict, target_pool_csfs_data)
+            # 如果扩展后仍低于目标，则补齐到目标数量
+            supplement_count = max(0, total_target_chosen - total_selected_after_expansion)
             
-            # 记录截断结果
-            if truncate_status['weight_loading']['loaded']:
-                logger.info(f"🔍 {truncate_status['weight_loading']['message']}: {truncate_status['weight_loading']['file_path']}")
-            elif 'error' in truncate_status['weight_loading']:
-                logger.warning(truncate_status['weight_loading']['error'])
+            if supplement_count > 0:
+                logger.info(f"📈 扩展后数量: {total_selected_after_expansion}, 目标数量: {total_target_chosen}")
+                logger.info(f"🔧 需要补齐数量: {supplement_count}")
             
-            for detail in truncate_status['truncation_details']:
-                if detail['method'] == 'weight_based':
-                    logger.info(f"块{detail['block']}: 基于权重排序截断 {detail['original_count']} -> {detail['truncated_count']}")
-                elif detail['method'] == 'simple':
-                    logger.info(f"块{detail['block']}: 简单截断 {detail['original_count']} -> {detail['truncated_count']}")
-                if detail['random_space'] > 0:
-                    logger.info(f"         预留随机选择空间: {detail['random_space']}")
+            # 为每个块分配扩展和补充数量
+            final_indices_dict = {}
             
-            selected_csfs_indices_dict = truncated_indices_dict
-            logger.info("✅ 完成initial_selected截断处理")
+            for block in range(target_pool_csfs_data.block_num):
+                block_csfs = target_pool_csfs_data.CSFs_block_data[block]
+                block_selected = selected_csfs_indices_dict.get(block, [])
+                
+                # 计算该块在总体中的比例
+                block_ratio = len(block_csfs) / total_target_pool if total_target_pool > 0 else 0
+                
+                # 按比例分配扩展数量和补充数量
+                block_expansion_count = math.ceil(expansion_count * block_ratio)
+                block_supplement_count = math.ceil(supplement_count * block_ratio)
+                
+                # 计算未选择的索引
+                all_indices = np.arange(len(block_csfs))
+                if len(block_selected) > 0:
+                    selected_set = set(block_selected)
+                    unselected_mask = ~np.isin(all_indices, list(selected_set))
+                    unselected_indices = all_indices[unselected_mask]
+                else:
+                    unselected_indices = all_indices
+                
+                # 从未选择池中随机选择扩展数量 + 补充数量
+                additional_indices = []
+                total_additional_needed = block_expansion_count + block_supplement_count
+                
+                if len(unselected_indices) > 0 and total_additional_needed > 0:
+                    actual_additional = min(total_additional_needed, len(unselected_indices))
+                    additional_indices = np.random.choice(
+                        unselected_indices, 
+                        size=actual_additional, 
+                        replace=False
+                    ).tolist()
+                
+                # 合并选择的索引
+                final_indices_dict[block] = block_selected + additional_indices
+                
+                logger.info(f"块{block}: selected={len(block_selected)}, expanded+supplement={len(additional_indices)}, total={len(final_indices_dict[block])}")
+            
+            # 更新selected_csfs_indices_dict
+            selected_csfs_indices_dict = final_indices_dict
+            logger.info("✅ 完成改进的第一轮选择")
+        else:
+            # 如果没有selected indices，直接按比例随机选择
+            logger.info("📝 未找到selected indices，使用传统随机选择")
+            final_indices_dict = {}
+            
+            for block in range(target_pool_csfs_data.block_num):
+                block_csfs = target_pool_csfs_data.CSFs_block_data[block]
+                block_target_count = math.ceil(len(block_csfs) * config.chosen_ratio)
+                
+                if block_target_count > 0 and len(block_csfs) > 0:
+                    all_indices = np.arange(len(block_csfs))
+                    chosen_indices = np.random.choice(
+                        all_indices,
+                        size=min(block_target_count, len(block_csfs)),
+                        replace=False
+                    ).tolist()
+                    final_indices_dict[block] = chosen_indices
+                else:
+                    final_indices_dict[block] = []
+                
+                logger.info(f"块{block}: 随机选择了{len(final_indices_dict[block])}个CSFs")
+            
+            selected_csfs_indices_dict = final_indices_dict
+            logger.info("✅ 完成传统随机选择")
     elif config.cal_error_num > 0 and config.continue_cal:
         # 错误重试模式：使用上一轮重要组态进行随机选择
         selected_csfs_indices_dict, prev_status = load_previous_chosen_indices(config)
