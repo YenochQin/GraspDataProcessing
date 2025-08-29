@@ -120,9 +120,9 @@ safe_get_config_value() {
     local temp_error=$(mktemp)
     
     # Execute configuration reading
-    python "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" get "$key" -f "$config_file" > "$temp_output" 2> "$temp_error"
+    python "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/csfs_ml_choosing_config_load.py" get "$key" -f "$config_file" > "$temp_output" 2> "$temp_error"
     local exit_code=$?
-    
+
     # Read results
     local value=$(cat "$temp_output")
     local error_msg=$(cat "$temp_error")
