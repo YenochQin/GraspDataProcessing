@@ -320,7 +320,7 @@ def main(config):
                 
                 # 验证更新后的覆盖情况
                 updated_descriptors = raw_csfs_descriptors[final_chosen_indices]
-                is_covered_after, _ = validate_csf_descriptors_coverage(
+                is_covered_after, _ = gk.validate_csf_descriptors_coverage(
                     updated_descriptors,
                     with_subshell_info=config.ml_config.get('descriptors_with_subshell_info', False)
                 )
