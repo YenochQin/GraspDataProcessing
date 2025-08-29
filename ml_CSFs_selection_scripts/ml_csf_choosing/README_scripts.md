@@ -60,7 +60,7 @@
 
 1. **环境要求**：
    - Python 3.12+
-   - 已安装 graspdataprocessing 包
+   - 已安装 graspkit 包
    - 相关依赖包（numpy, pandas, scikit-learn等）
 
 2. **工作目录要求**：
@@ -80,7 +80,7 @@
 cd /home/computer-0-2/4thdd/GdI/cv6odd1_j3as5/
 
 # 2. 运行快速脚本
-/home/computer-0-2/AppFiles/GraspDataProcessing/tests/ml_csf_choosing/quick_run.sh
+/home/computer-0-2/AppFiles/graspkit/tests/ml_csf_choosing/quick_run.sh
 
 # 3. 选择要运行的程序（1-4）
 ```
@@ -92,10 +92,10 @@ cd /home/computer-0-2/4thdd/GdI/cv6odd1_j3as5/
 cd /home/computer-0-2/4thdd/GdI/cv6odd1_j3as5/
 
 # 运行训练程序
-/home/computer-0-2/AppFiles/GraspDataProcessing/tests/ml_csf_choosing/run_ml.sh train
+/home/computer-0-2/AppFiles/graspkit/tests/ml_csf_choosing/run_ml.sh train
 
 # 运行所有程序
-/home/computer-0-2/AppFiles/GraspDataProcessing/tests/ml_csf_choosing/run_ml.sh all
+/home/computer-0-2/AppFiles/graspkit/tests/ml_csf_choosing/run_ml.sh all
 ```
 
 ### 创建别名（可选）
@@ -104,8 +104,8 @@ cd /home/computer-0-2/4thdd/GdI/cv6odd1_j3as5/
 
 ```bash
 # 添加到 ~/.bashrc
-alias ml-quick='/home/computer-0-2/AppFiles/GraspDataProcessing/tests/ml_csf_choosing/quick_run.sh'
-alias ml-run='/home/computer-0-2/AppFiles/GraspDataProcessing/tests/ml_csf_choosing/run_ml.sh'
+alias ml-quick='/home/computer-0-2/AppFiles/graspkit/tests/ml_csf_choosing/quick_run.sh'
+alias ml-run='/home/computer-0-2/AppFiles/graspkit/tests/ml_csf_choosing/run_ml.sh'
 
 # 重新加载配置
 source ~/.bashrc
@@ -119,12 +119,12 @@ ml-run train    # 直接运行训练
 
 1. **权限错误**：
    ```bash
-   chmod +x /home/computer-0-2/AppFiles/GraspDataProcessing/tests/ml_csf_choosing/*.sh
+   chmod +x /home/computer-0-2/AppFiles/graspkit/tests/ml_csf_choosing/*.sh
    ```
 
 2. **Python模块未找到**：
    - 确保在正确的Python环境中
-   - 检查 graspdataprocessing 包是否已安装
+   - 检查 graspkit 包是否已安装
 
 3. **配置文件未找到**：
    - 确保在包含 `config.toml` 的目录中运行脚本

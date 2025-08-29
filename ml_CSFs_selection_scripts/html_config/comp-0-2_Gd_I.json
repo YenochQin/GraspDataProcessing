@@ -16,7 +16,7 @@
     ],
     "root_path": "/home/computer-0-2/4thdd/GdI/cv5even2/j2/as3",
     "selected_csfs": "even2cvIas2_even1",
-    "grasp_data_processing_root": "/home/computer-0-2/AppFiles/GraspDataProcessing",
+    "grasp_data_processing_root": "/home/computer-0-2/AppFiles/graspkit",
     "conda_path": "/home/computer-0-2/AppFiles/miniconda3",
     "chosen_ratio": "0.1",
     "cutoff_value": "1e-09",

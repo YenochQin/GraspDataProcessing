@@ -28,7 +28,7 @@ from sklearn.model_selection import train_test_split
 try:
     import graspkit as gk
 except ImportError:
-    print("错误: 无法导入 graspdataprocessing 模块")
+    print("错误: 无法导入 graspkit 模块")
     sys.exit(1)
 
 important_config_count_history = []

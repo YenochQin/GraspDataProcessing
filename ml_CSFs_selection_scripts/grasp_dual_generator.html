@@ -472,9 +472,9 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="grasp_data_processing_root">GraspDataProcessing根路径 *</label>
-                        <input type="text" id="grasp_data_processing_root" placeholder="例如: /home/workstation3/AppFiles/GraspDataProcessing">
-                        <div class="help-text">GraspDataProcessing库的根目录路径</div>
+                        <label for="grasp_data_processing_root">graspkit根路径 *</label>
+                        <input type="text" id="grasp_data_processing_root" placeholder="例如: /home/workstation3/AppFiles/graspkit">
+                        <div class="help-text">graspkit库的根目录路径</div>
                     </div>
 
                     <div class="form-group">
@@ -797,7 +797,7 @@
             if (!config.root_path) missingFields.push('根路径');
             if (!config.selected_csfs) missingFields.push('初筛CSFs文件名');
             if (!config.loop1_rwfn_file) missingFields.push('预备径向波函数');
-            if (!config.grasp_data_processing_root) missingFields.push('GraspDataProcessing根路径');
+            if (!config.grasp_data_processing_root) missingFields.push('graspkit根路径');
             if (!config.atomic_number) missingFields.push('原子序数');
             if (!config.mass_number) missingFields.push('质量数');
             
@@ -968,7 +968,7 @@ random_state = 42
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
-# Set GraspDataProcessing root directory path for script portability
+# Set graspkit root directory path for script portability
 GRASPKITTOOLS_ROOT="${config.grasp_data_processing_root}"
 export PATH="\${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts:\${PATH}"
 
@@ -1004,7 +1004,7 @@ log_with_timestamp "SUCCESS: Conda environment activated successfully"
 print_environment_info
 
 ###########################################
-# GraspDataProcessing package path and tool script paths set at script beginning
+# graspkit package path and tool script paths set at script beginning
 log_with_timestamp "Set PYTHONPATH: \$PYTHONPATH"
 log_with_timestamp "Set PATH: \$PATH"
 ###########################################

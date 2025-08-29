@@ -13,7 +13,7 @@
     "root_path": "/home/workstation2/nvmesdd2T/graspcal/Gd/GdI/ml_csfs_choosing/cv6odd2/j2/as5",
     "selected_csfs": "GdIevenIcvIas2_even2",
     "loop1_rwfn_file": "cv6even2_j3as5_1.w",
-    "grasp_data_processing_root": "/home/workstation2/AppFiles/GraspDataProcessing",
+    "grasp_data_processing_root": "/home/workstation2/AppFiles/graspkit",
     "conda_path": "/home/workstation2/AppFiles/miniconda3",
     "chosen_ratio": "0.08",
     "cutoff_value": "1e-09",

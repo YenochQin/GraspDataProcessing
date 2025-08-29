@@ -7,7 +7,7 @@
 '''
 import numpy as np
 import pandas as pd
-import graspdataprocessing as gdt
+import graspkit as gdt
 
 
 level_test = {"atom": "NdGalike", 

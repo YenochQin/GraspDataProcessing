@@ -25,7 +25,7 @@ def check_ann_source():
     
     try:
         import graspkit as gk
-        from graspdataprocessing.machine_learning_module.ANN import ANNClassifier
+        from graspkit.machine_learning_module.ANN import ANNClassifier
         import inspect
         
         # 检查实际加载的ANN.py文件
@@ -68,7 +68,7 @@ def test_model_creation():
     print("=" * 60)
     
     try:
-        from graspdataprocessing.machine_learning_module.ANN import ANNClassifier
+        from graspkit.machine_learning_module.ANN import ANNClassifier
         import torch.nn as nn
         
         # 创建分类器实例
@@ -125,13 +125,13 @@ def check_import_paths():
     print(f"\n项目根目录: {project_root}")
     print(f"源码路径: {src_path}")
     
-    # 检查graspdataprocessing导入
+    # 检查graspkit导入
     try:
         import graspkit as gk
-        print(f"\n✅ graspdataprocessing导入成功")
+        print(f"\n✅ graspkit导入成功")
         print(f"   位置: {gk.__file__}")
         
-        # 检查是否有多个graspdataprocessing
+        # 检查是否有多个graspkit
         import pkgutil
         grasp_modules = []
         for finder, name, ispkg in pkgutil.iter_modules():
@@ -142,7 +142,7 @@ def check_import_paths():
             print(f"\n找到的相关模块: {grasp_modules}")
         
     except Exception as e:
-        print(f"\n❌ graspdataprocessing导入失败: {e}")
+        print(f"\n❌ graspkit导入失败: {e}")
         return False
     
     # 检查已安装的包
@@ -237,7 +237,7 @@ def test_simple_forward():
     print("=" * 60)
     
     try:
-        from graspdataprocessing.machine_learning_module.ANN import ANNClassifier
+        from graspkit.machine_learning_module.ANN import ANNClassifier
         import torch
         
         # 创建分类器
@@ -321,7 +321,7 @@ def main():
         print("\n建议解决方案:")
         print("1. 清理所有缓存文件")
         print("2. 确保使用最新的源码")
-        print("3. 检查是否有多个graspdataprocessing包")
+        print("3. 检查是否有多个graspkit包")
         print("4. 如果问题持续，使用运行时修复方案")
 
 if __name__ == "__main__":

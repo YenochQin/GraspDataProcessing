@@ -19,7 +19,7 @@ from typing import List, Dict, Tuple, Optional
 try:
     sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
     import graspkit as gk
-    from graspdataprocessing.data_IO.fig_settings import configure_matplotlib_for_publication
+    from graspkit.data_IO.fig_settings import configure_matplotlib_for_publication
     use_project_style = True
 except ImportError:
     print("Warning: 无法导入项目模块，使用默认matplotlib样式")

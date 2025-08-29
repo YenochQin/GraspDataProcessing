@@ -15,7 +15,7 @@
     ],
     "root_path": "/home/workstation3/caldata/GdI/cv6odd1/as4/j2",
     "selected_csfs": "mJ-1-90chosenas3_odd2",
-    "grasp_data_processing_root": "/home/workstation3/AppFiles/GraspDataProcessing",
+    "grasp_data_processing_root": "/home/workstation3/AppFiles/graspkit",
     "conda_path": "/home/workstation3/AppFiles/miniconda3",
     "chosen_ratio": "0.1",
     "cutoff_value": "1e-09",

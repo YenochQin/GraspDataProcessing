@@ -19,12 +19,12 @@ from typing import Any, Dict, List, Optional, Protocol, Tuple
 try:
     import graspkit as gk
 except ImportError:
-    print("错误: 无法导入 graspdataprocessing 模块")
+    print("错误: 无法导入 graspkit 模块")
     sys.exit(1)
 
 class CSFs(Protocol):
     """
-    为 graspdataprocessing.CSFs 定义一个协议，用于类型提示
+    为 graspkit.CSFs 定义一个协议，用于类型提示
     """
     block_num: int
     CSFs_block_data: List[List[Any]]

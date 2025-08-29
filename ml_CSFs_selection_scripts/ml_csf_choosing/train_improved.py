@@ -32,7 +32,7 @@ import os
 try:
     import graspkit as gk
 except ImportError:
-    print("错误: 无法导入 graspdataprocessing 模块")
+    print("错误: 无法导入 graspkit 模块")
     sys.exit(1)
 
 # 新增：XGBoost集成
@@ -44,7 +44,7 @@ except ImportError:
     print("警告: XGBoost不可用，将使用RandomForest替代")
 
 try:
-    from graspdataprocessing.machine_learning_module.ANN import ANNClassifier
+    from graspkit.machine_learning_module.ANN import ANNClassifier
     ANN_AVAILABLE = True
 except ImportError:
     ANN_AVAILABLE = False

@@ -9,8 +9,8 @@
 #SBATCH --error=%j_%x.log
 . /usr/share/Modules/init/zsh
 
-# Set GraspDataProcessing root directory path for script portability
-GRASPKITTOOLS_ROOT="/home/computer-0-2/AppFiles/GraspDataProcessing"
+# Set graspkit root directory path for script portability
+GRASPKITTOOLS_ROOT="/home/computer-0-2/AppFiles/graspkit"
 export PATH="${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts:${PATH}"
 
 # Load common function library (absolute path to eliminate code duplication)
@@ -45,7 +45,7 @@ log_with_timestamp "SUCCESS: Conda environment activated successfully"
 print_environment_info
 
 ###########################################
-# GraspDataProcessing package path and tool script paths set at script beginning
+# graspkit package path and tool script paths set at script beginning
 log_with_timestamp "Set PYTHONPATH: $PYTHONPATH"
 log_with_timestamp "Set PATH: $PATH"
 ###########################################
