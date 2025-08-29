@@ -3,7 +3,6 @@
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=46
 #SBATCH --cpus-per-task=1
-#SBATCH --hint=nomultithread
 #SBATCH -p batch
 #SBATCH --output=%j_%x.log
 #SBATCH --error=%j_%x.log
@@ -516,7 +515,7 @@ cal_method='rmcdhf'
 # rangular step
 if check_step_should_run "rangular" "$loop"; then
     if ! check_step_completed "rangular" "$loop" "$conf"; then
-        safe_grasp_execute "rangular_mpi" "y" srun --mpi=pmix --cpu-bind=hwthread --ntasks=${processor} rangular_mpi
+        safe_grasp_execute "rangular_mpi" "y" srun --mpi=pmix --cpu-bind=thread --ntasks=${processor} rangular_mpi
     fi
     
     # Check if should stop after this step
@@ -560,7 +559,7 @@ ${cal_levels}
 ${orbital_params}
 
 100"
-        safe_grasp_execute "rmcdhf_mem_mpi" "$input_commands" srun --mpi=pmix --cpu-bind=hwthread --ntasks=${processor} rmcdhf_mem_mpi
+        safe_grasp_execute "rmcdhf_mem_mpi" "$input_commands" srun --mpi=pmix --cpu-bind=thread --ntasks=${processor} rmcdhf_mem_mpi
     fi
     
     # Check if should stop after this step
@@ -642,7 +641,7 @@ n
 y
 5
 ${cal_levels}"
-        safe_grasp_execute "rci_mpi" "$input_commands" srun --mpi=pmix --cpu-bind=hwthread --ntasks=${processor} rci_mpi
+        safe_grasp_execute "rci_mpi" "$input_commands" srun --mpi=pmix --cpu-bind=thread --ntasks=${processor} rci_mpi
     fi
     
     # Check if should stop after this step
@@ -733,7 +732,7 @@ n
 y
 5
 ${cal_levels}"
-        safe_grasp_execute "rci_mpi" "$input_commands" srun --mpi=pmix --cpu-bind=hwthread --ntasks=${processor} rci_mpi
+        safe_grasp_execute "rci_mpi" "$input_commands" srun --mpi=pmix --cpu-bind=thread --ntasks=${processor} rci_mpi
     fi
     
     # Check if should stop after this step

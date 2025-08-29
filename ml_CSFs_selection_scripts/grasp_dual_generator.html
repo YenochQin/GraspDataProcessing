@@ -1483,7 +1483,7 @@ cal_method='rmcdhf'
 # rangular step
 if check_step_should_run "rangular" "\$loop"; then
     if ! check_step_completed "rangular" "\$loop" "\$conf"; then
-        safe_grasp_execute "rangular_mpi" "y" srun --mpi=pmix --cpu-bind=hwthread --ntasks=\${processor} rangular_mpi
+        safe_grasp_execute "rangular_mpi" "y" srun --mpi=pmix --cpu-bind=thread --ntasks=\${processor} rangular_mpi
     fi
     
     # Check if should stop after this step
@@ -1527,7 +1527,7 @@ if check_step_should_run "rmcdhf" "\$loop"; then
 \${orbital_params}
 
 100"
-        safe_grasp_execute "rmcdhf_mem_mpi" "\$input_commands" mpirun -np \${processor} rmcdhf_mem_mpi
+        safe_grasp_execute "rmcdhf_mem_mpi" "\$input_commands" srun --mpi=pmix --cpu-bind=thread --ntasks=\${processor} rmcdhf_mem_mpi
     fi
     
     # Check if should stop after this step
@@ -1609,7 +1609,7 @@ n
 y
 5
 \${cal_levels}"
-        safe_grasp_execute "rci_mpi" "\$input_commands" mpirun -np \${processor} rci_mpi
+        safe_grasp_execute "rci_mpi" "\$input_commands" srun --mpi=pmix --cpu-bind=thread --ntasks=\${processor} rci_mpi
     fi
     
     # Check if should stop after this step
@@ -1700,7 +1700,7 @@ n
 y
 5
 \${cal_levels}"
-        safe_grasp_execute "rci_mpi" "\$input_commands" mpirun -np \${processor} rci_mpi
+        safe_grasp_execute "rci_mpi" "\$input_commands" srun --mpi=pmix --cpu-bind=thread --ntasks=\${processor} rci_mpi
     fi
     
     # Check if should stop after this step
