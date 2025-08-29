@@ -10,14 +10,15 @@
 . /usr/share/Modules/init/zsh
 
 # Set GraspDataProcessing root directory path for script portability
-GRASP_DATA_PROCESSING_ROOT="/home/computer-0-2/AppFiles/GraspDataProcessing"
-export PYTHONPATH="${GRASP_DATA_PROCESSING_ROOT}/src:${PYTHONPATH}"
-export PATH="${GRASP_DATA_PROCESSING_ROOT}/scripts:${PATH}"
+GRASPKITTOOLS_ROOT="/home/computer-0-2/AppFiles/GraspDataProcessing"
+export PATH="${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts:${PATH}"
 
 # Load common function library (absolute path to eliminate code duplication)
-source "${GRASP_DATA_PROCESSING_ROOT}/scripts/common_functions.sh"
-
-
+source "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/common_functions.sh"
+log_with_timestamp "Setting absolute paths for Python programs..."
+ML_PYTHON_DIR="${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/ml_csf_choosing"
+log_with_timestamp "SUCCESS: Python program path setup complete: $ML_PYTHON_DIR"
+###########################################
 log_with_timestamp "========== Starting sbatch script execution ========="
 log_with_timestamp "Job name: ${SLURM_JOB_NAME:-Not set}"
 log_with_timestamp "Job ID: ${SLURM_JOB_ID:-Not set}"
@@ -52,7 +53,6 @@ log_with_timestamp "Set PATH: $PATH"
 log_with_timestamp "Checking Python environment..."
 which python
 python --version
-which csfs_ml_choosing_config_load.py
 ###########################################
 ## Read configuration parameters from config.toml (in calculation root directory)
 log_with_timestamp "Reading configuration parameters from config.toml..."
@@ -84,13 +84,8 @@ log_config_params "$atom" "$conf" "$processor" "$Active_space" "$cal_levels"
 log_with_timestamp "Initial wavefunction file: $loop1_rwfn_file"
 ###########################################
 # Update root_path in configuration file
-run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set root_path ${cal_dir} -f "${config_file}"
+run_python_with_env "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/csfs_ml_choosing_config_load.py" set root_path ${cal_dir} -f "${config_file}"
 log_with_timestamp_and_path "Calculation directory" "$cal_dir"
-###########################################
-log_with_timestamp "Setting absolute paths for Python programs..."
-ML_PYTHON_DIR="${GRASP_DATA_PROCESSING_ROOT}/tests/ml_csf_choosing"
-log_with_timestamp "SUCCESS: Python program path setup complete: $ML_PYTHON_DIR"
-
 ###########################################
 # Read step control parameters
 log_with_timestamp "Reading step control configuration..."
@@ -368,9 +363,9 @@ do_step_control_reset() {
         log_with_timestamp "[RESTART] Breakpoint restart completed, resetting step control settings to normal mode..."
         
         # Reset step control settings
-        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.start_step "auto" -f "${config_file}"
-        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.end_step "auto" -f "${config_file}"
-        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set step_control.enable_step_control "false" -f "${config_file}"
+        run_python_with_env "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/csfs_ml_choosing_config_load.py" set step_control.start_step "auto" -f "${config_file}"
+        run_python_with_env "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/csfs_ml_choosing_config_load.py" set step_control.end_step "auto" -f "${config_file}"
+        run_python_with_env "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/csfs_ml_choosing_config_load.py" set step_control.enable_step_control "false" -f "${config_file}"
         
         # Update local variables
         start_step="auto"
@@ -421,8 +416,8 @@ if [[ "$backward_loop_needed" == "true" ]]; then
         log_with_timestamp "✅ 已回退到目标轮次 $target_backward_loop，开始重新执行train.py"
         
         # 清除回退标志
-        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set backward_loop_needed false -f "${config_file}"
-        run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set target_backward_loop 0 -f "${config_file}"
+        run_python_with_env "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/csfs_ml_choosing_config_load.py" set backward_loop_needed false -f "${config_file}"
+        run_python_with_env "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/csfs_ml_choosing_config_load.py" set target_backward_loop 0 -f "${config_file}"
         
         # 直接跳转到train.py执行
         log_with_timestamp "🚀 跳转到第 $loop 轮train.py重新训练..."
@@ -801,7 +796,7 @@ fi
 
 log_with_timestamp "返回上级目录..."
 cd ..
-run_python_with_env "${GRASP_DATA_PROCESSING_ROOT}/scripts/csfs_ml_choosing_config_load.py" set cal_method ${cal_method} -f "${config_file}"
+run_python_with_env "${GRASPKITTOOLS_ROOT}/ml_CSFs_selection_scripts/csfs_ml_choosing_config_load.py" set cal_method ${cal_method} -f "${config_file}"
 else
     log_with_timestamp "🔄 跳过所有GRASP计算步骤 (backward loop mode - jumping to train)"
 fi
