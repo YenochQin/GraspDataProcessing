@@ -1,6 +1,6 @@
-# GraspDataProcessing Scripts and Auxiliary Files
+# Graspkit Scripts and Auxiliary Files
 
-This directory contains auxiliary scripts, test files, and documentation that have been separated from the main GraspDataProcessing Python package. These files support the operation and usage of the core GraspDataProcessing library but are not part of the main package itself.
+This directory contains auxiliary scripts, test files, and documentation that have been separated from the main Graspkit Python package. These files support the operation and usage of the core Graspkit library but are not part of the main package itself.
 
 ## 🎯 Purpose
 
@@ -34,25 +34,17 @@ Comprehensive testing and examples:
 | `cpp_parallel_csf/` | C++ descriptor parallelization tests |
 | Root files | Utility test scripts for data validation |
 
-### `modify_logs/` - Development Documentation
-Complete development history with bilingual documentation.
 
 ## 🚀 Installation Guide
 
-### Method 1: GitHub Release (Recommended)
+### Method: GitHub Release (Recommended)
 Download the latest release from GitHub:
 ```bash
 # Download from GitHub releases page
-wget https://github.com/YenochQin/graspdataprocessing/releases/latest/download/grasp-data-processing-x.x.x-py3-none-any.whl
+wget https://github.com/YenochQin/Graspkit/releases/latest/download/grasp-data-processing-<graspkit-version>-py3-none-any.whl
 
 # Install the package
-pip install grasp-data-processing-x.x.x-py3-none-any.whl
-```
-
-### Method 2: Test PyPI Installation
-Install from Test PyPI repository:
-```bash
-pip install -i https://test.pypi.org/simple/ grasp-data-processing
+pip install grasp-data-processing-<graspkit-version>-py3-none-any.whl
 ```
 
 ## 📦 System Requirements
@@ -145,7 +137,7 @@ python scripts/csfs_ml_choosing_config_load.py validate -f my_config.toml
 # Add to ~/.bashrc or ~/.zshrc
 export GRASP_PATH="/path/to/grasp2018"
 export CSFS_DESCRIPTORS_PATH="/path/to/CSFs_2_descripors"
-export PYTHONPATH="/path/to/GraspDataProcessing/src:$PYTHONPATH"
+export PYTHONPATH="/path/to/Graspkit/src:$PYTHONPATH"
 ```
 
 ### SLURM Configuration
@@ -159,7 +151,7 @@ Update `scripts/run_script.sh` for your cluster:
 #SBATCH --output=%j_%x.log
 
 # Paths
-GRASP_DATA_PROCESSING_ROOT="/your/path/to/GraspDataProcessing"
+GRASP_DATA_PROCESSING_ROOT="/your/path/to/Graspkit"
 source /your/path/to/miniconda3/etc/profile.d/conda.sh
 conda activate your_env_name
 ```
@@ -180,7 +172,7 @@ conda activate your_env_name
 ### Verification Steps
 ```bash
 # Test Python package
-python -c "import graspdataprocessing; print('✅ Package OK')"
+python -c "import Graspkit; print('✅ Package OK')"
 
 # Test GRASP installation
 which rangular_mpi && echo "✅ GRASP OK"
@@ -191,21 +183,3 @@ which csf_descriptor && echo "✅ Descriptors OK"
 # Test web interface
 ls scripts/grasp_dual_generator.html && echo "✅ Web interface OK"
 ```
-
-## 📚 Additional Resources
-
-- **Main Package**: `/Users/yiqin/Documents/PythonProjects/GraspDataProcessing/`
-- **CSFs_2_descripors**: https://github.com/YenochQin/CSFs_2_descripors
-- **GRASP Official**: https://grasp.wp.st-andrews.ac.uk/
-- **Issues**: Report problems to project GitHub issues
-- **Documentation**: See main package README.md for detailed API documentation
-
-## 🔄 Migration Notes
-
-This structure was created by separating:
-- **Core library**: Scientific computing and ML functionality
-- **Operational scripts**: Runtime and configuration tools
-- **Web interface**: User-friendly configuration generator
-- **Development logs**: Complete project history
-
-No functional changes were made - only reorganization for better modularity and user experience.
