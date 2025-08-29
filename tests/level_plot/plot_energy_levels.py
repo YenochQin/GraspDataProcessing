@@ -18,7 +18,7 @@ from typing import List, Dict, Tuple, Optional
 # 尝试导入项目模块
 try:
     sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
-    import graspdataprocessing as gdp
+    import graspkit as gk
     from graspdataprocessing.data_IO.fig_settings import configure_matplotlib_for_publication
     use_project_style = True
 except ImportError:

@@ -21,7 +21,7 @@ def test_cpu_threads_config():
     print("=" * 60)
     
     import torch
-    import graspdataprocessing as gdp
+    import graspkit as gk
     
     # 创建一个简单的配置对象测试
     class TestConfig:
@@ -78,7 +78,7 @@ def test_with_real_config():
     print("使用真实配置文件测试")
     print("=" * 60)
     
-    import graspdataprocessing as gdp
+    import graspkit as gk
     import torch
     
     # 查找config.toml文件
@@ -97,7 +97,7 @@ def test_with_real_config():
     if config_file:
         print(f"找到配置文件: {config_file}")
         try:
-            config = gdp.load_config(str(config_file))
+            config = gk.load_config(str(config_file))
             cpu_threads = getattr(config, 'cpu_threads', None)
             print(f"配置文件中的cpu_threads: {cpu_threads}")
             

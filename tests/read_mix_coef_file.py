@@ -5,7 +5,7 @@
 @date :2024/05/07 14:22:17
 @author :YenochQin (秦毅)
 '''
-import graspdataprocessing as gdp
+import graspkit as gk
 
 plottest = {
     "atom": "NdGalike", 
@@ -15,5 +15,5 @@ plottest = {
     "file_type": "mix"
     }
 
-test = gdp.GraspFileLoad(plottest)
+test = gk.GraspFileLoad(plottest)
 test.data_file_process()

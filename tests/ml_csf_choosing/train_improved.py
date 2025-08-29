@@ -30,7 +30,7 @@ import torch
 import os
 
 try:
-    import graspdataprocessing as gdp
+    import graspkit as gk
 except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
@@ -223,7 +223,7 @@ def build_ensemble_model(X_train, y_train, X_test, y_test, config):
         class_weights = [1.0, pos_weight]
         
         # 创建ANN模型
-        model = gdp.ANNClassifier(
+        model = gk.ANNClassifier(
             input_size=X_train.shape[1],
             hidden_size=hidden_size,
             learning_rate=0.001,
@@ -525,13 +525,13 @@ def verify_multiprocessing():
 def main(config):
     """增强版主程序逻辑"""
     config.file_name = f'{config.conf}_{config.cal_loop_num}'
-    logger = gdp.setup_logging(config)
+    logger = gk.setup_logging(config)
     
     config_file_path = config.root_path / 'config.toml'
     logger.info("增强版机器学习训练程序启动")
     execution_time = time.time()
 
-    gdp.setup_directories(config)
+    gk.setup_directories(config)
 
     try:
         # 加载数据文件
@@ -539,9 +539,9 @@ def main(config):
          rmix_file_data, 
          raw_csfs_descriptors, 
          cal_csfs_data, 
-         caled_csfs_indices_dict) = gdp.load_data_files(config, logger)
+         caled_csfs_indices_dict) = gk.load_data_files(config, logger)
         
-        cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
+        cal_result, asfs_position = gk.check_configuration_coupling(config, energy_level_data_pd, logger)
         
     except Exception as e:
         logger.error(f"程序执行过程中发生错误: {str(e)}")
@@ -563,11 +563,11 @@ def main(config):
             current_calculation_csfs = cal_csfs_data.CSFs_block_length[0]
             logger.info(f"当前轮CSFs数量: {current_calculation_csfs}")
             
-            energy_converged = gdp.check_energy_convergence(config, logger, selected_energy_data)
+            energy_converged = gk.check_energy_convergence(config, logger, selected_energy_data)
             
             if not energy_converged:
                 logger.info(f"检测到能量不收敛，回退到第 {config.cal_loop_num - 1} 轮")
-                gdp.update_config(config_file_path, {
+                gk.update_config(config_file_path, {
                     'backward_loop_needed': True,
                     'target_backward_loop': config.cal_loop_num - 1,
                     'cal_loop_num': config.cal_loop_num - 1,
@@ -576,23 +576,23 @@ def main(config):
                 })
                 return
             
-            should_continue = gdp.evaluate_calculation_convergence(config, logger, current_calculation_csfs)
+            should_continue = gk.evaluate_calculation_convergence(config, logger, current_calculation_csfs)
             
             if not should_continue:
                 logger.info("整体计算已收敛，跳过机器学习训练")
-                gdp.update_config(config_file_path, {'continue_cal': False})
+                gk.update_config(config_file_path, {'continue_cal': False})
                 return
 
         # 数据预处理
         logger.info("增强版数据预处理")
         include_wrong_level_negatives = getattr(config, 'ml_config', {}).get('include_wrong_level_negatives', True)
         
-        caled_csfs_descriptors = gdp.generate_chosen_csfs_descriptors(
+        caled_csfs_descriptors = gk.generate_chosen_csfs_descriptors(
             config, caled_csfs_indices_dict, raw_csfs_descriptors, 
             rmix_file_data, asfs_position, logger, include_wrong_level_negatives
         )
         
-        unselected_csfs_descriptors = gdp.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
+        unselected_csfs_descriptors = gk.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
         
         # 处理数据格式 - 支持DataFrame和ndarray两种格式
         if isinstance(caled_csfs_descriptors, pd.DataFrame):
@@ -874,7 +874,7 @@ def main(config):
             previous_important_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}_important_indices.pkl'
             if previous_important_indices_path.exists():
                 try:
-                    previous_important_indices_dict = gdp.csfs_index_load(previous_important_indices_path)
+                    previous_important_indices_dict = gk.csfs_index_load(previous_important_indices_path)
                     if not previous_important_indices_dict:
                         raise ValueError("previous_important_indices_dict为空")
                     
@@ -917,17 +917,17 @@ def main(config):
         
         # 保存重要组态索引
         important_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_important_indices.pkl'
-        gdp.csfs_index_storange(important_csfs_indices_dict, important_indices_path)
+        gk.csfs_index_storange(important_csfs_indices_dict, important_indices_path)
         logger.info(f"重要组态索引保存到: {important_indices_path}")
         
         # 保存ML预测组态索引
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
-        gdp.csfs_index_storange(ml_predicted_csfs_indices_dict, ml_chosen_indices_dict_path)
+        gk.csfs_index_storange(ml_predicted_csfs_indices_dict, ml_chosen_indices_dict_path)
         logger.info(f"ML预测组态索引保存到: {ml_chosen_indices_dict_path}")
         
         # 保存最终选择的组态索引（用于下次计算）
         final_chosen_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_final_chosen_indices.pkl'
-        gdp.csfs_index_storange(final_chosen_csfs_indices_dict, final_chosen_indices_path)
+        gk.csfs_index_storange(final_chosen_csfs_indices_dict, final_chosen_indices_path)
         logger.info(f"最终选择组态索引保存到: {final_chosen_indices_path}")
         
         # 保存迭代结果
@@ -976,7 +976,7 @@ def main(config):
         # 计算总执行时间
         total_execution_time = time.time() - execution_time
         
-        gdp.save_iteration_results(
+        gk.save_iteration_results(
             config=config,
             training_time=training_time,
             eval_time=0.0,  # 已在内部计算
@@ -995,7 +995,7 @@ def main(config):
             y_current_calc_probability = best_model.predict_proba(selector.transform(scaler.transform(X_current_calc)))[:, 1]
             
             # 使用标准化的保存和绘图函数
-            saved_files = gdp.save_and_plot_results(
+            saved_files = gk.save_and_plot_results(
                 evaluation_results={'test_metrics': ensemble_results[best_model_name]},
                 model=best_model,
                 config=config,
@@ -1043,9 +1043,9 @@ def main(config):
         logger.info("✓ CPU多核优化已全部启用")
         
         # 数据保存完成，更新配置继续下一轮计算
-        gdp.update_config(config_file_path, {'continue_cal': True})
-        gdp.update_config(config_file_path, {'cal_error_num': 0})
-        gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
+        gk.update_config(config_file_path, {'continue_cal': True})
+        gk.update_config(config_file_path, {'cal_error_num': 0})
+        gk.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
         
     else:
         # 处理配置不匹配的回退逻辑
@@ -1060,7 +1060,7 @@ if __name__ == "__main__":
     
     # 加载配置
     try:
-        cfg = gdp.load_config(args.config)
+        cfg = gk.load_config(args.config)
         main(cfg)
     except FileNotFoundError:
         print(f"错误: 配置文件 {args.config} 不存在")

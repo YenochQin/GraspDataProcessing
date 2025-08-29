@@ -26,150 +26,26 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 try:
-    import graspdataprocessing as gdp
+    import graspkit as gk
 except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
 
 important_config_count_history = []
 
-
-def validate_csf_descriptors_coverage(descriptors: np.ndarray, 
-                                    with_subshell_info: bool = False) -> tuple[bool, list[int]]:
-    """
-    验证选取的CSFs描述符子集是否满足覆盖条件：
-    对于每个轨道，至少有一个CSF在其对应的电子填充数位置不为零
-    
-    Args:
-        descriptors (np.ndarray): 选取出的CSFs描述符数组，形状为 (n_csfs, n_features)
-        with_subshell_info (bool): 是否包含子壳层信息
-            - False: 使用parse_csf_2_descriptor生成的描述符（每个轨道3个值）
-            - True: 使用parse_csf_2_descriptor_with_subshell生成的描述符（每个轨道5个值）
-    
-    Returns:
-        tuple[bool, list[int]]: (是否满足覆盖条件, 未覆盖的轨道索引列表)
-    """
-    # 检查输入参数
-    if descriptors.size == 0:
-        return False, []
-    
-    # 确定每个轨道的电子填充位置索引
-    if with_subshell_info:
-        values_per_orbital = 5
-        electron_index_in_orbital = 2
-    else:
-        values_per_orbital = 3
-        electron_index_in_orbital = 0
-    
-    # 从描述符结构推断轨道数量
-    actual_n_orbitals = descriptors.shape[1] // values_per_orbital
-    
-    # 直接通过切片获取每个轨道的电子填充
-    electron_indices = np.arange(electron_index_in_orbital, 
-                                actual_n_orbitals * values_per_orbital, 
-                                values_per_orbital)
-    
-    # 提取所有CSF的电子数信息
-    electron_counts = descriptors[:, electron_indices]  # 形状为 (n_csfs, actual_n_orbitals)
-    
-    # 检查每个轨道是否至少有一个CSF的电子数不为零
-    has_nonzero_electrons = np.any(electron_counts > 0, axis=0)  # 形状为 (actual_n_orbitals,)
-    
-    # 找出未覆盖的轨道索引
-    uncovered_orbitals = np.where(~has_nonzero_electrons)[0].tolist()
-    
-    # 返回验证结果
-    is_covered = len(uncovered_orbitals) == 0
-    return is_covered, uncovered_orbitals
-
-
-def select_csfs_for_coverage(descriptors: np.ndarray,
-                            uncovered_orbitals: list[int],
-                            full_descriptors: np.ndarray,
-                            with_subshell_info: bool = False) -> tuple[np.ndarray, list[int]]:
-    """
-    当覆盖验证失败时，从给定的完整描述符中按顺序选取包含缺少轨道的CSF描述符
-    
-    Args:
-        descriptors (np.ndarray): 当前的CSFs描述符数组，形状为 (n_csfs, n_features)
-        uncovered_orbitals (list[int]): 未覆盖的轨道索引列表
-        full_descriptors (np.ndarray): 完整的CSFs描述符数组，形状为 (n_full_csfs, n_features)
-        with_subshell_info (bool): 是否包含子壳层信息
-    
-    Returns:
-        tuple[np.ndarray, list[int]]: (更新后的描述符数组, 选取的CSF索引列表)
-            - 更新后的描述符数组包含原有描述符和新选取的描述符
-            - 选取的CSF索引列表对应于full_descriptors中的索引
-    """
-    if not uncovered_orbitals:
-        return descriptors, []
-    
-    # 确定每个轨道的电子填充位置索引
-    if with_subshell_info:
-        values_per_orbital = 5
-        electron_index_in_orbital = 2
-    else:
-        values_per_orbital = 3
-        electron_index_in_orbital = 0
-    
-    # 获取每个轨道的电子填充位置索引
-    n_orbitals = full_descriptors.shape[1] // values_per_orbital
-    electron_indices = np.arange(electron_index_in_orbital, 
-                                n_orbitals * values_per_orbital, 
-                                values_per_orbital)
-    
-    # 提取完整描述符中的电子数信息
-    full_electron_counts = full_descriptors[:, electron_indices]
-    
-    # 找出当前描述符中已包含的CSF索引（避免重复选择）
-    current_csfs_set = set(range(len(descriptors))) if descriptors.size > 0 else set()
-    
-    selected_indices = []
-    remaining_uncovered = set(uncovered_orbitals)
-    
-    # 按顺序遍历完整描述符
-    for idx in range(len(full_descriptors)):
-        if idx in current_csfs_set:
-            continue  # 跳过已包含的CSF
-            
-        # 检查当前CSF是否包含任何剩余未覆盖的轨道
-        csf_electrons = full_electron_counts[idx]
-        covers_orbitals = [orb for orb in remaining_uncovered if csf_electrons[orb] > 0]
-        
-        if covers_orbitals:
-            selected_indices.append(idx)
-            remaining_uncovered -= set(covers_orbitals)
-            
-            # 如果所有轨道都已覆盖，提前退出
-            if not remaining_uncovered:
-                break
-    
-    if not selected_indices:
-        return descriptors, []
-    
-    # 构建更新后的描述符数组
-    new_descriptors = full_descriptors[selected_indices]
-    
-    if descriptors.size == 0:
-        updated_descriptors = new_descriptors
-    else:
-        updated_descriptors = np.vstack([descriptors, new_descriptors])
-    
-    return updated_descriptors, selected_indices
-
 def main(config):
     """主程序逻辑"""
     config.file_name = f'{config.conf}_{config.cal_loop_num}'
-    logger = gdp.setup_logging(config)
+    logger = gk.setup_logging(config)
     
     config_file_path = config.root_path / 'config.toml'
     logger.info("机器学习训练程序启动")
     execution_time = time.time()
 
-    gdp.setup_directories(config)
+    gk.setup_directories(config)
 
     # 验证初始文件
-    # gdp.validate_initial_files(config, logger)
+    # gk.validate_initial_files(config, logger)
 
     logger.info(f"初始比例: {config.chosen_ratio}")
     logger.info(f"光谱项: {config.spectral_term}")
@@ -181,10 +57,10 @@ def main(config):
          rmix_file_data, 
          raw_csfs_descriptors, 
          cal_csfs_data, 
-         caled_csfs_indices_dict) = gdp.load_data_files(config, logger)
+         caled_csfs_indices_dict) = gk.load_data_files(config, logger)
         
         # 检查组态耦合
-        cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
+        cal_result, asfs_position = gk.check_configuration_coupling(config, energy_level_data_pd, logger)
         logger.info("************************************************")
 
     except Exception as e:
@@ -220,13 +96,13 @@ def main(config):
             
             # 1. 先检查能量收敛性
             logger.info("步骤1: 检查能量收敛性...")
-            energy_converged = gdp.check_energy_convergence(config, logger, selected_energy_data)
+            energy_converged = gk.check_energy_convergence(config, logger, selected_energy_data)
             
             if not energy_converged:
                 logger.info(f"检测到能量不收敛，从第 {config.cal_loop_num} 轮回退到第 {config.cal_loop_num - 1} 轮重新计算")
                 
                 # 设置回退标志和目标轮次
-                gdp.update_config(config_file_path, {
+                gk.update_config(config_file_path, {
                     'backward_loop_needed': True,
                     'target_backward_loop': config.cal_loop_num - 1,
                     'cal_loop_num': config.cal_loop_num - 1,
@@ -241,14 +117,14 @@ def main(config):
             
             # 2. 再检查整体计算收敛性
             logger.info("步骤2: 检查整体计算收敛性...")
-            should_continue = gdp.evaluate_calculation_convergence(config, logger, current_calculation_csfs)
+            should_continue = gk.evaluate_calculation_convergence(config, logger, current_calculation_csfs)
             
             logger.info(f"整体收敛性结果: {'继续计算' if should_continue else '已收敛，停止计算'}")
             
             if not should_continue:
                 logger.info("************************************************")
                 logger.info("整体计算已收敛，跳过机器学习训练，停止计算")
-                gdp.update_config(config_file_path, {'continue_cal': False})
+                gk.update_config(config_file_path, {'continue_cal': False})
                 return
                 
             logger.info("✓ 整体收敛性检查通过")
@@ -258,19 +134,19 @@ def main(config):
         # 获取是否包含错误能级负样本的配置
         include_wrong_level_negatives = getattr(config, 'ml_config', {}).get('include_wrong_level_negatives', True)
         
-        caled_csfs_descriptors = gdp.generate_chosen_csfs_descriptors(
+        caled_csfs_descriptors = gk.generate_chosen_csfs_descriptors(
             config, caled_csfs_indices_dict, raw_csfs_descriptors, rmix_file_data, asfs_position, logger, include_wrong_level_negatives
         )
         
-        unselected_csfs_descriptors = gdp.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
+        unselected_csfs_descriptors = gk.get_unselected_descriptors(raw_csfs_descriptors, caled_csfs_indices_dict)
         X_unselected = unselected_csfs_descriptors.copy()
         logger.info("特征提取完成")
 
         # 训练模型
-        model, X_train, X_test, y_train, y_test, training_time = gdp.train_model(config, caled_csfs_descriptors, rmix_file_data, asfs_position, logger)
+        model, X_train, X_test, y_train, y_test, training_time = gk.train_model(config, caled_csfs_descriptors, rmix_file_data, asfs_position, logger)
 
         # 评估模型
-        evaluation_results = gdp.evaluate_model(
+        evaluation_results = gk.evaluate_model(
             model, X_train, X_test, y_train, y_test, X_unselected, config, logger
         )
 
@@ -340,7 +216,7 @@ def main(config):
         logger.info(f"当前计算CSF预测概率维度: {y_current_calc_probability.shape}")
         
         # 使用标准化的保存和绘图函数
-        saved_files = gdp.save_and_plot_results(
+        saved_files = gk.save_and_plot_results(
             evaluation_results=evaluation_results,
             model=model,
             config=config,
@@ -412,7 +288,7 @@ def main(config):
         # 轨道覆盖检查和补充选择 - 使用新的函数
         # 直接从描述符结构推断轨道数量
         current_selected_descriptors = raw_csfs_descriptors[final_chosen_indices]
-        is_covered, uncovered_orbitals = validate_csf_descriptors_coverage(
+        is_covered, uncovered_orbitals = gk.validate_csf_descriptors_coverage(
             current_selected_descriptors, 
             with_subshell_info=config.ml_config.get('descriptors_with_subshell_info', False)
         )
@@ -426,7 +302,7 @@ def main(config):
             remaining_descriptors = raw_csfs_descriptors[remaining_unselected_indices]
             
             # 使用select_csfs_for_coverage函数选择补充的CSF
-            _, additional_indices_relative = select_csfs_for_coverage(
+            _, additional_indices_relative = gk.select_csfs_for_coverage(
                 np.array([]),  # 空数组，因为我们只想选择新的CSF
                 uncovered_orbitals,
                 remaining_descriptors,
@@ -484,7 +360,7 @@ def main(config):
             previous_important_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num-1}_important_indices.pkl'
             if previous_important_indices_path.exists():
                 try:
-                    previous_important_indices_dict = gdp.csfs_index_load(previous_important_indices_path)
+                    previous_important_indices_dict = gk.csfs_index_load(previous_important_indices_path)
                     if not isinstance(previous_important_indices_dict, dict):
                         raise TypeError(f"Expected dict, got {type(previous_important_indices_dict)}")
                     if 0 not in previous_important_indices_dict:
@@ -531,17 +407,17 @@ def main(config):
         
         # 保存重要组态索引
         important_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_important_indices.pkl'
-        gdp.csfs_index_storange(important_csfs_indices_dict, important_indices_path)
+        gk.csfs_index_storange(important_csfs_indices_dict, important_indices_path)
         logger.info(f"重要组态索引保存到: {important_indices_path}")
         
         # 保存ML预测组态索引
         ml_chosen_indices_dict_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_ml_chosen_indices.pkl'
-        gdp.csfs_index_storange(ml_predicted_csfs_indices_dict, ml_chosen_indices_dict_path)
+        gk.csfs_index_storange(ml_predicted_csfs_indices_dict, ml_chosen_indices_dict_path)
         logger.info(f"ML预测组态索引保存到: {ml_chosen_indices_dict_path}")
         
         # 保存最终选择的组态索引（用于下次计算）
         final_chosen_indices_path = config.root_path / 'results' / f'{config.conf}_{config.cal_loop_num}_final_chosen_indices.pkl'
-        gdp.csfs_index_storange(final_chosen_csfs_indices_dict, final_chosen_indices_path)
+        gk.csfs_index_storange(final_chosen_csfs_indices_dict, final_chosen_indices_path)
         logger.info(f"最终选择组态索引保存到: {final_chosen_indices_path}")
 
         # 保存迭代结果
@@ -600,7 +476,7 @@ def main(config):
         # 计算总执行时间
         total_execution_time = time.time() - execution_time
         
-        gdp.save_iteration_results(
+        gk.save_iteration_results(
             config=config,
             training_time=training_time,
             eval_time=eval_time,
@@ -611,9 +487,9 @@ def main(config):
         )
         
         # 数据保存完成，更新配置继续下一轮计算
-        gdp.update_config(config_file_path, {'continue_cal': True})
-        gdp.update_config(config_file_path, {'cal_error_num': 0})
-        gdp.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
+        gk.update_config(config_file_path, {'continue_cal': True})
+        gk.update_config(config_file_path, {'cal_error_num': 0})
+        gk.update_config(config_file_path, {'cal_loop_num': config.cal_loop_num + 1})
 
     else:
         logger.info("************************************************")
@@ -621,12 +497,12 @@ def main(config):
         
         if config.cal_loop_num <= 1:
             logger.error("已经是第一轮计算，无法回退到上一轮，使用原有错误处理机制")
-            gdp.handle_calculation_error(config, logger)
+            gk.handle_calculation_error(config, logger)
         else:
             logger.info(f"从第 {config.cal_loop_num} 轮回退到第 {config.cal_loop_num - 1} 轮重新训练")
             
             # 设置回退标志和目标轮次
-            gdp.update_config(config_file_path, {
+            gk.update_config(config_file_path, {
                 'backward_loop_needed': True,
                 'target_backward_loop': config.cal_loop_num - 1,
                 'cal_loop_num': config.cal_loop_num - 1,
@@ -646,7 +522,7 @@ if __name__ == "__main__":
     
     # 加载配置
     try:
-        cfg = gdp.load_config(args.config)
+        cfg = gk.load_config(args.config)
         main(cfg)
     except FileNotFoundError:
         print(f"错误: 配置文件 {args.config} 不存在")

@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Protocol, Tuple
 
 # 路径通过 sbatch 脚本中的 PYTHONPATH 环境变量自动设置
 try:
-    import graspdataprocessing as gdp
+    import graspkit as gk
 except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
@@ -128,7 +128,7 @@ def load_target_pool_data(config) -> Tuple[Optional[CSFs], Dict[str, Any]]:
     
     try:
         # 加载CSFs数据
-        target_pool_csfs_data: CSFs = gdp.load_csfs_binary(target_pool_binary_path)
+        target_pool_csfs_data: CSFs = gk.load_csfs_binary(target_pool_binary_path)
         return target_pool_csfs_data, {
             'success': True,
             'message': f"从二进制文件加载CSFs数据",
@@ -158,7 +158,7 @@ def load_selected_indices(config, target_pool_csfs_data_block_num):
     # 优先尝试加载预处理的indices文件（initial_csfs.py生成的）
     if selected_indices_path.exists():
         try:
-            selected_csfs_indices_dict = gdp.csfs_index_load(selected_indices_path)
+            selected_csfs_indices_dict = gk.csfs_index_load(selected_indices_path)
             return selected_csfs_indices_dict, {
                 'success': True,
                 'message': f"加载预处理的初筛CSFs indices",
@@ -176,14 +176,14 @@ def load_selected_indices(config, target_pool_csfs_data_block_num):
         if selected_csfs_file_path.exists():
             try:
                 # 从原始.c文件读取CSFs
-                selected_csfs_load = gdp.GraspFileLoad.from_filepath(selected_csfs_file_path, file_type='CSF')
+                selected_csfs_load = gk.GraspFileLoad.from_filepath(selected_csfs_file_path, file_type='CSF')
                 selected_csfs_data = selected_csfs_load.data_file_process()
                 
                 # 加载目标池数据用于映射
                 target_pool_binary_path = root_path / f"{config.conf}.pkl"
                 if target_pool_binary_path.exists():
                     # 使用哈希映射生成indices
-                    selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
+                    selected_csfs_indices_dict = gk.maping_two_csfs_indices(
                         selected_csfs_data.CSFs_block_data, 
                         target_pool_binary_path
                     )
@@ -243,7 +243,7 @@ def truncate_initial_selected_with_weights(config, selected_csfs_indices_dict, t
     if mix_file_path.exists():
         try:
             # 这里可以添加加载混合系数文件的逻辑
-            # mix_data = gdp.load_mix_coefficient_file(mix_file_path)
+            # mix_data = gk.load_mix_coefficient_file(mix_file_path)
             # 暂时使用简单的方法：保持原有顺序作为权重
             weight_loading_info = {
                 'loaded': True, 
@@ -339,7 +339,7 @@ def load_previous_chosen_indices(config):
     
     if previous_indices_file.with_suffix('.pkl').exists():
         try:
-            final_chosen_indices_dict = gdp.csfs_index_load(previous_indices_file)
+            final_chosen_indices_dict = gk.csfs_index_load(previous_indices_file)
             counts = [len(indices) for indices in final_chosen_indices_dict.values()]
             return final_chosen_indices_dict, {
                 'success': True,
@@ -378,7 +378,7 @@ def load_ml_final_chosen_indices(config):
     
     if final_chosen_path.with_suffix('.pkl').exists():
         try:
-            final_chosen_indices_dict = gdp.csfs_index_load(final_chosen_path)
+            final_chosen_indices_dict = gk.csfs_index_load(final_chosen_path)
             counts = [len(indices) for indices in final_chosen_indices_dict.values()]
             return final_chosen_indices_dict, {
                 'success': True,
@@ -415,7 +415,7 @@ def load_previous_ml_chosen_indices(config):
     
     if ml_results_path.with_suffix('.pkl').exists():
         try:
-            selected_csfs_indices_dict = gdp.csfs_index_load(ml_results_path)
+            selected_csfs_indices_dict = gk.csfs_index_load(ml_results_path)
             return selected_csfs_indices_dict, {
                 'success': True,
                 'message': '加载机器学习选择的CSFs indices',
@@ -512,7 +512,7 @@ def perform_csfs_selection(config):
     Returns:
         dict: 包含选择结果的字典
     """
-    logger = gdp.setup_logging(config)
+    logger = gk.setup_logging(config)
     
     # 步骤1：加载目标池数据
     target_pool_csfs_data, load_status = load_target_pool_data(config)
@@ -775,7 +775,7 @@ def perform_csfs_selection(config):
 
         for block in range(target_pool_csfs_data.block_num):
             chosen_csfs_dict[block], chosen_csfs_indices_dict[block], unselected_indices_dict[block] = (
-                gdp.radom_choose_csfs(
+                gk.radom_choose_csfs(
                     target_pool_csfs_data.CSFs_block_data[block], 
                     config.chosen_ratio, 
                     selected_csfs_indices_dict.get(block, [])
@@ -789,7 +789,7 @@ def perform_csfs_selection(config):
     chosen_csfs_file_path = cal_path / f'{config.conf}_{config.cal_loop_num}.c'
     
     try:
-        gdp.write_sorted_CSFs_to_cfile(
+        gk.write_sorted_CSFs_to_cfile(
             target_pool_csfs_data.subshell_info_raw,
             chosen_csfs_list,
             chosen_csfs_file_path
@@ -802,7 +802,7 @@ def perform_csfs_selection(config):
     # 步骤6：保存chosen indices
     chosen_indices_file = cal_path / f'{config.conf}_{config.cal_loop_num}_chosen_indices'
     try:
-        gdp.csfs_index_storange(chosen_csfs_indices_dict, chosen_indices_file)
+        gk.csfs_index_storange(chosen_csfs_indices_dict, chosen_indices_file)
         logger.info(f"已选择CSFs的索引保存到: {chosen_indices_file}.pkl")
     except Exception as e:
         logger.error(f"保存chosen indices失败: {str(e)}")
@@ -811,7 +811,7 @@ def perform_csfs_selection(config):
     # 步骤7：保存unselected indices  
     unselected_indices_file = cal_path / f'{config.conf}_{config.cal_loop_num}_unselected_indices'
     try:
-        gdp.csfs_index_storange(unselected_indices_dict, unselected_indices_file)
+        gk.csfs_index_storange(unselected_indices_dict, unselected_indices_file)
         logger.info(f"未选择CSFs的索引存到: {unselected_indices_file}.pkl")
     except Exception as e:
         logger.error(f"保存unselected indices失败: {str(e)}")
@@ -879,7 +879,7 @@ if __name__ == "__main__":
     
     # 加载配置
     try:
-        cfg = gdp.load_config(args.config)
+        cfg = gk.load_config(args.config)
         main(cfg)
     except FileNotFoundError:
         print(f"错误: 配置文件 {args.config} 不存在")

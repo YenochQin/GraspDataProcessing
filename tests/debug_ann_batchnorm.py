@@ -24,7 +24,7 @@ def check_ann_source():
     print("=" * 60)
     
     try:
-        import graspdataprocessing as gdp
+        import graspkit as gk
         from graspdataprocessing.machine_learning_module.ANN import ANNClassifier
         import inspect
         
@@ -127,9 +127,9 @@ def check_import_paths():
     
     # 检查graspdataprocessing导入
     try:
-        import graspdataprocessing as gdp
+        import graspkit as gk
         print(f"\n✅ graspdataprocessing导入成功")
-        print(f"   位置: {gdp.__file__}")
+        print(f"   位置: {gk.__file__}")
         
         # 检查是否有多个graspdataprocessing
         import pkgutil

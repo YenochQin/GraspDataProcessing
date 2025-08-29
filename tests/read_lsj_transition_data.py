@@ -6,7 +6,7 @@
 @author :YenochQin (秦毅)
 '''
 
-import graspdataprocessing as gdp
+import graspkit as gk
 
 
 test = {"atom": "NdGalike", 
@@ -18,7 +18,7 @@ test = {"atom": "NdGalike",
               "file_type": "lsjTRANSITION"}
 
 
-transition_data_collection = gdp.LSJTransitionDataCollection(test)
+transition_data_collection = gk.LSJTransitionDataCollection(test)
 
 data_pd = transition_data_collection.transition_data2dataframe()
 

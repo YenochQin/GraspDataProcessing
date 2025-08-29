@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import graspdataprocessing as gdp
+import graspkit as gk
 
 
 
@@ -26,7 +26,7 @@ test1 = {"atom": "Ni",
               "max_r": 1,
               "file_type": "wavefunction"}
 
-data = gdp.GraspFileLoad(test1)
+data = gk.GraspFileLoad(test1)
 
 
 test = data.data_file_process()

@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-import graspdataprocessing as gdp
+import graspkit as gk
 
 
 def final_csfs_select(config, logger):
@@ -29,30 +29,30 @@ def final_csfs_select(config, logger):
     else:
         raise ValueError(f"不支持的计算方法: {config.cal_method}")
     
-    rmix_file_load = gdp.GraspFileLoad.from_filepath(str(rmix_file_path), 'mix')
+    rmix_file_load = gk.GraspFileLoad.from_filepath(str(rmix_file_path), 'mix')
     rmix_file_data = rmix_file_load.data_file_process()
     logger.info(f"加载 mix coefficient 数据文件: {rmix_file_path=}")
     
     # 加载本轮计算CSFs文件
     cal_csfs_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.c'
-    cal_csfs_file_laod = gdp.GraspFileLoad.from_filepath(str(cal_csfs_file_path), 'CSFs')
+    cal_csfs_file_laod = gk.GraspFileLoad.from_filepath(str(cal_csfs_file_path), 'CSFs')
     cal_csfs_data = cal_csfs_file_laod.data_file_process()
     logger.info(f"加载本轮计算 CSFs 文件: {cal_csfs_file_path=}")
 
     energy_level_file_path = config.scf_cal_path / f'{config.conf}_{config.cal_loop_num}.level'
-    energy_level_file_load = gdp.LevelsEnergyData.from_filepath(str(energy_level_file_path), 'LEVEL')
+    energy_level_file_load = gk.LevelsEnergyData.from_filepath(str(energy_level_file_path), 'LEVEL')
     energy_level_data_pd = energy_level_file_load.energy_level_2_pd()
     logger.info(f"加载能级数据: {energy_level_file_path=}")
     # 检查组态耦合
-    cal_result, asfs_position = gdp.check_configuration_coupling(config, energy_level_data_pd, logger)
+    cal_result, asfs_position = gk.check_configuration_coupling(config, energy_level_data_pd, logger)
     
-    csfs_final_coupling_J_collection = gdp.single_block_batch_asfs_CSFs_final_coupling_J_collection(
+    csfs_final_coupling_J_collection = gk.single_block_batch_asfs_CSFs_final_coupling_J_collection(
                                                     cal_csfs_data.CSFs_block_data[0], 
                                                     rmix_file_data.mix_coefficient_List[0], 
                                                     asfs_position
                                                     )
     
-    levels_import_csfs_indices = gdp.batch_asfs_mix_square_above_threshold(
+    levels_import_csfs_indices = gk.batch_asfs_mix_square_above_threshold(
                                             asfs_mix_data=rmix_file_data, 
                                             threshold=config.cutoff_value, 
                                             asfs_position=asfs_position
@@ -80,13 +80,13 @@ def final_csfs_select(config, logger):
 
     selected_csfs = []
     for block in range(cal_csfs_data.block_num):
-        block_csfs = gdp.CSFs_block_get_CSF(cal_csfs_data.CSFs_block_data[block], final_selected_csfs_indices[block])
+        block_csfs = gk.CSFs_block_get_CSF(cal_csfs_data.CSFs_block_data[block], final_selected_csfs_indices[block])
         logger.info(f" {block=} selected csfs num: {len(block_csfs)=}")
         selected_csfs.append(block_csfs)
         
     sorted_csfs_file_path = config.scf_cal_path / f"{config.conf}_{config.cal_loop_num}_mJ-1_im{config.cutoff_value:.0e}.c"
 
-    new_csfs_data = gdp.write_sorted_CSFs_to_cfile(
+    new_csfs_data = gk.write_sorted_CSFs_to_cfile(
                         cal_csfs_data.subshell_info_raw, 
                         selected_csfs, 
                         output_file=sorted_csfs_file_path)
@@ -96,7 +96,7 @@ def final_csfs_select(config, logger):
 
 def main(config):
     """主程序逻辑"""
-    logger = gdp.setup_logging(config)
+    logger = gk.setup_logging(config)
     logger.info("Final CSFs selection")
 
     try:
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     
     # 加载配置
     try:
-        cfg = gdp.load_config(args.config)
+        cfg = gk.load_config(args.config)
         main(cfg)
     except FileNotFoundError:
         print(f"错误: 配置文件 {args.config} 不存在")

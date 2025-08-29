@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 
 try:
-    import graspdataprocessing as gdp
+    import graspkit as gk
 except ImportError:
     print("错误: 无法导入 graspdataprocessing 模块")
     sys.exit(1)
@@ -27,7 +27,7 @@ def process_target_pool_csfs(config):
     Returns:
         dict: 包含selected_csfs_indices_dict和处理状态的结果字典
     """
-    logger = gdp.setup_logging(config)
+    logger = gk.setup_logging(config)
     logger.info("Target Pool CSFs 数据预处理启动")
     
     processing_steps = []
@@ -63,7 +63,7 @@ def process_target_pool_csfs(config):
 
     try:
         # 步骤1：加载和处理target_pool CSFs
-        target_pool_csfs_load = gdp.GraspFileLoad.from_filepath(target_pool_file_path, file_type='CSF')
+        target_pool_csfs_load = gk.GraspFileLoad.from_filepath(target_pool_file_path, file_type='CSF')
         target_pool_csfs_data = target_pool_csfs_load.data_file_process()
         logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 读取成功")
         processing_steps.append({
@@ -79,7 +79,7 @@ def process_target_pool_csfs(config):
         if use_cpp:
             # 使用C++并行计算
             descriptor_file_path = target_pool_path.with_suffix('.h5')
-            descriptor_run = gdp.CppDescriptorGenerator(config.ml_config.get('csf_descriptor_executable', None))
+            descriptor_run = gk.CppDescriptorGenerator(config.ml_config.get('csf_descriptor_executable', None))
             descriptor_run.generate_descriptors(input_file = target_pool_file_path.__str__(),
                             output_file = descriptor_file_path.__str__(),
                             with_subshell_info = config.ml_config.get('descriptors_with_subshell_info', True),
@@ -88,13 +88,13 @@ def process_target_pool_csfs(config):
 
         else:
             # 回退到Python版本
-            descriptors_array, labels_array = gdp.batch_process_csfs_with_multi_block(
+            descriptors_array, labels_array = gk.batch_process_csfs_with_multi_block(
                 target_pool_csfs_data, 
                 label_type='sequential',
                 with_subshell_info=config.ml_config.get('descriptors_with_subshell_info', False)
             )
 
-            gdp.save_descriptors_with_multi_block(descriptors_array, labels_array, target_pool_path, 'npy')
+            gk.save_descriptors_with_multi_block(descriptors_array, labels_array, target_pool_path, 'npy')
             logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 描述符保存成功")
             processing_steps.append({
                 'step': 'descriptor_saving',
@@ -107,7 +107,7 @@ def process_target_pool_csfs(config):
         
 
         # 步骤4：保存CSFs二进制文件
-        gdp.save_csfs_binary(target_pool_csfs_data, target_pool_path)
+        gk.save_csfs_binary(target_pool_csfs_data, target_pool_path)
         logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 保存成功")
         processing_steps.append({
             'step': 'binary_saving',
@@ -121,7 +121,7 @@ def process_target_pool_csfs(config):
         
         if hasattr(config, 'selected_csfs_file') and config.selected_csfs_file:
             # 生成哈希校验文件
-            gdp.precompute_large_hash(target_pool_csfs_data.CSFs_block_data, target_pool_path.with_suffix('.pkl'))
+            gk.precompute_large_hash(target_pool_csfs_data.CSFs_block_data, target_pool_path.with_suffix('.pkl'))
             logger.info(f"初始CSFs文件{config.target_pool_file} CSFs 哈希校验文件保存成功")
             processing_steps.append({
                 'step': 'hash_generation',
@@ -133,7 +133,7 @@ def process_target_pool_csfs(config):
             
             # 加载selected CSFs
             selected_csfs_file_path = root_path.joinpath(config.selected_csfs_file)
-            selected_csfs_load = gdp.GraspFileLoad.from_filepath(selected_csfs_file_path, file_type='CSF')
+            selected_csfs_load = gk.GraspFileLoad.from_filepath(selected_csfs_file_path, file_type='CSF')
             selected_csfs_data = selected_csfs_load.data_file_process()
             logger.info(f"已选择CSFs文件{config.selected_csfs_file} CSFs 读取成功")
             processing_steps.append({
@@ -146,7 +146,7 @@ def process_target_pool_csfs(config):
             # 处理混合系数文件（如果存在）
             if hasattr(config, 'selected_csfs_mix_file') and config.selected_csfs_mix_file:
                 selected_csfs_mix_coefficient_file = root_path.joinpath(config.selected_csfs_mix_file)
-                selected_csfs_mix_coefficient_load = gdp.GraspFileLoad.from_filepath(
+                selected_csfs_mix_coefficient_load = gk.GraspFileLoad.from_filepath(
                     selected_csfs_mix_coefficient_file, 
                     file_type='mix'
                 )
@@ -161,7 +161,7 @@ def process_target_pool_csfs(config):
                 })
                 
                 # 根据阈值筛选 - 正确处理所有blocks
-                selected_csfs_mix_coeff_above_threshold_indices = gdp.batch_asfs_mix_square_above_threshold(
+                selected_csfs_mix_coeff_above_threshold_indices = gk.batch_asfs_mix_square_above_threshold(
                     selected_csfs_mix_coefficient_data, 
                     threshold=config.cutoff_value
                 )
@@ -195,7 +195,7 @@ def process_target_pool_csfs(config):
                 })
             
             # 映射CSFs索引
-            selected_csfs_indices_dict = gdp.maping_two_csfs_indices(
+            selected_csfs_indices_dict = gk.maping_two_csfs_indices(
                 selected_csfs_data.CSFs_block_data, 
                 target_pool_csfs_hash_file
             )
@@ -252,7 +252,7 @@ def main(config):
         
         # 保存selected_csfs_indices_dict供后续使用
         selected_indices_file = Path(config.root_path) / f"{config.conf}_selected_indices.pkl"
-        gdp.csfs_index_storange(result['selected_csfs_indices_dict'], selected_indices_file)
+        gk.csfs_index_storange(result['selected_csfs_indices_dict'], selected_indices_file)
         print(f"💾 Selected indices已保存: {selected_indices_file}")
         
     except Exception as e:
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     
     # 加载配置
     try:
-        cfg = gdp.load_config(args.config)
+        cfg = gk.load_config(args.config)
         main(cfg)
     except FileNotFoundError:
         print(f"错误: 配置文件 {args.config} 不存在")
